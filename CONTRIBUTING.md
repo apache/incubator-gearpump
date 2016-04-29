@@ -318,65 +318,18 @@ Only committer has the right to perform PR merge to Apache upstream.
 
 <a name="merge-pull-request"></a>
 ## Merge pull request
-For each committer, it is suggested to make a local clone of Apache Gearpump repository and make it solely for PR merge purpose. 
-```bash
-git clone https://git-wip-us.apache.org/repos/asf/incubator-gearpump
 
-```
-**NOTE: Only Apache Gearpump repository is writable. The GitHub mirror is READONLY.**
+All merges should be done using the `dev-tools/merge_gearpump_pr.py` script. To use this script, you will need to add a git remote called "apache" at `https://git-wip-us.apache.org/repos/asf/incubator-gearpump.git`, as well as one called "apache-github" at `git://github.com/apache/incubator-gearpump`. For the "apache" repo, you can authenticate using your ASF username and password. 
 
+The script is fairly self explanatory and walks you through following steps and options interactively.
 
-With this local copy of Apache official repo at hand, we are now able to perform merge for PRs. 
+1. squashes the pull request's changes into one commit and merge into master
+2. push to "apache" repo (automitically close GitHub pull request)
+3. optionally cherry-pick the commit on to another branch
+5. clean up and resolve the related JIRA issue
 
-**Important: A pull request must first be properly approved before you are allowed to merge it.**
-
-To pull in a merge request you should generally follow the command line instructions sent out by GitHub.
-
-1. Go to your local copy of the [Apache git repo](https://git-wip-us.apache.org/repos/asf/incubator-gearpump.git), switch
-   to the `master` branch, and make sure it is up to date.
-
-        $ git checkout master
-        $ git fetch origin
-        $ git merge origin/master
-
-2. Create a local branch for integrating and testing the pull request.  You may want to name the branch according to the
-  Gearpump JIRA ticket associated with the pull request (example: `GEARPUMP-1234`).
-
-        $ git checkout -b <local_test_branch>  # e.g. git checkout -b GEARPUMP-1234
-
-3. Merge the pull request into your local test branch.
-
-        $ git pull <remote_repo_url> <remote_branch>
-    You can use `./dev-tools/gearpump-merge.py <pull-number>` to produce the above command most of the time.
-
-4.  Assuming that the pull request merges without any conflicts:
-    Update the top-level `CHANGELOG.md`, and add in the JIRA ticket number (example: `GEARPUMP-1234`) and ticket
-    description to the change log.  Make sure that you place the JIRA ticket number in the commit comments where
-    applicable.
-
-5. Run any sanity tests that you think are needed.
-
-6. Once you are confident that everything is ok, you can merge your local test branch into your local `master` branch,
-   and push the changes back to the official Apache repo.
-	
-        # Rebase this local branch with latest origin/master again
-        $ git fetch origin
-        $ git rebase -i origin/master
-		
-        # Pull request looks ok, change log was updated, etc.  We are ready for pushing.
-        $ git checkout master
-        $ git merge <local_test_branch>  # e.g. git merge GEARPUMP-1234
-
-        # At this point our local master branch is ready, so now we will push the changes
-        # to the official Apache repo.  Note: The read-only mirror on GitHub will be updated
-        # automatically a short while after you have pushed to the Apache repo.
-        $ git push origin master
-
-7. The last step is updating the corresponding JIRA ticket.  [Go to JIRA](https://issues.apache.org/jira/browse/GEARPUMP)
-   and resolve the ticket.  Be sure to set the `Fix Version/s` field to the version you pushed your changes to.
-   It is usually good practice to thank the author of the pull request for their contribution if you have not done
-   so already.
-
+If you want to amend a commit before merging – which should be used for trivial touch-ups – then simply let the script wait at the point where it asks you if you want to push to Apache. Then, in a separate window, modify the code and push a commit. Run "git rebase -i HEAD~2" and "squash" your new commit. Edit the commit message just after to remove your commit message. You can verify the result is one change with "git log". Then resume the script in the other window.
+Also, please remember to set Assignee on JIRAs where applicable when they are resolved. The script can't do this automatically.
 
 <a name="release"></a>
 ## How to make a release
