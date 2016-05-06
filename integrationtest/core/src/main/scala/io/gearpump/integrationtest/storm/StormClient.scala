@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,13 +18,17 @@
 
 package io.gearpump.integrationtest.storm
 
-import backtype.storm.utils.{Utils, DRPCClient}
-import io.gearpump.integrationtest.{Util, Docker}
-import io.gearpump.integrationtest.minicluster.{RestClient, BaseContainer}
+import scala.util.Random
 
-class StormClient(masterAddrs: Seq[(String, Int)], restClient: RestClient) {
+import backtype.storm.utils.{DRPCClient, Utils}
 
-  private val CONFIG_FILE = "/opt/gearpump/storm.yaml"
+import io.gearpump.integrationtest.minicluster.{BaseContainer, MiniCluster, RestClient}
+import io.gearpump.integrationtest.{Docker, Util}
+
+class StormClient(cluster: MiniCluster, restClient: RestClient) {
+
+  private val masterAddrs: List[(String, Int)] = cluster.getMastersAddresses
+  private val CONFIG_FILE = s"/opt/gearpump/storm${new Random().nextInt()}.yaml"
   private val DRPC_HOST = "storm0"
   private val DRPC_PORT = 3772
   private val DRPC_INVOCATIONS_PORT = 3773
@@ -35,19 +39,40 @@ class StormClient(masterAddrs: Seq[(String, Int)], restClient: RestClient) {
 
   private val drpcContainer = new BaseContainer(DRPC_HOST, STORM_DRPC, masterAddrs,
     tunnelPorts = Set(DRPC_PORT, DRPC_INVOCATIONS_PORT))
-  private val nimbusContainer = new BaseContainer(NIMBUS_HOST, s"$STORM_NIMBUS -output $CONFIG_FILE", masterAddrs)
+
+  private val nimbusContainer =
+    new BaseContainer(NIMBUS_HOST, s"$STORM_NIMBUS -output $CONFIG_FILE", masterAddrs)
 
   def start(): Unit = {
-    drpcContainer.createAndStart()
     nimbusContainer.createAndStart()
+    ensureNimbusRunning()
+
+    drpcContainer.createAndStart()
+    ensureDrpcServerRunning()
+  }
+
+  private def ensureNimbusRunning(): Unit = {
+    Util.retryUntil(() => {
+      val response = Docker.execute(NIMBUS_HOST, "grep \"port\" " + CONFIG_FILE)
+      // Parse format nimbus.thrift.port: '39322'
+      val thriftPort = response.split(" ")(1).replace("'", "").toInt
+
+      Docker.executeSilently(NIMBUS_HOST, s"""sh -c "netstat -na | grep $thriftPort" """)
+    }, "Nimbus running")
+  }
+
+  private def ensureDrpcServerRunning(): Unit = {
+    Util.retryUntil(() => {
+      Docker.executeSilently(DRPC_HOST, s"""sh -c "netstat -na | grep $DRPC_PORT " """)
+    }, "DRPC running")
   }
 
   def submitStormApp(jar: String, mainClass: String, args: String, appName: String): Int = {
-    Util.retryUntil({
-      Docker.exec(NIMBUS_HOST, s"$STORM_APP -config $CONFIG_FILE " +
+    Util.retryUntil(() => {
+      Docker.executeSilently(NIMBUS_HOST, s"$STORM_APP -config $CONFIG_FILE " +
         s"-jar $jar $mainClass $args")
       restClient.listRunningApps().exists(_.appName == appName)
-    })
+    }, "app running")
     restClient.listRunningApps().filter(_.appName == appName).head.appId
   }
 
@@ -57,8 +82,10 @@ class StormClient(masterAddrs: Seq[(String, Int)], restClient: RestClient) {
   }
 
   def shutDown(): Unit = {
+
+    // Cleans up the storm.yaml config file
+    Docker.executeSilently(NIMBUS_HOST, s"rm $CONFIG_FILE ")
     drpcContainer.killAndRemove()
     nimbusContainer.killAndRemove()
   }
-
 }

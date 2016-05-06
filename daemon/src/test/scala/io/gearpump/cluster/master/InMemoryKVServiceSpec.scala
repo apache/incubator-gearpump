@@ -18,27 +18,32 @@
 
 package io.gearpump.cluster.master
 
+import scala.concurrent.duration._
+
 import akka.actor.Props
 import akka.testkit.TestProbe
-import io.gearpump.cluster.master.InMemoryKVService._
-import io.gearpump.cluster.{MasterHarness, TestUtil}
+import com.typesafe.config.Config
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
-class InMemoryKVServiceSpec extends FlatSpec with Matchers with BeforeAndAfterEach with MasterHarness {
+import io.gearpump.cluster.master.InMemoryKVService._
+import io.gearpump.cluster.{MasterHarness, TestUtil}
 
-  override def beforeEach() = {
+class InMemoryKVServiceSpec
+  extends FlatSpec with Matchers with BeforeAndAfterEach with MasterHarness {
+
+  override def beforeEach(): Unit = {
     startActorSystem()
   }
 
-  override def afterEach() = {
+  override def afterEach(): Unit = {
     shutdownActorSystem()
   }
 
-  override def config = TestUtil.MASTER_CONFIG
+  override def config: Config = TestUtil.MASTER_CONFIG
 
   "KVService" should "get, put, delete correctly" in {
-   val system = getActorSystem
-   val kvService = system.actorOf(Props(new InMemoryKVService()))
+    val system = getActorSystem
+    val kvService = system.actorOf(Props(new InMemoryKVService()))
     val group = "group"
 
     val client = TestProbe()(system)
@@ -54,7 +59,11 @@ class InMemoryKVServiceSpec extends FlatSpec with Matchers with BeforeAndAfterEa
 
     client.send(kvService, DeleteKVGroup(group))
 
+    // After DeleteGroup, it no longer accept Get and Put message for this group.
     client.send(kvService, GetKV(group, "key"))
-    client.expectMsg(GetKVSuccess("key", null))
+    client.expectNoMsg(3.seconds)
+
+    client.send(kvService, PutKV(group, "key", 3))
+    client.expectNoMsg(3.seconds)
   }
 }

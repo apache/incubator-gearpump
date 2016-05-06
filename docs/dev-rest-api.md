@@ -12,6 +12,9 @@ To disable Authentication, you can set `gearpump-ui.gearpump.ui-security.authent
 in gear.conf, please check [UI Authentication](deployment-ui-authentication.html) for details.
 
 ### How to authenticate if Authentication is enabled.
+
+#### For User-Password based authentication
+
 If Authentication is enabled, then you need to login before calling REST API.
 
 ```
@@ -28,9 +31,56 @@ curl --cookie outputAuthenticationCookie.txt http://127.0.0.1/api/v1.0/master
 
 for more information, please check [UI Authentication](deployment-ui-authentication.html).
 
+#### For OAuth2 based authentication
+
+For OAuth2 based authentication, it requires you to have an access token in place.
+
+Different OAuth2 service provider have different way to return an access token.
+
+**For Google**, you can refer to [OAuth Doc](https://developers.google.com/identity/protocols/OAuth2).
+
+**For CloudFoundry UAA**, you can use the uaac command to get the access token.
+
+```
+$ uaac target http://login.gearpump.gotapaas.eu/
+$ uaac token get <user_email_address>
+
+### Find access token
+$ uaac context
+
+[0]*[http://login.gearpump.gotapaas.eu]
+
+  [0]*[<user_email_address>]
+      user_id: 34e33a79-42c6-479b-a8c1-8c471ff027fb
+      client_id: cf
+      token_type: bearer
+      access_token: eyJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI
+      expires_in: 599
+      scope: password.write openid cloud_controller.write cloud_controller.read
+      jti: 74ea49e4-1001-4757-9f8d-a66e52a27557
+```
+
+For more information on uaac, please check [UAAC guide](https://docs.cloudfoundry.org/adminguide/uaa-user-management.html)
+
+Now, we have the access token, then let's login to Gearpump UI server with this access token:
+
+```
+## Please replace cloudfoundryuaa with actual OAuth2 service name you have configured in gear.conf
+curl  -X POST  --data accesstoken=eyJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI --cookie-jar outputAuthenticationCookie.txt http://127.0.0.1:8090/login/oauth2/cloudfoundryuaa/accesstoken
+```
+
+This will use user  `user_email_address` to login, and store the authentication cookie to file outputAuthenticationCookie.txt.
+
+In All subsequent Rest API calls, you need to add the authentication cookie. For example
+
+```
+curl --cookie outputAuthenticationCookie.txt http://127.0.0.1/api/v1.0/master
+```
+
+**NOTE:** You can default the default permission level for OAuth2 user. for more information,
+please check [UI Authentication](deployment-ui-authentication.html).
 
 ## Query version
-
 
 ### GET version
 
@@ -62,16 +112,8 @@ Sample Response:
 ```
 {
   "masterDescription": {
-    "leader": [
-      "master@127.0.0.1",
-      3000
-    ],
-    "cluster": [
-      [
-        "127.0.0.1",
-        3000
-      ]
-    ],
+    "leader":{"host":"master@127.0.0.1","port":3000},
+    "cluster":[{"host":"127.0.0.1","port":3000}]
     "aliveFor": "642941",
     "logFile": "/Users/foobar/gearpump/logs",
     "jarStore": "jarstore/",
@@ -123,7 +165,7 @@ Sample Response:
 ```
 [
   {
-    "workerId": 1,
+    "workerId": "1",
     "state": "active",
     "actorPath": "akka.tcp://master@127.0.0.1:3000/user/Worker0",
     "aliveFor": "431565",
@@ -146,7 +188,7 @@ Sample Response:
     "jvmName": "11788@lisa"
   },
   {
-    "workerId": 0,
+    "workerId": "0",
     "state": "active",
     "actorPath": "akka.tcp://master@127.0.0.1:3000/user/Worker1",
     "aliveFor": "431546",
@@ -254,6 +296,92 @@ Sample Response:
 }
 ```
 
+### POST api/v1.0/master/submitapp
+Submit a streaming job jar to Gearpump cluster. It functions like command line
+```
+gear app -jar xx.jar -conf yy.conf -executors 1 <command line arguments>
+```
+
+Required MIME type: "multipart/form-data"
+
+Required post form fields:
+
+1. field name "jar", job jar file.
+
+Optional post form fields:
+
+1. "configfile", configuration file, in UTF8 format.
+2. "configstring", text body of configuration file, in UTF8 format.
+3. "executorcount", The count of JVM process to start across the cluster for this application job
+4. "args", command line arguments for this job jar.
+
+Example html:
+
+```bash
+<form id="submitapp" action="http://127.0.0.1:8090/api/v1.0/master/submitapp"
+method="POST" enctype="multipart/form-data">
+ 
+Job Jar (*.jar) [Required]:  <br/>
+<input type="file" name="jar"/> <br/> <br/>
+ 
+Config file (*.conf) [Optional]:  <br/>
+<input type="file" name="configfile"/> <br/>  <br/>
+ 
+Config String, Config File in string format. [Optional]: <br/>
+<input type="text" name="configstring" value="a.b.c.d=1"/> <br/><br/>
+ 
+Executor count (integer, how many process to start for this streaming job) [Optional]: <br/>
+<input type="text" name="executorcount" value="1"/> <br/><br/>
+ 
+Application arguments (String) [Optional]: <br/>
+<input type="text" name="args" value=""/> <br/><br/>
+ 
+<input type="submit" value="Submit"/>
+ 
+</table>
+ 
+</form>
+```
+
+### POST api/v1.0/master/submitstormapp
+Submit a storm jar to Gearpump cluster. It functions like command line
+```
+storm app -jar xx.jar -conf yy.yaml <command line arguments>
+```
+
+Required MIME type: "multipart/form-data"
+
+Required post form fields:
+
+1. field name "jar", job jar file.
+
+Optional post form fields:
+
+1. "configfile", .yaml configuration file, in UTF8 format.
+2. "args", command line arguments for this job jar.
+
+Example html:
+
+```bash
+<form id="submitstormapp" action="http://127.0.0.1:8090/api/v1.0/master/submitstormapp"
+method="POST" enctype="multipart/form-data">
+ 
+Job Jar (*.jar) [Required]:  <br/>
+<input type="file" name="jar"/> <br/> <br/>
+ 
+Config file (*.yaml) [Optional]:  <br/>
+<input type="file" name="configfile"/> <br/>  <br/>
+
+Application arguments (String) [Optional]: <br/>
+<input type="text" name="args" value=""/> <br/><br/>
+ 
+<input type="submit" value="Submit"/>
+ 
+</table>
+ 
+</form>
+```
+
 ## Worker service
 
 ### GET api/v1.0/worker/&lt;workerId&gt;
@@ -269,7 +397,7 @@ Sample Response:
 
 ```
 {
-  "workerId": 0,
+  "workerId": "0",
   "state": "active",
   "actorPath": "akka.tcp://master@127.0.0.1:3000/user/Worker1",
   "aliveFor": "831069",
@@ -432,8 +560,79 @@ Sample Response:
 }
 ```
 
-## Application service
+## Supervisor Service
 
+Supervisor service allows user to add or remove a worker machine.
+
+### POST api/v1.0/supervisor/status
+Query whether the supervisor service is enabled. If Supervisor service is disabled, you are not allowed to use API like addworker/removeworker.
+
+Example:
+
+```bash
+curl -X POST [--cookie outputAuthenticationCookie.txt] http://127.0.0.1:8090/api/v1.0/supervisor/status
+```
+
+Sample Response:
+
+```
+{"enabled":true}
+```
+
+### GET api/v1.0/supervisor
+Get the supervisor path
+
+Example:
+
+```bash
+curl [--cookie outputAuthenticationCookie.txt] http://127.0.0.1:8090/api/v1.0/supervisor
+```
+
+Sample Response:
+
+```
+{path: "supervisor actor path"}
+```
+
+### POST api/v1.0/supervisor/addworker/&lt;worker-count&gt;
+Add workerCount new workers in the cluster. It will use the low level resource scheduler like
+YARN to start new containers and then boot Gearpump worker process.
+
+Example:
+
+```bash
+curl -X POST [--cookie outputAuthenticationCookie.txt] http://127.0.0.1:8090/api/v1.0/supervisor/addworker/2
+
+```
+
+Sample Response:
+
+```
+{success: true}
+```
+
+### POST api/v1.0/supervisor/removeworker/&lt;worker-id&gt;
+Remove single worker instance by specifying a worker Id.
+
+**NOTE:* Use with caution!
+
+**NOTE:** All executors JVMs under this worker JVM will also be destroyed. It will trigger failover for all
+applications that have executor started under this worker.
+
+Example:
+
+```bash
+curl -X POST [--cookie outputAuthenticationCookie.txt] http://127.0.0.1:8090/api/v1.0/supervisor/removeworker/3
+
+```
+
+Sample Response:
+
+```
+{success: true}
+```
+
+## Application service
 
 ### GET api/v1.0/appmaster/&lt;appId&gt;?detail=&lt;true|false&gt;
 Query information of an specific application of Id appId
@@ -535,19 +734,19 @@ Sample Response:
     {
       "executorId": 0,
       "executor": "akka.tcp://app1system0@127.0.0.1:52240/remote/akka.tcp/app1-executor-1@127.0.0.1:52212/user/daemon/appdaemon1/$c/appmaster/executors/0#-1554950276",
-      "workerId": 1,
+      "workerId": "1",
       "status": "active"
     },
     {
       "executorId": 1,
       "executor": "akka.tcp://app1system1@127.0.0.1:52241/remote/akka.tcp/app1-executor-1@127.0.0.1:52212/user/daemon/appdaemon1/$c/appmaster/executors/1#928082134",
-      "workerId": 0,
+      "workerId": "0",
       "status": "active"
     },
     {
       "executorId": -1,
       "executor": "akka://app1-executor-1/user/daemon/appdaemon1/$c/appmaster",
-      "workerId": 1,
+      "workerId": "1",
       "status": "active"
     }
   ],
@@ -589,7 +788,6 @@ Sample Response:
   ]
 }
 ```
-
 
 ### GET api/v1.0/appmaster/&lt;appId&gt;/config
 Query the configuration of specific application appId
@@ -884,7 +1082,7 @@ Sample Response:
 ```
 {
   "id": 1,
-  "workerId": 0,
+  "workerId": "0",
   "actorPath": "akka.tcp://app1system1@127.0.0.1:52241/remote/akka.tcp/app1-executor-1@127.0.0.1:52212/user/daemon/appdaemon1/$c/appmaster/executors/1",
   "logFile": "logs/",
   "status": "active",

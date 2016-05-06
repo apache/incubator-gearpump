@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,19 +20,23 @@ package io.gearpump.integrationtest.kafka
 import scala.collection.mutable
 
 trait ResultVerifier {
-  def onNext(msg: String): Unit
+  def onNext(num: Int): Unit
 }
 
 class MessageLossDetector(totalNum: Int) extends ResultVerifier {
   private val bitSets = new mutable.BitSet(totalNum)
+  var result = List.empty[Int]
 
-  override def onNext(msg: String): Unit = {
-    val num = msg.toInt
+  override def onNext(num: Int): Unit = {
     bitSets.add(num)
+    result :+= num
   }
 
   def allReceived: Boolean = {
     1.to(totalNum).forall(bitSets)
   }
 
+  def received(num: Int): Boolean = {
+    bitSets(num)
+  }
 }

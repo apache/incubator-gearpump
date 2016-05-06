@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,20 +19,22 @@
 package io.gearpump.streaming.source
 
 import io.gearpump.streaming.task.TaskContext
-import io.gearpump.{TimeStamp, Message}
+import io.gearpump.Message
+
+import scala.util.Random
 
 /**
- * interface to implement custom source where data is read into the system.
+ * Interface to implement custom source where data is read into the system.
  * a DataSource could be a message queue like kafka or simply data generation source.
  *
- * an example would be like
+ * An example would be like
  * {{{
- *  GenStringSource extends DataSource {
+ *  GenMsgSource extends DataSource {
  *
- *    def open(context: TaskContext, startTime: Option[TimeStamp]): Unit = {}
+ *    def open(context: TaskContext, startTime: TimeStamp): Unit = {}
  *
- *    def read(batchSize: Int): List[Message] = {
- *      List.fill(batchSize)(Message("message"))
+ *    def read(context: TaskContext): Message = {
+ *      Message("message")
  *    }
  *
  *    def close(): Unit = {}
@@ -44,23 +46,24 @@ import io.gearpump.{TimeStamp, Message}
 trait DataSource extends java.io.Serializable {
 
   /**
-   * open connection to data source
+   * Opens connection to data source
    * invoked in onStart() method of [[io.gearpump.streaming.source.DataSourceTask]]
+   *
    * @param context is the task context at runtime
    * @param startTime is the start time of system
    */
-  def open(context: TaskContext, startTime: Option[TimeStamp]): Unit
+  def open(context: TaskContext, startTime: Long): Unit
 
   /**
-   * read a number of messages from data source.
-   * invoked in each onNext() method of [[io.gearpump.streaming.source.DataSourceTask]]
-   * @param batchSize max number of messages to read
-   * @return a list of messages wrapped in [[io.gearpump.Message]]
+   * Reads next message from data source and
+   * returns null if no message is available
+   *
+   * @return a [[io.gearpump.Message]] or null
    */
-  def read(batchSize: Int): List[Message]
+  def read(): Message
 
   /**
-   * close connection to data source.
+   * Closes connection to data source.
    * invoked in onStop() method of [[io.gearpump.streaming.source.DataSourceTask]]
    */
   def close(): Unit

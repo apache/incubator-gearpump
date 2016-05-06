@@ -1,6 +1,7 @@
 #!/bin/bash
 CURDIR=`pwd`
 CURDIRNAME=`basename $CURDIR`
+
 if [ "$CURDIRNAME" != "docs" ]; then
   echo "This script MUST be run under 'docs' directory. "
   exit 1
@@ -32,12 +33,20 @@ export BUILD_API=$2
 # generate _site documents
 jekyll build
 
-# check html link validality
-echo "Checking generated HTMLs..."
-htmlproof _site \
+# check html link validity
+# htmlproof has been renamed to htmlproofer in Dec 2015
+HTMLPROOF="htmlproof"
+HTML_IGNORE_HREF='--href-ignore "#/"'
+if ! `which $HTMLPROOF >/dev/null`; then
+  HTMLPROOF="htmlproofer"
+  HTML_IGNORE_HREF="--allow-hash-href"
+fi
+echo "Checking generated HTMLs using $HTMLPROOF..."
+
+$HTMLPROOF _site \
   --disable-external \
-  --href-ignore "#/" \
-  --url-ignore \#,api/scala/index.html,api/java/index.html
+  $HTML_IGNORE_HREF \
+  --url-ignore \#,api/scala/index.html,api/java/index.html,/download.html
 
 # generate API doc
 if [ "$BUILD_API" = 1 ]; then
@@ -46,7 +55,6 @@ if [ "$BUILD_API" = 1 ]; then
   echo "Running 'sbt clean unidoc'; this may take a few minutes..."
   cd $CURDIR/..
   sbt clean unidoc
-
   echo "Moving back into docs dir."
   cd $CURDIR
 

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,14 +18,15 @@
 
 package io.gearpump.streaming.state.impl
 
-import io.gearpump.TimeStamp
-import io.gearpump.streaming.transaction.api.CheckpointStore
-import org.mockito.{Matchers => MockitoMatchers}
 import org.mockito.Mockito._
+import org.mockito.{Matchers => MockitoMatchers}
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{Matchers, PropSpec}
 import org.scalatest.prop.PropertyChecks
+import org.scalatest.{Matchers, PropSpec}
+
+import io.gearpump.TimeStamp
+import io.gearpump.streaming.transaction.api.CheckpointStore
 
 class CheckpointManagerSpec extends PropSpec with PropertyChecks with Matchers with MockitoSugar {
 
@@ -40,7 +41,6 @@ class CheckpointManagerSpec extends PropSpec with PropertyChecks with Matchers w
         checkpointManager.recover(timestamp)
 
         verify(checkpointStore).recover(timestamp)
-        checkpointManager.getCheckpointTime - timestamp should be <= checkpointInterval
     }
   }
 
@@ -57,7 +57,7 @@ class CheckpointManagerSpec extends PropSpec with PropertyChecks with Matchers w
     }
   }
 
-   property("CheckpointManager should close CheckpointStore") {
+  property("CheckpointManager should close CheckpointStore") {
     forAll(checkpointIntervalGen) {
       (checkpointInterval: Long) =>
         val checkpointStore = mock[CheckpointStore]
@@ -69,23 +69,21 @@ class CheckpointManagerSpec extends PropSpec with PropertyChecks with Matchers w
   }
 
   property("CheckpointManager should update checkpoint time according to max message timestamp") {
-    val timestampListGen = Gen.containerOf[Array, TimeStamp](timestampGen) suchThat (_.nonEmpty)
-    forAll(timestampListGen, checkpointIntervalGen) {
-      (timestamps: Array[TimeStamp], checkpointInterval: Long) =>
+    forAll(timestampGen, checkpointIntervalGen) {
+      (timestamp: TimeStamp, checkpointInterval: Long) =>
         val checkpointStore = mock[CheckpointStore]
         val checkpointManager =
           new CheckpointManager(checkpointInterval, checkpointStore)
-        timestamps.foreach(checkpointManager.update)
-        val maxTimestamp = timestamps.max
-        checkpointManager.getMaxMessageTime shouldBe maxTimestamp
+        checkpointManager.update(timestamp)
+        checkpointManager.getMaxMessageTime shouldBe timestamp
 
-        val checkpointTime = checkpointManager.getCheckpointTime
+        val checkpointTime = checkpointManager.getCheckpointTime.get
+        timestamp should (be < checkpointTime and be >= (checkpointTime - checkpointInterval))
+
         checkpointManager.checkpoint(checkpointTime, Array.empty[Byte])
         verify(checkpointStore).persist(MockitoMatchers.eq(checkpointTime),
           MockitoMatchers.anyObject[Array[Byte]]())
-        val newCheckpointTime = checkpointManager.updateCheckpointTime()
-        maxTimestamp should (be < newCheckpointTime and be >= (newCheckpointTime - checkpointInterval))
+        checkpointManager.getCheckpointTime shouldBe empty
     }
   }
-
 }

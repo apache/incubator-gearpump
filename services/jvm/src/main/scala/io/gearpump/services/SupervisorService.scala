@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,65 +18,99 @@
 
 package io.gearpump.services
 
-import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.server.Directives._
-import akka.stream.Materializer
-import io.gearpump.cluster.ClientToMaster._
-import io.gearpump.util.ActorUtil._
-
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
+import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
+import akka.stream.Materializer
 
-class SupervisorService(val supervisor: ActorRef, override val system: ActorSystem)
+import io.gearpump.cluster.AppMasterToMaster.{GetWorkerData, WorkerData}
+import io.gearpump.cluster.ClientToMaster._
+import io.gearpump.cluster.worker.WorkerId
+import io.gearpump.services.SupervisorService.{Path, Status}
+import io.gearpump.util.ActorUtil._
+// NOTE: This cannot be removed!!!
+import io.gearpump.services.util.UpickleUtil._
+
+/** Responsible for adding/removing machines. Typically it delegates to YARN. */
+class SupervisorService(
+    val master: ActorRef, val supervisor: ActorRef, override val system: ActorSystem)
   extends BasicService {
 
   import upickle.default.write
 
-  override def doRoute(implicit mat: Materializer) = pathPrefix("supervisor") {
+  /**
+   * TODO: Add additional check to ensure the user have enough authorization to
+   * add/remove a worker machine
+   */
+  private def authorize(internal: Route): Route = {
+    if (supervisor == null) {
+      failWith(new Exception("API not enabled, cannot find a valid supervisor! " +
+        "Please make sure Gearpump is running on top of YARN or other resource managers"))
+    } else {
+      internal
+    }
+  }
+
+  protected override def doRoute(implicit mat: Materializer) = pathPrefix("supervisor") {
     pathEnd {
       get {
-        complete(write(supervisor.path.toString))
+        val path = if (supervisor == null) {
+          null
+        } else {
+          supervisor.path.toString
+        }
+        complete(write(Path(path)))
       }
     } ~
-    path("addworker" / IntNumber) { count =>
+    path("status") {
       post {
-        onComplete(askActor[CommandResult](supervisor, AddWorker(count))) {
-          case Success(value) =>
-            complete(write(value))
-          case Failure(ex) =>
-            failWith(ex)
+        if (supervisor == null) {
+          complete(write(Status(enabled = false)))
+        } else {
+          complete(write(Status(enabled = true)))
         }
       }
     } ~
-      path("addmaster") {
-        post {
-          onComplete(askActor[CommandResult](supervisor, AddMaster)) {
+    path("addworker" / IntNumber) { workerCount =>
+      post {
+        authorize {
+          onComplete(askActor[CommandResult](supervisor, AddWorker(workerCount))) {
             case Success(value) =>
               complete(write(value))
             case Failure(ex) =>
               failWith(ex)
           }
         }
-      } ~
-        path("removemaster" / Segment) { uriPath =>
-          post {
-            onComplete(askActor[CommandResult](supervisor, RemoveMaster(uriPath))) {
-              case Success(value) =>
-                complete(write(value))
-              case Failure(ex) =>
-                failWith(ex)
+      }
+    } ~
+    path("removeworker" / Segment) { workerIdString =>
+      post {
+        authorize {
+          val workerId = WorkerId.parse(workerIdString)
+          def future(): Future[CommandResult] = {
+            askWorker[WorkerData](master, workerId, GetWorkerData(workerId)).flatMap{workerData =>
+              val containerId = workerData.workerDescription.resourceManagerContainerId
+              askActor[CommandResult](supervisor, RemoveWorker(containerId))
             }
           }
-        } ~
-        path("removeworker" / Segment) { uriPath =>
-          post {
-            onComplete(askActor[CommandResult](supervisor, RemoveWorker(uriPath))) {
-              case Success(value) =>
-                complete(write(value))
-              case Failure(ex) =>
-                failWith(ex)
-            }
+
+          onComplete[CommandResult](future()) {
+            case Success(value) =>
+              complete(write(value))
+            case Failure(ex) =>
+              failWith(ex)
           }
         }
+      }
+    }
   }
+}
+
+object SupervisorService {
+  case class Status(enabled: Boolean)
+
+  case class Path(path: String)
 }

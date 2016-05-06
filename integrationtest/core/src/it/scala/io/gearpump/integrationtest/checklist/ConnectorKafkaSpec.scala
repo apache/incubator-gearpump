@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,8 +17,10 @@
  */
 package io.gearpump.integrationtest.checklist
 
-import io.gearpump.integrationtest.{Util, TestSpecBase}
+import org.scalatest.TestData
+
 import io.gearpump.integrationtest.kafka._
+import io.gearpump.integrationtest.{TestSpecBase, Util}
 
 /**
  * The test spec checks the Kafka datasource connector
@@ -39,8 +41,8 @@ class ConnectorKafkaSpec extends TestSpecBase {
     super.afterAll()
   }
 
-  override def afterEach() = {
-    super.afterEach()
+  override def afterEach(test: TestData): Unit = {
+    super.afterEach(test)
     if (producer != null) {
       producer.stop()
       producer = null
@@ -62,12 +64,13 @@ class ConnectorKafkaSpec extends TestSpecBase {
         "-sourceTopic", sourceTopic,
         "-sinkTopic", sinkTopic).mkString(" ")
       val appId = restClient.getNextAvailableAppId()
-      val success = restClient.submitApp(kafkaJar, args)
+      val success = restClient.submitApp(kafkaJar, cluster.getWorkerHosts.length, args)
       success shouldBe true
 
       // verify
       expectAppIsRunning(appId, "KafkaReadWrite")
-      Util.retryUntil(kafkaCluster.getLatestOffset(sinkTopic) == messageNum)
+      Util.retryUntil(() => kafkaCluster.getLatestOffset(sinkTopic) == messageNum,
+        "kafka all message written")
     }
   }
 
@@ -90,27 +93,28 @@ class ConnectorKafkaSpec extends TestSpecBase {
         "-sinkTopic", sinkTopic,
         "-source", sourcePartitionNum).mkString(" ")
       val appId = restClient.getNextAvailableAppId()
-      val success = restClient.submitApp(kafkaJar, args)
+      val success = restClient.submitApp(kafkaJar, cluster.getWorkerHosts.length, args)
       success shouldBe true
 
       // verify #1
       expectAppIsRunning(appId, "KafkaReadWrite")
-      Util.retryUntil(restClient.queryStreamingAppDetail(appId).clock > 0)
+      Util.retryUntil(() => restClient.queryStreamingAppDetail(appId).clock > 0, "app running")
 
       // verify #2
       val executorToKill = restClient.queryExecutorBrief(appId).map(_.executorId).max
       restClient.killExecutor(appId, executorToKill) shouldBe true
-      Util.retryUntil(restClient.queryExecutorBrief(appId).map(_.executorId).max > executorToKill)
+      Util.retryUntil(() => restClient.queryExecutorBrief(appId)
+        .map(_.executorId).max > executorToKill,
+        s"executor $executorToKill killed")
 
       // verify #3
       val detector = new MessageLossDetector(producer.lastWriteNum)
       val kafkaReader = new SimpleKafkaReader(detector, sinkTopic,
         host = kafkaCluster.advertisedHost, port = kafkaCluster.advertisedPort)
-      Util.retryUntil({
+      Util.retryUntil(() => {
         kafkaReader.read()
         detector.allReceived
-      })
+      }, "kafka all message read")
     }
   }
-
 }

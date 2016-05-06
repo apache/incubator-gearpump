@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,17 +17,19 @@
  */
 package io.gearpump.integrationtest.kafka
 
-import com.twitter.bijection.Injection
+import scala.util.{Failure, Success}
+
 import kafka.api.FetchRequestBuilder
 import kafka.consumer.SimpleConsumer
 import kafka.utils.Utils
 
-import scala.util.{Failure, Success}
+import io.gearpump.streaming.serializer.ChillSerializer
 
 class SimpleKafkaReader(verifier: ResultVerifier, topic: String, partition: Int = 0,
-  host: String, port: Int) {
+    host: String, port: Int) {
 
   private val consumer = new SimpleConsumer(host, port, 100000, 64 * 1024, "")
+  private val serializer = new ChillSerializer[Int]
   private var offset = 0L
 
   def read(): Unit = {
@@ -36,7 +38,7 @@ class SimpleKafkaReader(verifier: ResultVerifier, topic: String, partition: Int 
     ).messageSet(topic, partition)
 
     for (messageAndOffset <- messageSet) {
-      Injection.invert[String, Array[Byte]](Utils.readBytes(messageAndOffset.message.payload)) match {
+      serializer.deserialize(Utils.readBytes(messageAndOffset.message.payload)) match {
         case Success(msg) =>
           offset = messageAndOffset.nextOffset
           verifier.onNext(msg)
@@ -44,5 +46,4 @@ class SimpleKafkaReader(verifier: ResultVerifier, topic: String, partition: Int 
       }
     }
   }
-
 }

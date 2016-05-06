@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,19 +19,18 @@
 package io.gearpump.experiments.yarn.client
 
 import java.io.IOException
-
-import akka.actor.{ActorRef, ActorSystem}
-import io.gearpump.experiments.yarn.glue.Records.ApplicationId
-import io.gearpump.experiments.yarn.glue.YarnClient
-import io.gearpump.util.LogUtil
-import org.apache.commons.httpclient.HttpClient
-import org.apache.commons.httpclient.methods.GetMethod
-import org.slf4j.Logger
-
 import scala.util.Try
 
+import akka.actor.{ActorRef, ActorSystem}
+import org.apache.commons.httpclient.HttpClient
+import org.apache.commons.httpclient.methods.GetMethod
+
+import io.gearpump.experiments.yarn.glue.Records.ApplicationId
+import io.gearpump.experiments.yarn.glue.YarnClient
+import io.gearpump.util.{AkkaHelper, LogUtil}
+
 /**
- * Resolve AppMaster ActorRef
+ * Resolves AppMaster ActorRef
  */
 class AppMasterResolver(yarnClient: YarnClient, system: ActorSystem) {
   val LOG = LogUtil.getLogger(getClass)
@@ -52,7 +51,7 @@ class AppMasterResolver(yarnClient: YarnClient, system: ActorSystem) {
     if (status == 200) {
       val response = get.getResponseBodyAsString
       LOG.info("Successfully resolved AppMaster address: " + response)
-      system.actorFor(response)
+      AkkaHelper.actorFor(system, response)
     } else {
       throw new IOException("Fail to resolve AppMaster address, please make sure " +
         s"${report.getOriginalTrackingUrl} is accessible...")
@@ -67,7 +66,8 @@ class AppMasterResolver(yarnClient: YarnClient, system: ActorSystem) {
       index += 1
       val tryConnect = Try(fun)
       if (tryConnect.isFailure) {
-        Console.err.println(s"Failed to connect YarnAppMaster(tried $index)... "  + tryConnect.failed.get.getMessage)
+        LOG.error(s"Failed to connect YarnAppMaster(tried $index)... " +
+          tryConnect.failed.get.getMessage)
       } else {
         result = tryConnect.get
       }

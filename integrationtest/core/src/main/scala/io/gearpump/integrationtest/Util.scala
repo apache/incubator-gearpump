@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,9 +17,10 @@
  */
 package io.gearpump.integrationtest
 
-import org.apache.log4j.Logger
-
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
+
+import org.apache.log4j.Logger
 
 object Util {
 
@@ -39,25 +40,33 @@ object Util {
     }
   }
 
-  def retryUntil(condition: => Boolean, attempts: Int = 15,
-                 interval: Duration = 20.seconds): Unit = {
+  def retryUntil(
+      condition: () => Boolean, conditionDescription: String, maxTries: Int = 15,
+      interval: Duration = 10.seconds): Unit = {
     var met = false
-    var attemptsLeft = attempts
+    var tries = 0
 
-    while (!met) {
-      try {
-        attemptsLeft -= 1
-        met = condition
-        if (!met) {
-          throw new RuntimeException(
-            s"condition is not met after ${attempts - attemptsLeft} retries")
-        }
-      } catch {
-        case ex if attemptsLeft > 0 =>
-          LOG.debug(s"condition is not met (maybe machine is slow). retry in ${interval.toSeconds}s ($attemptsLeft attempts left)")
-          Thread.sleep(interval.toMillis)
+    while (!met && tries < maxTries) {
+
+      met = Try(condition()) match {
+        case Success(true) => true
+        case Success(false) => false
+        case Failure(ex) => false
+      }
+
+      tries += 1
+
+      if (!met) {
+        LOG.error(s"Failed due to (false == $conditionDescription), " +
+          s"retrying for the ${tries} times...")
+        Thread.sleep(interval.toMillis)
+      } else {
+        LOG.info(s"Success ($conditionDescription) after ${tries} retries")
       }
     }
-  }
 
+    if (!met) {
+      throw new Exception(s"Failed after ${tries} retries, ($conditionDescription) == false")
+    }
+  }
 }

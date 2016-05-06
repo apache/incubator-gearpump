@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,25 +17,30 @@
  */
 package io.gearpump.integrationtest.minicluster
 
+import scala.reflect.ClassTag
+
 import com.typesafe.config.{Config, ConfigFactory}
-import io.gearpump.cluster.{AppJar, MasterToAppMaster}
+import org.apache.log4j.Logger
+import upickle.Js
+import upickle.default._
+
+import io.gearpump.cluster.AppMasterToMaster.MasterData
 import io.gearpump.cluster.MasterToAppMaster.{AppMasterData, AppMastersData}
 import io.gearpump.cluster.MasterToClient.HistoryMetrics
+import io.gearpump.cluster.master.MasterSummary
+import io.gearpump.cluster.worker.{WorkerId, WorkerSummary}
+import io.gearpump.cluster.{AppJar, MasterToAppMaster}
 import io.gearpump.integrationtest.{Docker, Util}
 import io.gearpump.services.AppMasterService.Status
 import io.gearpump.services.MasterService.{AppSubmissionResult, BuiltinPartitioners}
+// NOTE: This cannot be removed!!!
+import io.gearpump.services.util.UpickleUtil._
 import io.gearpump.streaming.ProcessorDescription
-import io.gearpump.cluster.AppMasterToMaster.MasterData
-import io.gearpump.cluster.master.MasterSummary
-import io.gearpump.cluster.worker.WorkerSummary
 import io.gearpump.streaming.appmaster.AppMaster.ExecutorBrief
 import io.gearpump.streaming.appmaster.DagManager.{DAGOperationResult, ReplaceProcessor}
 import io.gearpump.streaming.appmaster.StreamAppMasterSummary
 import io.gearpump.streaming.executor.Executor.ExecutorSummary
 import io.gearpump.util.{Constants, Graph}
-import org.apache.log4j.Logger
-import upickle.Js
-import upickle.default._
 
 /**
  * A REST client to operate a Gearpump cluster
@@ -46,23 +51,25 @@ class RestClient(host: String, port: Int) {
 
   private val cookieFile: String = "cookie.txt"
 
-  implicit val graphReader: upickle.default.Reader[Graph[Int, String]] = upickle.default.Reader[Graph[Int, String]] {
+  implicit val graphReader: upickle.default.Reader[Graph[Int, String]] =
+    upickle.default.Reader[Graph[Int, String]] {
     case Js.Obj(verties, edges) =>
       val vertexList = upickle.default.readJs[List[Int]](verties._2)
       val edgeList = upickle.default.readJs[List[(Int, String, Int)]](edges._2)
       Graph(vertexList, edgeList)
   }
 
-  private def decodeAs[T: upickle.default.Reader](expr: String): T = try {
+  private def decodeAs[T](
+      expr: String)(implicit reader: upickle.default.Reader[T], classTag: ClassTag[T]): T = try {
     read[T](expr)
   } catch {
     case ex: Throwable =>
-      LOG.error(ex)
+      LOG.error(s"Failed to decode Rest response to ${classTag.runtimeClass.getSimpleName}")
       throw ex
   }
 
   def queryVersion(): String = {
-    callFromRoot("version")
+    curl("version")
   }
 
   def listWorkers(): Array[WorkerSummary] = {
@@ -87,15 +94,21 @@ class RestClient(host: String, port: Int) {
     listApps().length + 1
   }
 
-  def submitApp(jar: String, args: String = "", config: String = ""): Boolean = try {
+  def submitApp(jar: String, executorNum: Int, args: String = "", config: String = "")
+    : Boolean = try {
     var endpoint = "master/submitapp"
-    if (args.length > 0) {
-      endpoint += "?args=" + Util.encodeUriComponent(args)
-    }
+
     var options = Seq(s"jar=@$jar")
     if (config.length > 0) {
       options :+= s"conf=@$config"
     }
+
+    options :+= s"executorcount=$executorNum"
+
+    if (args != null && !args.isEmpty) {
+      options :+= "args=\"" + args + "\""
+    }
+
     val resp = callApi(endpoint, options.map("-F " + _).mkString(" "))
     val result = decodeAs[AppSubmissionResult](resp)
     assert(result.success)
@@ -121,7 +134,8 @@ class RestClient(host: String, port: Int) {
     decodeAs[StreamAppMasterSummary](resp)
   }
 
-  def queryStreamingAppMetrics(appId: Int, current: Boolean, path: String = "processor*"): HistoryMetrics = {
+  def queryStreamingAppMetrics(appId: Int, current: Boolean, path: String = "processor*")
+    : HistoryMetrics = {
     val args = if (current) "?readLatest=true" else ""
     val resp = callApi(s"appmaster/$appId/metrics/app$appId.$path$args")
     decodeAs[HistoryMetrics](resp)
@@ -163,14 +177,15 @@ class RestClient(host: String, port: Int) {
     ConfigFactory.parseString(resp)
   }
 
-  def queryWorkerMetrics(workerId: Int, current: Boolean): HistoryMetrics = {
+  def queryWorkerMetrics(workerId: WorkerId, current: Boolean): HistoryMetrics = {
     val args = if (current) "?readLatest=true" else ""
-    val resp = callApi(s"worker/$workerId/metrics/worker$workerId?$args")
+    val workerIdStr = WorkerId.render(workerId)
+    val resp = callApi(s"worker/$workerIdStr/metrics/worker$workerIdStr?$args")
     decodeAs[HistoryMetrics](resp)
   }
 
-  def queryWorkerConfig(workerId: Int): Config = {
-    val resp = callApi(s"worker/$workerId/config")
+  def queryWorkerConfig(workerId: WorkerId): Config = {
+    val resp = callApi(s"worker/${WorkerId.render(workerId)}/config")
     ConfigFactory.parseString(resp)
   }
 
@@ -187,7 +202,8 @@ class RestClient(host: String, port: Int) {
   def replaceStreamingAppProcessor(appId: Int, replaceMe: ProcessorDescription): Boolean = try {
     val replaceOperation = new ReplaceProcessor(replaceMe.id, replaceMe)
     val args = upickle.default.write(replaceOperation)
-    val resp = callApi(s"appmaster/$appId/dynamicdag?args=" + Util.encodeUriComponent(args), CRUD_POST)
+    val resp = callApi(s"appmaster/$appId/dynamicdag?args=" + Util.encodeUriComponent(args),
+      CRUD_POST)
     decodeAs[DAGOperationResult](resp)
     true
   } catch {
@@ -233,16 +249,15 @@ class RestClient(host: String, port: Int) {
   private val CRUD_DELETE = "-X DELETE"
 
   private def callApi(endpoint: String, option: String = ""): String = {
-    callFromRoot(s"api/v1.0/$endpoint", Array(option, s"--cookie $cookieFile"))
+    curl(s"api/v1.0/$endpoint", Array(option, s"--cookie $cookieFile"))
   }
 
-  private def callFromRoot(endpoint: String, options: Array[String] = Array.empty[String]): String = {
-    Docker.execAndCaptureOutput(host, s"curl -s ${options.mkString(" ")} http://$host:$port/$endpoint")
+  private def curl(endpoint: String, options: Array[String] = Array.empty[String]): String = {
+    Docker.curl(host, s"http://$host:$port/$endpoint", options)
   }
 
   def login(): Unit = {
-    callFromRoot("login", Array(CRUD_POST, s"--cookie-jar $cookieFile",
+    curl("login", Array(CRUD_POST, s"--cookie-jar $cookieFile",
       "--data username=admin", "--data password=admin"))
   }
-
 }

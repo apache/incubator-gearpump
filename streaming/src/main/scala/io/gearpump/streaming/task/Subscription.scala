@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,20 +18,22 @@
 
 package io.gearpump.streaming.task
 
+import org.slf4j.Logger
+
 import io.gearpump.google.common.primitives.Shorts
-import io.gearpump.partitioner.{Partitioner, MulticastPartitioner, UnicastPartitioner}
+import io.gearpump.partitioner.{MulticastPartitioner, Partitioner, UnicastPartitioner}
 import io.gearpump.streaming.AppMasterToExecutor.MsgLostException
 import io.gearpump.streaming.LifeTime
 import io.gearpump.streaming.task.Subscription._
 import io.gearpump.util.LogUtil
 import io.gearpump.{Message, TimeStamp}
-import org.slf4j.Logger
 
 /**
- * This manage the output and message clock for single downstream processor
+ * Manges the output and message clock for single downstream processor
  *
  * @param subscriber downstream processor
- * @param maxPendingMessageCount trigger flow control. Should be bigger than maxPendingMessageCountPerAckRequest
+ * @param maxPendingMessageCount trigger flow control. Should be bigger than
+ *                               maxPendingMessageCountPerAckRequest
  * @param ackOnceEveryMessageCount send on AckRequest to the target
  */
 class Subscription(
@@ -44,9 +46,10 @@ class Subscription(
     ackOnceEveryMessageCount: Int = ONE_ACKREQUEST_EVERY_MESSAGE_COUNT) {
 
   assert(maxPendingMessageCount >= ackOnceEveryMessageCount)
-  assert(maxPendingMessageCount  < Short.MaxValue / 2)
+  assert(maxPendingMessageCount < Short.MaxValue / 2)
 
-  val LOG: Logger = LogUtil.getLogger(getClass, app = appId, executor = executorId, task = taskId)
+  private val LOG: Logger = LogUtil.getLogger(getClass, app = appId,
+    executor = executorId, task = taskId)
 
   import subscriber.{parallelism, partitionerDescription, processorId}
 
@@ -62,8 +65,8 @@ class Subscription(
 
   private var life = subscriber.lifeTime
 
-  val partitioner = partitionerDescription.partitionerFactory.partitioner
-  val sendFn = partitioner match {
+  private val partitioner = partitionerDescription.partitionerFactory.partitioner
+  private val sendFn = partitioner match {
     case up: UnicastPartitioner =>
       (msg: Message) => {
         val partition = up.getPartition(msg, parallelism, taskId.index)
@@ -74,14 +77,13 @@ class Subscription(
         val partitions = mp.getPartitions(msg, parallelism, taskId.index)
         partitions.map(partition => sendMessage(msg, partition)).sum
       }
-
   }
 
   def changeLife(life: LifeTime): Unit = {
     this.life = life
   }
 
-  def start: Unit = {
+  def start(): Unit = {
     val ackRequest = InitialAckRequest(taskId, sessionId)
     transport.transport(ackRequest, allTasks: _*)
   }
@@ -91,14 +93,16 @@ class Subscription(
   }
 
   /**
-   * Return how many message is actually sent by this subscription
+   * Returns how many message is actually sent by this subscription
+   *
    * @param msg  the message to send
    * @param partition  the target partition to send message to
    * @return 1 if success
    */
   def sendMessage(msg: Message, partition: Int): Int = {
 
-    // only send message whose timestamp matches the lifeTime
+    var count = 0
+    // Only sends message whose timestamp matches the lifeTime
     if (partition != Partitioner.UNKNOWN_PARTITION_ID && life.contains(msg.timestamp)) {
 
       val targetTask = TaskId(processorId, partition)
@@ -107,52 +111,50 @@ class Subscription(
       this.minClockValue(partition) = Math.min(this.minClockValue(partition), msg.timestamp)
       this.candidateMinClock(partition) = Math.min(this.candidateMinClock(partition), msg.timestamp)
 
-      messageCount(partition) = (messageCount(partition) + 1).toShort
-      pendingMessageCount(partition) = (pendingMessageCount(partition) + 1).toShort
-      updateMaxPendingCount()
+      incrementMessageCount(partition, 1)
 
       if (messageCount(partition) % ackOnceEveryMessageCount == 0) {
-        val ackRequest = AckRequest(taskId, messageCount(partition), sessionId)
-        transport.transport(ackRequest, targetTask)
+        sendAckRequest(partition)
       }
 
-      if (messageCount(partition) % maxPendingMessageCount == 0) {
-        val probeLatency = LatencyProbe(System.currentTimeMillis())
-        transport.transport(probeLatency, targetTask)
+      if (messageCount(partition) / maxPendingMessageCount !=
+        (messageCount(partition) + ackOnceEveryMessageCount) / maxPendingMessageCount) {
+        sendLatencyProbe(partition)
       }
-
-      return 1
+      count = 1
+      count
     } else {
       if (needFlush) {
-        flush
+        flush()
       }
-
-      return 0
+      count = 0
+      count
     }
   }
 
   private var lastFlushTime: Long = 0L
   private val FLUSH_INTERVAL = 5 * 1000 // ms
   private def needFlush: Boolean = {
-    System.currentTimeMillis() - lastFlushTime > FLUSH_INTERVAL && Shorts.max(pendingMessageCount: _*) > 0
+    System.currentTimeMillis() - lastFlushTime > FLUSH_INTERVAL &&
+      Shorts.max(pendingMessageCount: _*) > 0
   }
 
-  private def flush: Unit = {
+  private def flush(): Unit = {
     lastFlushTime = System.currentTimeMillis()
     allTasks.foreach { targetTaskId =>
-      val ackRequest = AckRequest(taskId, messageCount(targetTaskId.index), sessionId)
-      transport.transport(ackRequest, targetTaskId)
+      sendAckRequest(targetTaskId.index)
     }
   }
 
   private def allTasks: scala.collection.Seq[TaskId] = {
-    (0 until parallelism).map {taskIndex =>
+    (0 until parallelism).map { taskIndex =>
       TaskId(processorId, taskIndex)
     }
   }
 
-  /** Handle acknowledge message.
-    * Throw MessageLossException if required.
+  /**
+   * Handles acknowledge message. Throw MessageLossException if required.
+   *
    * @param ack acknowledge message received
    */
   def receiveAck(ack: Ack): Unit = {
@@ -163,7 +165,7 @@ class Subscription(
       if (ack.actualReceivedNum == ack.seq) {
         if ((ack.seq - candidateMinClockSince(index)).toShort >= 0) {
           if (ack.seq == messageCount(index)) {
-            // all messages have been acked.
+            // All messages have been acked.
             minClockValue(index) = Long.MaxValue
           } else {
             minClockValue(index) = candidateMinClock(index)
@@ -175,7 +177,8 @@ class Subscription(
         pendingMessageCount(ack.taskId.index) = (messageCount(ack.taskId.index) - ack.seq).toShort
         updateMaxPendingCount()
       } else {
-        LOG.error(s"Failed! received ack: $ack, received: ${ack.actualReceivedNum}, sent: ${ack.seq}, try to replay...")
+        LOG.error(s"Failed! received ack: $ack, received: ${ack.actualReceivedNum}, " +
+          s"sent: ${ack.seq}, try to replay...")
         throw new MsgLostException
       }
     }
@@ -185,17 +188,48 @@ class Subscription(
     minClockValue.min
   }
 
-  def allowSendingMoreMessages() : Boolean = {
+  def allowSendingMoreMessages(): Boolean = {
     maxPendingCount < maxPendingMessageCount
   }
 
-  private def updateMaxPendingCount() : Unit = {
+  def sendAckRequestOnStallingTime(stallingTime: TimeStamp): Unit = {
+    minClockValue.indices.foreach { i =>
+      if (minClockValue(i) == stallingTime && pendingMessageCount(i) > 0
+        && allowSendingMoreMessages) {
+        sendAckRequest(i)
+        sendLatencyProbe(i)
+      }
+    }
+  }
+
+  private def sendAckRequest(partition: Int): Unit = {
+    // Increments more count for each AckRequest
+    // to throttle the number of unacked AckRequest
+    incrementMessageCount(partition, ackOnceEveryMessageCount)
+    val targetTask = TaskId(processorId, partition)
+    val ackRequest = AckRequest(taskId, messageCount(partition), sessionId)
+    transport.transport(ackRequest, targetTask)
+  }
+
+  private def incrementMessageCount(partition: Int, count: Int): Unit = {
+    messageCount(partition) = (messageCount(partition) + count).toShort
+    pendingMessageCount(partition) = (pendingMessageCount(partition) + count).toShort
+    updateMaxPendingCount()
+  }
+
+  private def updateMaxPendingCount(): Unit = {
     maxPendingCount = Shorts.max(pendingMessageCount: _*)
+  }
+
+  private def sendLatencyProbe(partition: Int): Unit = {
+    val probeLatency = LatencyProbe(System.currentTimeMillis())
+    val targetTask = TaskId(processorId, partition)
+    transport.transport(probeLatency, targetTask)
   }
 }
 
 object Subscription {
-  //make sure it is smaller than MAX_PENDING_MESSAGE_COUNT
+  // Makes sure it is smaller than MAX_PENDING_MESSAGE_COUNT
   final val ONE_ACKREQUEST_EVERY_MESSAGE_COUNT = 100
   final val MAX_PENDING_MESSAGE_COUNT = 1000
 }

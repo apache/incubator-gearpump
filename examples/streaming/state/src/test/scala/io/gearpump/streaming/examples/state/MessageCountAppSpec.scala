@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,16 +18,19 @@
 
 package io.gearpump.streaming.examples.state
 
-import io.gearpump.cluster.ClientToMaster.SubmitApplication
-import io.gearpump.cluster.MasterToClient.SubmitApplicationResult
-import io.gearpump.cluster.{MasterHarness, TestUtil}
-import org.scalatest.{Matchers, BeforeAndAfter, PropSpec}
-import org.scalatest.prop.PropertyChecks
-
 import scala.concurrent.Future
 import scala.util.Success
 
-class MessageCountAppSpec extends PropSpec with PropertyChecks with Matchers with BeforeAndAfter with MasterHarness {
+import org.scalatest.prop.PropertyChecks
+import org.scalatest.{BeforeAndAfter, Matchers, PropSpec}
+
+import io.gearpump.cluster.ClientToMaster.SubmitApplication
+import io.gearpump.cluster.MasterToClient.SubmitApplicationResult
+import io.gearpump.cluster.{MasterHarness, TestUtil}
+import io.gearpump.streaming.examples.state.MessageCountApp._
+
+class MessageCountAppSpec
+  extends PropSpec with PropertyChecks with Matchers with BeforeAndAfter with MasterHarness {
 
   before {
     startActorSystem()
@@ -37,13 +40,20 @@ class MessageCountAppSpec extends PropSpec with PropertyChecks with Matchers wit
     shutdownActorSystem()
   }
 
-  override def config = TestUtil.DEFAULT_CONFIG
+  protected override def config = TestUtil.DEFAULT_CONFIG
 
   property("MessageCount should succeed to submit application with required arguments") {
-    val requiredArgs = Array.empty[String]
+    val requiredArgs = Array(
+      s"-$SOURCE_TOPIC", "source",
+      s"-$SINK_TOPIC", "sink",
+      s"-$ZOOKEEPER_CONNECT", "localhost:2181",
+      s"-$BROKER_LIST", "localhost:9092",
+      s"-$DEFAULT_FS", "hdfs://localhost:9000"
+    )
     val optionalArgs = Array(
-      "-gen", "2",
-      "-count", "2"
+      s"-$SOURCE_TASK", "2",
+      s"-$COUNT_TASK", "2",
+      s"-$SINK_TASK", "2"
     )
 
     val args = {
@@ -51,13 +61,17 @@ class MessageCountAppSpec extends PropSpec with PropertyChecks with Matchers wit
         ("requiredArgs", "optionalArgs"),
         (requiredArgs, optionalArgs.take(0)),
         (requiredArgs, optionalArgs.take(2)),
+        (requiredArgs, optionalArgs.take(4)),
         (requiredArgs, optionalArgs)
       )
     }
+
     val masterReceiver = createMockMaster()
     forAll(args) { (requiredArgs: Array[String], optionalArgs: Array[String]) =>
       val args = requiredArgs ++ optionalArgs
-      Future {MessageCountApp.main(masterConfig, args)}
+      Future {
+        MessageCountApp.main(masterConfig, args)
+      }
       masterReceiver.expectMsgType[SubmitApplication](PROCESS_BOOT_TIME)
       masterReceiver.reply(SubmitApplicationResult(Success(0)))
     }

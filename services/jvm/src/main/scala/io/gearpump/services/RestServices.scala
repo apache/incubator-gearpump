@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,20 +18,25 @@
 
 package io.gearpump.services
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{Route, _}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import io.gearpump.jarstore.JarStoreService
-import io.gearpump.util.{Constants, LogUtil}
 import org.apache.commons.lang.exception.ExceptionUtils
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import io.gearpump.jarstore.JarStoreService
+import io.gearpump.util.{Constants, LogUtil}
+// NOTE: This cannot be removed!!!
+import io.gearpump.services.util.UpickleUtil._
 
-class RestServices(master: ActorRef, mat: ActorMaterializer, system: ActorSystem) extends RouteService {
+/** Contains all REST API service endpoints */
+class RestServices(master: ActorRef, mat: ActorMaterializer, system: ActorSystem)
+  extends RouteService {
 
   implicit val timeout = Constants.FUTURE_TIMEOUT
 
@@ -42,9 +47,11 @@ class RestServices(master: ActorRef, mat: ActorMaterializer, system: ActorSystem
 
   private val LOG = LogUtil.getLogger(getClass)
 
-  private val securityEnabled = config.getBoolean(Constants.GEARPUMP_UI_SECURITY_ENABLED)
+  private val securityEnabled = config.getBoolean(
+    Constants.GEARPUMP_UI_SECURITY_AUTHENTICATION_ENABLED)
 
-  private val supervisorPath = system.settings.config.getString(Constants.GEARPUMP_SERVICE_SUPERVISOR_PATH)
+  private val supervisorPath = system.settings.config.getString(
+    Constants.GEARPUMP_SERVICE_SUPERVISOR_PATH)
 
   private val myExceptionHandler: ExceptionHandler = ExceptionHandler {
     case ex: Throwable => {
@@ -55,13 +62,17 @@ class RestServices(master: ActorRef, mat: ActorMaterializer, system: ActorSystem
     }
   }
 
-  // make sure staticRoute is the final one, as it will try to lookup resource in local path
+  // Makes sure staticRoute is the final one, as it will try to lookup resource in local path
   // if there is no match in previous routes
   private val static = new StaticService(system, supervisorPath).route
 
   def supervisor: ActorRef = {
-    val actorRef = system.actorSelection(supervisorPath).resolveOne()
-    Await.result(actorRef, new Timeout(Duration.create(5, "seconds")).duration)
+    if (supervisorPath == null || supervisorPath.isEmpty()) {
+      null
+    } else {
+      val actorRef = system.actorSelection(supervisorPath).resolveOne()
+      Await.result(actorRef, new Timeout(Duration.create(5, "seconds")).duration)
+    }
   }
 
   override def route: Route = {
@@ -83,7 +94,7 @@ class RestServices(master: ActorRef, mat: ActorMaterializer, system: ActorSystem
     val masterService = new MasterService(master, jarStoreService, system)
     val worker = new WorkerService(master, system)
     val app = new AppMasterService(master, jarStoreService, system)
-    val sup = new SupervisorService(supervisor, system)
+    val sup = new SupervisorService(master, supervisor, system)
 
     new RouteService {
       override def route: Route = {

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,42 +18,43 @@
 
 package io.gearpump.streaming.examples.state.processor
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
 import com.twitter.algebird.AveragedValue
-import io.gearpump.streaming.MockUtil
-import io.gearpump.streaming.state.impl.{InMemoryCheckpointStoreFactory, WindowConfig, PersistentStateConfig}
-import io.gearpump.streaming.task.{StartTime, ReportCheckpointClock}
-import io.gearpump.streaming.transaction.api.CheckpointStoreFactory
-import io.gearpump.Message
-import io.gearpump.cluster.UserConfig
-import io.gearpump.streaming.state.impl.InMemoryCheckpointStoreFactory
-import io.gearpump.streaming.task.StartTime
 import org.mockito.Mockito._
 import org.scalacheck.Gen
-import org.scalatest.{Matchers, PropSpec}
 import org.scalatest.prop.PropertyChecks
+import org.scalatest.{Matchers, PropSpec}
 
+import io.gearpump.Message
+import io.gearpump.cluster.UserConfig
+import io.gearpump.streaming.MockUtil
+import io.gearpump.streaming.state.api.PersistentTask
+import io.gearpump.streaming.state.impl.{InMemoryCheckpointStoreFactory, PersistentStateConfig, WindowConfig}
+import io.gearpump.streaming.task.{ReportCheckpointClock, StartTime}
+import io.gearpump.streaming.transaction.api.CheckpointStoreFactory
 
 class WindowAverageProcessorSpec extends PropSpec with PropertyChecks with Matchers {
   property("WindowAverageProcessor should update state") {
 
-    val taskContext = MockUtil.mockTaskContext
-
     implicit val system = ActorSystem("test")
-
     val longGen = Gen.chooseNum[Long](1, 1000)
     forAll(longGen, longGen) {
       (data: Long, num: Long) =>
+        val taskContext = MockUtil.mockTaskContext
+
         val windowSize = num
         val windowStep = num
 
         val conf = UserConfig.empty
-            .withBoolean(PersistentStateConfig.STATE_CHECKPOINT_ENABLE, true)
-            .withLong(PersistentStateConfig.STATE_CHECKPOINT_INTERVAL_MS, num)
-            .withValue[CheckpointStoreFactory](PersistentStateConfig.STATE_CHECKPOINT_STORE_FACTORY, new InMemoryCheckpointStoreFactory)
-
-            .withValue(WindowConfig.NAME, WindowConfig(windowSize, windowStep))
+          .withBoolean(PersistentStateConfig.STATE_CHECKPOINT_ENABLE, true)
+          .withLong(PersistentStateConfig.STATE_CHECKPOINT_INTERVAL_MS, num)
+          .withValue[CheckpointStoreFactory](PersistentStateConfig.STATE_CHECKPOINT_STORE_FACTORY,
+            new InMemoryCheckpointStoreFactory)
+          .withValue(WindowConfig.NAME, WindowConfig(windowSize, windowStep))
 
         val windowAverage = new WindowAverageProcessor(taskContext, conf)
 
@@ -63,22 +64,23 @@ class WindowAverageProcessorSpec extends PropSpec with PropertyChecks with Match
         windowAverage.onStart(StartTime(0L))
         appMaster.expectMsg(ReportCheckpointClock(taskContext.taskId, 0L))
 
-        for (i <- 1L to num) {
-          when(taskContext.upstreamMinClock).thenReturn(0L)
-          windowAverage.onNext(Message("" + data, 0L))
+        for (i <- 0L until num) {
+          windowAverage.onNext(Message("" + data, i))
+          windowAverage.state.get shouldBe Some(AveragedValue(i + 1, data))
         }
 
-        windowAverage.state.get shouldBe Some(AveragedValue(num, data))
+        // Next checkpoint time is not arrived yet
+        when(taskContext.upstreamMinClock).thenReturn(0L)
+        windowAverage.onNext(PersistentTask.CHECKPOINT)
+        appMaster.expectNoMsg(10.milliseconds)
 
+        // Time to checkpoint
         when(taskContext.upstreamMinClock).thenReturn(num)
-        windowAverage.onNext(Message("" + data, num))
+        windowAverage.onNext(PersistentTask.CHECKPOINT)
         appMaster.expectMsg(ReportCheckpointClock(taskContext.taskId, num))
-
-
-        windowAverage.state.get shouldBe Some(AveragedValue(1L, data))
     }
 
-    system.shutdown()
-    system.awaitTermination()
+    system.terminate()
+    Await.result(system.whenTerminated, Duration.Inf)
   }
 }

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,22 +18,23 @@
 
 package io.gearpump.services
 
-import akka.http.scaladsl.testkit.{RouteTestTimeout}
-import com.typesafe.config.Config
-import io.gearpump.cluster.TestUtil
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import akka.actor.{ActorSystem}
-import akka.http.scaladsl.server._
 import scala.concurrent.duration._
-import akka.http.scaladsl.model._
-import headers._
-import akka.http.scaladsl.model.FormData
-import akka.http.scaladsl.model.headers.{Cookie, `Set-Cookie`}
-import akka.http.scaladsl.server.AuthorizationFailedRejection
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.testkit.ScalatestRouteTest
 
-class SecurityServiceSpec extends FlatSpec with ScalatestRouteTest  with Matchers with BeforeAndAfterAll {
+import akka.actor.ActorSystem
+import akka.http.scaladsl.model.FormData
+import akka.http.scaladsl.model.headers.{Cookie, `Set-Cookie`, _}
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, _}
+import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
+import com.typesafe.config.Config
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+
+import io.gearpump.cluster.TestUtil
+// NOTE: This cannot be removed!!!
+import io.gearpump.services.util.UpickleUtil._
+
+class SecurityServiceSpec
+  extends FlatSpec with ScalatestRouteTest with Matchers with BeforeAndAfterAll {
 
   override def testConfig: Config = TestUtil.UI_CONFIG
 
@@ -42,9 +43,9 @@ class SecurityServiceSpec extends FlatSpec with ScalatestRouteTest  with Matcher
   it should "return 401 if not authenticated" in {
     val security = new SecurityService(SecurityServiceSpec.resource, actorSystem)
 
-    implicit val customTimeout = RouteTestTimeout(15 seconds)
+    implicit val customTimeout = RouteTestTimeout(15.seconds)
 
-    (Get(s"/resource") ~> security.route) ~> check{
+    (Get(s"/resource") ~> security.route) ~> check {
       assert(rejection.isInstanceOf[AuthenticationFailedRejection])
     }
   }
@@ -52,30 +53,31 @@ class SecurityServiceSpec extends FlatSpec with ScalatestRouteTest  with Matcher
   "guest" should "get protected resource after authentication" in {
     val security = new SecurityService(SecurityServiceSpec.resource, actorSystem)
 
-    implicit val customTimeout = RouteTestTimeout(15 seconds)
+    implicit val customTimeout = RouteTestTimeout(15.seconds)
 
     var cookie: HttpCookiePair = null
-    (Post(s"/login", FormData("username" -> "guest", "password" -> "guest")) ~> security.route) ~> check{
+    (Post(s"/login", FormData("username" -> "guest", "password" -> "guest"))
+      ~> security.route) ~> check {
       assert("{\"user\":\"guest\"}" == responseAs[String])
       assert(status.intValue() == 200)
       assert(header[`Set-Cookie`].isDefined)
       val httpCookie = header[`Set-Cookie`].get.cookie
       assert(httpCookie.name == "gearpump_token")
-      cookie = new HttpCookiePair(httpCookie.name, httpCookie.value)
+      cookie = HttpCookiePair.apply(httpCookie.name, httpCookie.value)
     }
 
-    // after authentication, everything is fine.
-    Get("/resource") ~>  addHeader(Cookie(cookie)) ~> security.route ~> check {
+    // After authentication, everything is fine.
+    Get("/resource").addHeader(Cookie(cookie)) ~> security.route ~> check {
       responseAs[String] shouldEqual "OK"
     }
 
-    // however, guest cannot access high-permission operations, like POST.
-    Post("/resource") ~> addHeader(Cookie(cookie)) ~> security.route ~> check {
+    // However, guest cannot access high-permission operations, like POST.
+    Post("/resource").addHeader(Cookie(cookie)) ~> security.route ~> check {
       assert(rejection == AuthorizationFailedRejection)
     }
 
-    // logout, should clear the session
-    Post(s"/logout") ~> addHeader(Cookie(cookie)) ~> security.route ~> check{
+    // Logout, should clear the session
+    Post(s"/logout").addHeader(Cookie(cookie)) ~> security.route ~> check {
       assert("{\"user\":\"guest\"}" == responseAs[String])
       assert(status.intValue() == 200)
       assert(header[`Set-Cookie`].isDefined)
@@ -84,12 +86,12 @@ class SecurityServiceSpec extends FlatSpec with ScalatestRouteTest  with Matcher
       assert(httpCookie.value == "deleted")
     }
 
-    // access again, rejected.
-    Get("/resource") ~>  security.route ~> check {
+    // Access again, rejected this time.
+    Get("/resource") ~> security.route ~> check {
       assert(rejection.isInstanceOf[AuthenticationFailedRejection])
     }
 
-    Post("/resource") ~>  security.route ~> check {
+    Post("/resource") ~> security.route ~> check {
       assert(rejection.isInstanceOf[AuthenticationFailedRejection])
     }
   }
@@ -97,30 +99,31 @@ class SecurityServiceSpec extends FlatSpec with ScalatestRouteTest  with Matcher
   "admin" should "get protected resource after authentication" in {
     val security = new SecurityService(SecurityServiceSpec.resource, actorSystem)
 
-    implicit val customTimeout = RouteTestTimeout(15 seconds)
+    implicit val customTimeout = RouteTestTimeout(15.seconds)
 
     var cookie: HttpCookiePair = null
-    (Post(s"/login", FormData("username" -> "admin", "password" -> "admin")) ~> security.route) ~> check{
+    (Post(s"/login", FormData("username" -> "admin", "password" -> "admin"))
+      ~> security.route) ~> check {
       assert("{\"user\":\"admin\"}" == responseAs[String])
       assert(status.intValue() == 200)
       assert(header[`Set-Cookie`].isDefined)
       val httpCookie = header[`Set-Cookie`].get.cookie
       assert(httpCookie.name == "gearpump_token")
-      cookie = new HttpCookiePair(httpCookie.name, httpCookie.value)
+      cookie = HttpCookiePair(httpCookie.name, httpCookie.value)
     }
 
-    // after authentication, everything is fine.
-    Get("/resource") ~>  addHeader(Cookie(cookie)) ~> security.route ~> check {
+    // After authentication, everything is fine.
+    Get("/resource").addHeader(Cookie(cookie)) ~> security.route ~> check {
       responseAs[String] shouldEqual "OK"
     }
 
     // Not like guest, admimn can also access POST
-    Post("/resource") ~> addHeader(Cookie(cookie)) ~> security.route ~> check {
+    Post("/resource").addHeader(Cookie(cookie)) ~> security.route ~> check {
       responseAs[String] shouldEqual "OK"
     }
 
-    // logout, should clear the session
-    Post(s"/logout") ~> addHeader(Cookie(cookie)) ~> security.route ~> check{
+    // Logout, should clear the session
+    Post(s"/logout").addHeader(Cookie(cookie)) ~> security.route ~> check {
       assert("{\"user\":\"admin\"}" == responseAs[String])
       assert(status.intValue() == 200)
       assert(header[`Set-Cookie`].isDefined)
@@ -129,8 +132,8 @@ class SecurityServiceSpec extends FlatSpec with ScalatestRouteTest  with Matcher
       assert(httpCookie.value == "deleted")
     }
 
-    // access again, rejected.
-    Get("/resource") ~>  security.route ~> check {
+    // Access again, rejected this time.
+    Get("/resource") ~> security.route ~> check {
       assert(rejection.isInstanceOf[AuthenticationFailedRejection])
     }
 
@@ -144,7 +147,7 @@ object SecurityServiceSpec {
 
   val resource = new RouteService {
     override def route: Route = {
-      get{
+      get {
         path("resource") {
           complete("OK")
         }

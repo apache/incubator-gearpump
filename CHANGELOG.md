@@ -1,3 +1,98 @@
+Apache Gearpump 0.8.0
+==================
+
+Apache Incubation:
+-------------------
+Apache Gearpump enters Apache incubation. Now, we are working on importing the source code to Apache Git (INFRA-11435), and
+ a bunch of other tasks (GEARPUMP-1).
+
+Apache Gearpump Jira: https://issues.apache.org/jira/browse/GEARPUMP
+Mail list:
+
+* Subscribe link to User list: user-subscribe@gearpump.incubator.apache.org
+* Subscribe link to Dev list: dev-subscribe@gearpump.incubator.apache.org
+* Subscribe link to Private list: private-subscribe@gearpump.incubator.apache.org
+* Subscribe link to commits list: commits-subscribe@gearpump.incubator.apache.org
+
+What are the changes for the process for Apache Incubation?
+------------------
+The code importing to Apache Git is still in process. During this transition time,
+We will follow these procedures:
+
+ 1. For new issue, we should no longer open issue in Github issues. Instead, we
+   need to open an issue at Apache Jira: https://issues.apache.org/jira/browse/GEARPUMP
+ 2. Pull Requests are still submitted to http://github.com/gearpump/gearpump for review.
+ 3. We should cross post the link of PR to Jira site, and Jira link to Pull Request context.
+ 4. Code will still be commited to https://github.com/gearpump/gearpump
+ 5. During this transition time, document change doesn't require a +1 if it comes from committers.
+ 6. The release tag requires a consensus in project discussion like sync-meeting. But it doesn't
+   additional "+1" on code commit.
+   For example, we will ask around that whether it is OK to trigger a tag; if every one agrees,
+   then the assignee can tag the build and change the release doc directly without a written "+1" on the commit.
+
+After the transition period, the proposed process is like this:
+
+ 1. The official repo will be at git://git.apache.org/gearpump.git, all other repos will be
+    mirror of this repo.
+ 2. We will disable "write" in github issues, and switch to Apache Jira.
+ 3. We will enable Apache Github integration, which allow us to mirror official Git repo in Github.
+ 4. When the user submit a PR, there should be at least one +1 before doing merge.
+ 5. For all commits, the commit should commit the path manually to official repo
+   git://git.apache.org/gearpump.git, "Github merge" will be disabled.
+ 6. For document change, we can have further discussion on whether it should requires a +1.
+
+Before completing importing source code to Apache Git, we will still use
+
+Why we make a tag release now, but not wait until Apache importing complete?
+------------------
+There are quite a lot of open task at https://issues.apache.org/jira/browse/GEARPUMP-1, which
+would take a significant time. For example, we still don't have the new maven artifact yet.
+
+Making incremental releases like this one allow us to be more prepared to make a full Apache release.
+
+Highlights:
+------------------
+1. Update Akka to Akka 2.4.2 (#1988). Now we only support Java 8 and Scala 2.11, Java7, Scala 2.10 support is dropped
+   (Be compatible with Akka 2.4.2). The performance of Gearpump 0.8.0 is as good at Gearpump 0.76.
+2. Fix Min clock slow-advancing issue (#1318) when some graph edge (Possibly means networking between two hosts) don't
+   have enough traffic.
+3. Add OAuth2 social login for UI server.
+
+Lowlights:
+-------------------
+Akka-stream DSL module is temporary disabled, as Akka-Stream 2.4.2 has big API change compared with Akka-Stream 1.0. We'd
+like to add the full functional module back in next release.
+
+Change log:
+------------------
+From now on, new issues should be submitted to https://issues.apache.org/jira/browse/GEARPUMP
+
+- GEARPUMP-10, Downgrade netty from Netty 4 to Netty 3.8 cause the OAuth2 authentication failure
+- GEARPUMP-9, Clean and fix integration test
+- GEARPUMP-8, fix "two machines can possibly have same worker id for single-master cluster"
+- GEARPUMP-6: show add/remove worker buttons for admin
+- GEARPUMP-5, Add additional authorization check like checking user-organization for cloudfoundry OAuth2 Authenticator.
+- GEARPUMP-3, Define REST API to add/remove worker instances, which allow us to scale out in YARN.
+- GEARPUMP-2, Define REST API to submit job jar
+- #1988, upgrade akka to akka 2.4.2
+- #2015, do not send AckRequest or LatencyProbe when no pending messages
+- #1943 allow user to config how many executors to use in an application
+- #1641, add exactly-once it
+- #1318, fix MinClock not updated fast enough for slow stream
+- #1981, Support OAuth2 Social login
+- #2007, add Java DSL
+- #2002, add akka stream examples
+- #1996, EmbeddedCluster requires master configuration like ClusterActorRefProvider.
+- #1989: add confirmation dialog for kill app and restart app
+- #1983, fix KafkaUtilSpec failure
+- #1975,  fix storm integration test
+- #1972, backoff retry kafka consuming on exception
+- #1966 make Partitioner API Java compatible
+- #1892: added instruction text to operate network graph (2) minor tweaks of context menu
+- #1963, rename CommitGuideline.md to CONTRIBUTING.md
+- #1958: better test report organizing
+- #1906: some visual glitches found in mobile view
+
 Gearpump 0.7.6
 ===================
 Highlights:
@@ -136,13 +231,13 @@ Change logs:
 - #1701: wrong dirty check of modify processor and more
 - #1384: rest service url was not set correctly
 - #1682: allow specify a transition time when changing parallelism
-- #1691: dashboard layout and textual changes and update to dashing…
-- #1640 YARN deployment - no easy way of obtaining master address… 
+- #1691: dashboard layout and textual changes and update to dashing...
+- #1640 YARN deployment - no easy way of obtaining master address...
 - #1688, Reduce unimportant logs in travis UT console
 - #1671, make default timeout shorter to be more UI responsive.
 - #1685, Should not publish gearpump-integration-test to maven
 - #1683, Allow metrics to be aggregated before sending to UI
-- #1223: will mark application with a warning when stalling task de…
+- #1223: will mark application with a warning when stalling task de...
 - #1670, #1653, fix dynamic dag bug
 - #1659 add a rest api to terminate service process
 - #1672: when worker is killed, its detail page will no longer be updated
@@ -155,7 +250,7 @@ Change logs:
 - #1639 refine daemon's classpath
 - #1652, submit app with no arguments from dashboard returns warning
 - #1547 add a SequenceFileSink
-- #1424: when application is terminated, related status indicators …
+- #1424: when application is terminated, related status indicators ...
 - #1645: parse appid in submission response better
 - #1514, add an experimental module to support akka-stream 1.0
 - #1643, fix UI timeout issue when metrics is disabled
@@ -226,9 +321,9 @@ Change log:
 - #1194 add graph cycle detection
 - #491, add a rest api to acquire Gearpump's built-in partitioners
 - #1405: now the number of executors is back
-- #1371: a right way to show historical metrics (2) added committed… 
+- #1371: a right way to show historical metrics (2) added committed�? 
 - #1402, fix NoneGroupingPartitioner
-- #1399: in application overview page the task count of executor wa…
+- #1399: in application overview page the task count of executor wa...
 - #1397, allow KafkaSink to receive Message of bytes
 - #1395, cross publishSigned
 - #1374 remove jars of yarn in executor's classpath
@@ -241,15 +336,13 @@ Gearpump 0.6.1
 ==========================
 Highlight: new version UI dashboard.
 
-
 Change log:
 --------------------
 - #1369: object path and metrics name are divided by ':' now
 - #1369: fixed data initialization issue of echart
 - #1364, add default value for BYTES_PER_MESSAGE of SOLStreamProducer
-- #1361: able to show multiple tasks in chart (better not select mo…
-- #1358: properties will be updated (2) moved roboto font and echar…  
-
+- #1361: able to show multiple tasks in chart (better not select mo�?
+- #1358: properties will be updated (2) moved roboto font and echart�?  
 
 Gearpump 0.6
 ==========================
@@ -260,7 +353,6 @@ Change log:
 - #606: ui v2
 - #1352, return appmaster config
 - #1344 fix Master HA bug
-
 
 Gearpump 0.5.0
 ==========================
@@ -370,7 +462,7 @@ Change logs:
  - #1149: Shell tools printed too much detail on console
  - #1146: actor hungry when worker use block-io to wait response from FileServer.
  - #1088: move hbase code to external/
- - #1140：pass app name to task
+ - #1140: pass app name to task
  - #1017: Split daemon dependencies with core dependencies
  - #1144: fix out of memory when trying to scale gearpump to 2000 task on a 2 core machine
  - #995: Command line parser should be able to fall back  to MAIN-CLASS definition in MANIFEST.IN when mainClass is not specified in command line options.
@@ -444,7 +536,7 @@ Change list
  - #775, fix netty config
  - #778, log improvements
  - #781 when launching lots of tasks, the application failed to transfer message across hosts 
- - #782, a) add wildcard match to return metrics(support glob char … and *), b) add diagnosis message if the clock stop advancing
+ - #782, a) add wildcard match to return metrics(support glob char . and *), b) add diagnosis message if the clock stop advancing
  - #786, Read user config from classpath, the appmaster/executor wil use the dynamic user config
  - #773: skew chart will show relative skew
  - #790, 1) return detail task data in appmaster REST. 2) bind executor id with executor system id
@@ -471,8 +563,8 @@ Change list
  - #843, Can't put custom user config in application.conf
  - #849, set default hostname to 127.0.0.1 in UT
  - #851, JVM not exited when there is exception due to akka create non-daemon threads
- - #854， fix storm connector performance
- - #856， Service launch failed
+ - #854, fix storm connector performance
+ - #856, Service launch failed
  - #853, fix resource leak(thread not closed, process not killed in UT. Also increase the PermGen size to avoid Permgen OOM.
  - #859, random UT fail due to akka bug, "akka cluster deadlock when initializing"
  - #865, Change the default timeout setting in akka test expectMsg
@@ -499,7 +591,7 @@ gearpump-0.3.4
 ====================
 Change List:
 ----------------
- - #768, Serious performance degration of ui server on windows
+ - #768, Serious performance degrade of ui server on windows
  - #765, improve the graph type inference so we don't need to set template argument type explicitly
 
 gearpump-0.3.3
@@ -622,7 +714,7 @@ Change List:
  - #479, publish test jar as artifacts
  - #419, Reorder the application log by master startup timestamp
  - #456, Use visdag to render the graph DAG
- - #464， Travis bower integration
+ - #464, Travis bower integration
  - #394, fix kafka producer hang issue
  - #468, For test code, the ClockService will throw exception when the DAG is not defined
  - #465, fix appname prefix bug
@@ -655,13 +747,12 @@ Change List:
  - #378, construct the serializer explicitly, instead of implicitly via the kryo serializer akka extension
  - #380, set the context class loader as the URL class loader for ActorSystem.
 
-
 gearpump-0.2.3
 ====================
 Change List:
 ---------------
  - #333, KafkaUtilSpec causes out of memory on travis
- - #335, #359， Enable auto-deployment to sonatype
+ - #335, #359, Enable auto-deployment to sonatype
  - #299, Some UT may fail randomly, most because of the expectMsg time out
  - #338, fix kafka leader not available exception
  - #349, scoverage dependencies get into snapshot build binaries.
@@ -701,7 +792,7 @@ Highlights:
  - Add support for general replay-able data source to support at least once delivery. 
  - More robust streaming. Be resilient to message loss, message duplication, and zombie processes. 
  - Refactor Kafka data source for at least once delivery.
- - Support general applications besides streaming, add an experimental distrubtedshell application under experiments/.
+ - Support general applications besides streaming, add an experimental distributedshell application under experiments/.
  - Re-defined the AppMaster, and Task interface, It is much easier to write an application now.
  - Support submitting and distributing large applications jars.
  - Add CI tool, nightly build, code coverage, and defined a formal commit guideline.
