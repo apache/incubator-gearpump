@@ -19,16 +19,9 @@
 package org.apache.gearpump.cluster.master
 
 import java.util.concurrent.{TimeUnit, TimeoutException}
-import org.apache.gearpump.cluster.worker.WorkerId
-
-import scala.collection.JavaConverters._
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success}
 
 import akka.actor.{Actor, ActorRef, Props, _}
 import com.typesafe.config.Config
-import org.slf4j.Logger
-
 import org.apache.gearpump.cluster.AppMasterToMaster.RequestResource
 import org.apache.gearpump.cluster.AppMasterToWorker.{LaunchExecutor, ShutdownExecutor}
 import org.apache.gearpump.cluster.MasterToAppMaster.ResourceAllocated
@@ -36,11 +29,17 @@ import org.apache.gearpump.cluster.MasterToClient.SubmitApplicationResult
 import org.apache.gearpump.cluster.WorkerToAppMaster.ExecutorLaunchRejected
 import org.apache.gearpump.cluster.appmaster.{AppMasterRuntimeEnvironment, AppMasterRuntimeInfo, WorkerInfo}
 import org.apache.gearpump.cluster.scheduler.{Resource, ResourceAllocation, ResourceRequest}
+import org.apache.gearpump.cluster.worker.WorkerId
 import org.apache.gearpump.cluster.{AppDescription, AppJar, _}
 import org.apache.gearpump.transport.HostPort
 import org.apache.gearpump.util.ActorSystemBooter._
 import org.apache.gearpump.util.Constants._
 import org.apache.gearpump.util.{ActorSystemBooter, ActorUtil, LogUtil, Util}
+import org.slf4j.Logger
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success}
 
 /**
  *

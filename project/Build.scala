@@ -35,7 +35,8 @@ object Build extends sbt.Build {
 
   val copySharedSourceFiles = TaskKey[Unit]("copied shared services source code")
 
-  val akkaVersion = "2.4.3"
+  val akkaVersion = "2.4.10"
+  val akkaStreamVersion = "2.4-SNAPSHOT"
   val apacheRepo = "https://repository.apache.org/"
   val hadoopVersion = "2.6.0"
   val hbaseVersion = "1.0.0"
@@ -145,9 +146,12 @@ object Build extends sbt.Build {
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
       "commons-logging" % "commons-logging" % commonsLoggingVersion,
-      "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion
+        exclude("com.typesafe.akka", "akka-stream_2.11"),
+      "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion,
       "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided"
-    )
+    ),
+    dependencyOverrides += "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion
   )
 
   val streamingDependencies = Seq(
@@ -186,7 +190,8 @@ object Build extends sbt.Build {
       "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
       "org.scala-lang" % "scala-reflect" % scalaVersionNumber,
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
-      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
+        exclude("com.typesafe.akka", "akka-stream_2.11"),
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
       "org.mockito" % "mockito-core" % mockitoVersion % "test",
@@ -250,7 +255,7 @@ object Build extends sbt.Build {
     base = file("."),
     settings = commonSettings ++ noPublish ++ gearpumpUnidocSetting)
       .aggregate(shaded, core, daemon, streaming, services, external_kafka, external_monoid,
-      external_serializer, examples, storm, yarn, external_hbase, packProject,
+      external_serializer, examples, akkastream, storm, yarn, external_hbase, packProject,
       external_hadoopfs, integration_test).settings(Defaults.itSettings: _*)
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
@@ -314,14 +319,17 @@ object Build extends sbt.Build {
 
   lazy val serviceJvmSettings = commonSettings ++ noPublish ++ Seq(
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion % "test",
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion % "test"
+        exclude("com.typesafe.akka", "akka-stream_2.11"),
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "com.softwaremill.akka-http-session" %% "core" % "0.2.5",
-      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion
+        exclude("com.typesafe.akka", "akka-stream_2.11"),
       "com.github.scribejava" % "scribejava-apis" % "2.4.0",
       "com.ning" % "async-http-client" % "1.9.33",
       "org.webjars" % "angularjs" % "1.4.9",
+      "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
 
       // angular 1.5 breaks ui-select, but we need ng-touch 1.5
       "org.webjars.npm" % "angular-touch" % "1.5.0",
@@ -382,14 +390,17 @@ object Build extends sbt.Build {
   lazy val akkastream = Project(
     id = "gearpump-experiments-akkastream",
     base = file("experiments/akkastream"),
-    settings = commonSettings ++ noPublish ++ myAssemblySettings ++
+    settings = commonSettings ++ noPublish ++
       Seq(
         libraryDependencies ++= Seq(
-          "org.json4s" %% "json4s-jackson" % "3.2.11"
+          "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion,
+          "org.json4s" %% "json4s-jackson" % "3.2.11",
+          "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
         ),
-        mainClass in(Compile, packageBin) := Some("akka.stream.gearpump.example.Test")
-      ))
-      .dependsOn(streaming % "test->test; provided", daemon % "test->test; provided")
+        dependencyOverrides += "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion
+      )) 
+      .dependsOn (services % "test->test; compile->compile", daemon % "test->test; compile->compile")
+      .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val storm = Project(
     id = "gearpump-experiments-storm",

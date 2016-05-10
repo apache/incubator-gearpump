@@ -20,13 +20,16 @@ package org.apache.gearpump.cluster
 
 import akka.actor.{ActorSystem, ExtendedActorSystem}
 import akka.serialization.JavaSerializer
-
 import org.apache.gearpump.google.common.io.BaseEncoding
+import org.apache.gearpump.util.LogUtil
+
+import scala.util.{Failure, Success, Try}
 
 /**
  * Immutable configuration
  */
 final class UserConfig(private val _config: Map[String, String]) extends Serializable {
+  private val LOG = LogUtil.getLogger(getClass)
 
   def withBoolean(key: String, value: Boolean): UserConfig = {
     new UserConfig(_config + (key -> value.toString))
@@ -135,10 +138,18 @@ final class UserConfig(private val _config: Map[String, String]) extends Seriali
     if (null == value) {
       this
     } else {
-      val serializer = new JavaSerializer(system.asInstanceOf[ExtendedActorSystem])
-      val bytes = serializer.toBinary(value)
-      val encoded = BaseEncoding.base64().encode(bytes)
-      this.withString(key, encoded)
+      Try({
+        val serializer = new JavaSerializer(system.asInstanceOf[ExtendedActorSystem])
+        val bytes = serializer.toBinary(value)
+        BaseEncoding.base64().encode(bytes)
+      }) match {
+        case Success(enc) =>
+          this.withString(key, enc)
+        case Failure(throwable) =>
+          LOG.error(s"Could not serialize value with key $key ${throwable.getMessage}")
+          this
+      }
+
     }
   }
   // scalastyle:on line.size.limit
