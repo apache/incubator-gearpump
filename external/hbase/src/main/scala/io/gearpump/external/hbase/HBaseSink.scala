@@ -85,18 +85,6 @@ class HBaseSink(
     connection.close()
     table.close()
   }
-
-  private def writeObject(out: ObjectOutputStream): Unit = {
-    out.defaultWriteObject()
-    configuration.write(out)
-  }
-
-  private def readObject(in: ObjectInputStream): Unit = {
-    in.defaultReadObject()
-    val clientConf = new Configuration(false)
-    clientConf.readFields(in)
-    configuration = HBaseConfiguration.create(clientConf)
-  }
 }
 
 object HBaseSink {
