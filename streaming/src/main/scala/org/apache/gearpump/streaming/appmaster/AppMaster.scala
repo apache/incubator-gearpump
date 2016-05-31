@@ -145,7 +145,7 @@ class AppMaster(appContext: AppMasterContext, app: AppDescription) extends Appli
   /** Handles messages from Tasks */
   def taskMessageHandler: Receive = {
     case clock: ClockEvent =>
-      taskManager.foreach(_ forward clock)
+      clockService.foreach(_ forward clock)
     case register: RegisterTask =>
       taskManager.foreach(_ forward register)
     case unRegister: UnRegisterTask =>
@@ -159,15 +159,11 @@ class AppMaster(appContext: AppMasterContext, app: AppDescription) extends Appli
       taskManager.foreach(_ forward messageLoss)
     case lookupTask: LookupTaskActorRef =>
       taskManager.foreach(_ forward lookupTask)
-    case checkpoint: ReportCheckpointClock =>
-      clockService.foreach(_ forward checkpoint)
     case GetDAG =>
       val task = sender
       getDAG.foreach {
         dag => task ! dag
       }
-    case GetCheckpointClock =>
-      clockService.foreach(_ forward GetCheckpointClock)
   }
 
   /** Handles messages from Executors */

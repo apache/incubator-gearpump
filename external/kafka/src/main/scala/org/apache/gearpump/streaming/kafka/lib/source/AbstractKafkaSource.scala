@@ -79,6 +79,7 @@ abstract class AbstractKafkaSource(
     KafkaConfig.TIMESTAMP_FILTER_CLASS_CONFIG, classOf[TimeStampFilter])
 
   private var startTime: Long = 0L
+  private var watermark: Long = 0L
   private var checkpointStoreFactory: Option[CheckpointStoreFactory] = None
   private var checkpointStores: Map[TopicAndPartition, CheckpointStore] =
     Map.empty[TopicAndPartition, CheckpointStore]
@@ -92,6 +93,7 @@ abstract class AbstractKafkaSource(
 
     LOG.info("KafkaSource opened at start time {}", startTime)
     this.startTime = startTime
+    this.watermark = startTime
     val topicList = topic.split(",", -1).toList
     val grouper = config.getConfiguredInstance(KafkaConfig.PARTITION_GROUPER_CLASS_CONFIG,
       classOf[PartitionGrouper])
@@ -119,6 +121,9 @@ abstract class AbstractKafkaSource(
     LOG.info("KafkaSource closed")
   }
 
+  override def getWatermark: TimeStamp = watermark
+
+
   /**
    * 1. Decodes raw bytes into Message with timestamp
    * 2. Filters message against start time
@@ -127,12 +132,13 @@ abstract class AbstractKafkaSource(
   private def filterAndCheckpointMessage(kafkaMsg: KafkaMessage): Option[Message] = {
     val msg = messageDecoder.fromBytes(kafkaMsg.key.orNull, kafkaMsg.msg)
     LOG.debug("read message {}", msg)
-    val filtered = timestampFilter.filter(msg, startTime)
+    val filtered = timestampFilter.filter(msg, watermark)
     filtered.foreach { m =>
       val time = m.timestamp
       val offset = kafkaMsg.offset
       LOG.debug("checkpoint message state ({}, {})", time, offset)
       checkpointOffsets(kafkaMsg.topicAndPartition, time, offset)
+      watermark = time
     }
     filtered
   }

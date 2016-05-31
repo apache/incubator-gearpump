@@ -20,7 +20,7 @@ package org.apache.gearpump.streaming.source
 
 import org.apache.gearpump._
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.task.{StartTime, Task, TaskContext}
+import org.apache.gearpump.streaming.task.{UpdateWatermark, StartTime, Task, TaskContext}
 
 object DataSourceTask {
   val DATA_SOURCE = "data_source"
@@ -49,14 +49,21 @@ class DataSourceTask(context: TaskContext, conf: UserConfig) extends Task(contex
     startTime = newStartTime.startTime
     LOG.info(s"opening data source at $startTime")
     source.open(context, startTime)
-    self ! Message("start", System.currentTimeMillis())
+    self ! Message("start")
   }
 
   override def onNext(message: Message): Unit = {
+    var num = 0
     0.until(batchSize).foreach { _ =>
-      Option(source.read()).foreach(context.output)
+      Option(source.read()).foreach { msg =>
+        num += 1
+        context.output(msg)
+      }
     }
-    self ! Message("continue", System.currentTimeMillis())
+    if (num > 0) {
+      context.appMaster ! UpdateWatermark(context.taskId, source.getWatermark)
+    }
+    self ! Message("continue")
   }
 
   override def onStop(): Unit = {

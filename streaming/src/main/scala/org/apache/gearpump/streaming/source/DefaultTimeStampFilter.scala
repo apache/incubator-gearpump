@@ -26,6 +26,6 @@ import org.apache.gearpump.{Message, TimeStamp}
  */
 class DefaultTimeStampFilter extends TimeStampFilter {
   override def filter(msg: Message, predicate: TimeStamp): Option[Message] = {
-    Option(msg).find(_.timestamp >= predicate)
+    Option(msg).filter(_.timestamp >= predicate)
   }
 }

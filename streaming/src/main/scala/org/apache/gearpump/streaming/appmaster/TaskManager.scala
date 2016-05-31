@@ -72,7 +72,6 @@ private[appmaster] class TaskManager(
   extends Actor {
 
   private val LOG: Logger = LogUtil.getLogger(getClass, app = appId)
-  private val systemConfig = context.system.settings.config
 
   private val ids = new SessionIdFactory()
 
@@ -96,8 +95,6 @@ private[appmaster] class TaskManager(
   def receive: Receive = applicationReady(DagReadyState.empty)
 
   private def onClientQuery(taskRegistry: TaskRegistry): Receive = {
-    case clock: ClockEvent =>
-      clockService forward clock
     case GetTaskList =>
       sender ! TaskList(taskRegistry.getTaskExecutorMap)
     case LookupTaskActorRef(taskId) =>
