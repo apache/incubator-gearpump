@@ -70,8 +70,8 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
   }
 
   override def postStop(): Unit = {
-    Option(healthCheckScheduler).map(_.cancel)
-    Option(snapshotScheduler).map(_.cancel)
+    Option(healthCheckScheduler).foreach(_.cancel())
+    Option(snapshotScheduler).foreach(_.cancel())
   }
 
   // Keep track of clock value of all processors.
@@ -89,7 +89,7 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
 
   private def checkpointEnabled(processor: ProcessorDescription): Boolean = {
     val taskConf = processor.taskConf
-    taskConf != null && taskConf.getBoolean("state.checkpoint.enable") == Some(true)
+    taskConf != null && taskConf.getBoolean("state.checkpoint.enable").contains(true)
   }
 
   private def resetCheckpointClocks(dag: DAG, startClock: TimeStamp): Unit = {
@@ -118,13 +118,7 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
         (processorId, clock)
       }
 
-    this.upstreamClocks = clocks.map { pair =>
-      val (processorId, processor) = pair
-
-      val upstreams = dag.graph.incomingEdgesOf(processorId).map(_._1)
-      val upstreamClocks = upstreams.flatMap(clocks.get(_))
-      (processorId, upstreamClocks.toArray)
-    }
+    this.upstreamClocks = getUpstreamClocks(clocks)
 
     this.processorClocks = clocks.toArray.map(_._2)
 
@@ -147,16 +141,10 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
 
     this.clocks = newClocks
 
-    this.upstreamClocks = newClocks.map { pair =>
-      val (processorId, processor) = pair
-
-      val upstreams = dag.graph.incomingEdgesOf(processorId).map(_._1)
-      val upstreamClocks = upstreams.flatMap(newClocks.get(_))
-      (processorId, upstreamClocks.toArray)
-    }
+    this.upstreamClocks = getUpstreamClocks(newClocks)
 
     // Inits the clock of all processors.
-    newClocks.map { pair =>
+    newClocks.foreach { pair =>
       val (processorId, processorClock) = pair
       val upstreamClock = getUpStreamMinClock(processorId)
       val birth = processorClock.life.birth
@@ -195,6 +183,23 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
       stash()
   }
 
+  private def getUpstreamClocks(
+      clocks: Map[ProcessorId, ProcessorClock]): Map[ProcessorId, Array[ProcessorClock]] = {
+    clocks.map { case (processorId, clock) =>
+      val upstreams = dag.graph.incomingEdgesOf(processorId).map(_._1)
+      val upstreamClocks = if (upstreams.isEmpty) {
+        // create an imaginary upstream clock for source processor
+        // which will be updated by watermark clock
+        val pc = new ProcessorClock(processorId, clock.life, clock.parallelism)
+        pc.init(Long.MaxValue)
+        List(pc)
+      } else {
+        upstreams.flatMap(clocks.get)
+      }
+      (processorId, upstreamClocks.toArray)
+    }
+  }
+
   private def getUpStreamMinClock(processorId: ProcessorId): TimeStamp = {
     val clocks = upstreamClocks.get(processorId)
     if (clocks.isDefined) {
@@ -222,6 +227,9 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
         LOG.error(s"Cannot updateClock for task $task")
       }
       sender ! UpstreamMinClock(upstreamMinClock)
+
+    case UpdateWatermark(task, clock) =>
+      upstreamClocks(task.processorId)(0).updateMinClock(task.index, clock)
 
     case GetLatestMinClock =>
       sender ! LatestMinClock(minClock)
@@ -258,16 +266,16 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
     case getStalling: GetStallingTasks =>
       sender ! StallingTasks(healthChecker.getReport.stallingTasks)
 
-    case ChangeToNewDAG(dag) =>
-      if (dag.version > this.dag.version) {
+    case ChangeToNewDAG(newDag) =>
+      if (newDag.version > this.dag.version) {
         // Transits to a new dag version
-        this.dag = dag
-        dynamicDAG(dag, getStartClock)
+        this.dag = newDag
+        dynamicDAG(newDag, getStartClock)
       } else {
         // Restarts current dag.
-        recoverDag(dag, getStartClock)
+        recoverDag(newDag, getStartClock)
       }
-      LOG.info(s"Change to new DAG(dag = ${dag.version}), send back ChangeToNewDAGSuccess")
+      LOG.info(s"Change to new DAG(dag = ${newDag.version}), send back ChangeToNewDAGSuccess")
       sender ! ChangeToNewDAGSuccess(clocks.map { pair =>
         val (id, clock) = pair
         (id, clock.min)
@@ -287,10 +295,7 @@ class ClockService(private var dag: DAG, store: AppDataStore) extends Actor with
     upstreamClocks = upstreamClocks - processorId
 
     // Removes dead processor from checkpoints.
-    checkpointClocks = checkpointClocks.filter { kv =>
-      val (taskId, processor) = kv
-      taskId.processorId != processorId
-    }
+    checkpointClocks = checkpointClocks.filter(_._1.processorId != processorId)
   }
 
   private def minClock: TimeStamp = {
@@ -336,11 +341,11 @@ object ClockService {
 
   case object HealthCheck
 
-  class ProcessorClock(val processorId: ProcessorId, val life: LifeTime, val parallism: Int,
+  class ProcessorClock(val processorId: ProcessorId, val life: LifeTime, val parallelism: Int,
       private var _min: TimeStamp = 0L, private var _taskClocks: Array[TimeStamp] = null) {
 
     def copy(life: LifeTime): ProcessorClock = {
-      new ProcessorClock(processorId, life, parallism, _min, _taskClocks)
+      new ProcessorClock(processorId, life, parallelism, _min, _taskClocks)
     }
 
     def min: TimeStamp = _min
@@ -349,7 +354,7 @@ object ClockService {
     def init(startClock: TimeStamp): Unit = {
       if (taskClocks == null) {
         this._min = startClock
-        this._taskClocks = new Array(parallism)
+        this._taskClocks = new Array(parallelism)
         util.Arrays.fill(taskClocks, startClock)
       }
     }

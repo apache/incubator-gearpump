@@ -25,8 +25,7 @@ import kafka.common.TopicAndPartition
 import org.apache.gearpump.streaming.MockUtil
 import org.apache.gearpump.streaming.kafka.lib.source.consumer.FetchThread.FetchThreadFactory
 import org.apache.gearpump.streaming.kafka.lib.source.grouper.PartitionGrouper
-import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient
-import KafkaClient.KafkaClientFactory
+import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient.KafkaClientFactory
 import org.apache.gearpump.streaming.kafka.lib.source.consumer.{KafkaMessage, FetchThread}
 import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient
 import org.apache.gearpump.streaming.kafka.util.KafkaConfig
@@ -173,7 +172,7 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
           when(fetchThread.poll).thenReturn(Option(kafkaMsg))
           val message = Message(kafkaMsg.msg, kafkaMsg.offset)
           when(messageDecoder.fromBytes(kafkaMsg.key.get, kafkaMsg.msg)).thenReturn(message)
-          when(timestampFilter.filter(message, 0)).thenReturn(Some(message))
+          when(timestampFilter.filter(any[Message], anyLong())).thenReturn(Some(message))
           source.read() shouldBe Message(kafkaMsg.msg, kafkaMsg.offset)
           verify(checkpointStores(kafkaMsg.topicAndPartition)).persist(
             kafkaMsg.offset, Injection[Long, Array[Byte]](kafkaMsg.offset))

@@ -19,7 +19,7 @@
 package org.apache.gearpump.streaming.source
 
 import org.apache.gearpump.streaming.task.TaskContext
-import org.apache.gearpump.Message
+import org.apache.gearpump.{TimeStamp, Message}
 
 import scala.util.Random
 
@@ -67,4 +67,11 @@ trait DataSource extends java.io.Serializable {
    * invoked in onStop() method of [[org.apache.gearpump.streaming.source.DataSourceTask]]
    */
   def close(): Unit
+
+  /**
+   * Returns a watermark
+   * no timestamp earlier than the watermark
+   * should enter the system
+   */
+  def getWatermark: TimeStamp
 }

@@ -108,9 +108,11 @@ object StreamApp {
 /** A test message source which generated message sequence repeatedly. */
 class CollectionDataSource[T](seq: Seq[T]) extends DataSource {
   private lazy val iterator: Iterator[T] = seq.iterator
+  private var watermark: TimeStamp = 0L
 
   override def read(): Message = {
     if (iterator.hasNext) {
+      watermark = System.currentTimeMillis()
       Message(iterator.next())
     } else {
       null
@@ -120,4 +122,6 @@ class CollectionDataSource[T](seq: Seq[T]) extends DataSource {
   override def close(): Unit = {}
 
   override def open(context: TaskContext, startTime: TimeStamp): Unit = {}
+
+  override def getWatermark: TimeStamp = watermark
 }
