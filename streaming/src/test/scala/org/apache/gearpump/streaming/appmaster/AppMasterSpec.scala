@@ -289,9 +289,6 @@ class AppMasterSpec extends WordSpec with Matchers with BeforeAndAfterEach with 
     // wait for app to get started
     mockMaster.expectMsg(ActivateAppMaster(appId))
     mockMaster.reply(AppMasterActivated(appId))
-    for (i <- 1 to 4) {
-      mockMaster.expectMsg(10.seconds, AppMasterSpec.TaskStarted)
-    }
   }
 }
 
@@ -304,9 +301,7 @@ object AppMasterSpec {
 
 class TaskA(taskContext: TaskContext, userConf: UserConfig) extends Task(taskContext, userConf) {
 
-  val master = userConf.getValue[ActorRef](AppMasterSpec.MASTER).get
   override def onStart(startTime: StartTime): Unit = {
-    master ! AppMasterSpec.TaskStarted
   }
 
   override def onNext(msg: Message): Unit = {}
@@ -314,9 +309,7 @@ class TaskA(taskContext: TaskContext, userConf: UserConfig) extends Task(taskCon
 
 class TaskB(taskContext: TaskContext, userConf: UserConfig) extends Task(taskContext, userConf) {
 
-  val master = userConf.getValue[ActorRef](AppMasterSpec.MASTER).get
   override def onStart(startTime: StartTime): Unit = {
-    master ! AppMasterSpec.TaskStarted
   }
 
   override def onNext(msg: Message): Unit = {}
