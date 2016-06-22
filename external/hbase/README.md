@@ -28,7 +28,7 @@ Then before submitting the application, you need to add HBase lib folder and con
 Please note only client side's configuration change is needed. After that, you are able to submit the application.
 
 
-## If you need to supply the HBase user fot the connection
+## If you need to supply the HBase user for the connection
 There are HBase configurations that have authorization configured (some users are allowed to read/write to selected namespaces/tables, some are not).
 
 In this cases you may need to configure the user that connects to HBase.
