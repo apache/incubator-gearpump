@@ -229,4 +229,20 @@ object BuildExample extends sbt.Build {
         CrossVersion.binaryScalaVersion(scalaVersion.value)
     )
   ) dependsOn (streaming % "test->test; provided")
+
+  lazy val examples_redis = Project(
+    id = "gearpump-examples-redis",
+    base = file("examples/streaming/redis"),
+    settings = commonSettings ++ noPublish ++ myAssemblySettings ++
+      Seq(
+        mainClass in (Compile, packageBin) := Some("org.apache.gearpump.streaming.example.redis.RedisSourceSinkExample"),
+        target in assembly := baseDirectory.value.getParentFile.getParentFile / "target" /
+          CrossVersion.binaryScalaVersion(scalaVersion.value)
+      ) ++
+      Seq(
+        mainClass in (Compile, packageBin) := Some("org.apache.gearpump.streaming.example.redis.RedisSourceStorageExample"),
+        target in assembly := baseDirectory.value.getParentFile.getParentFile / "target" /
+          CrossVersion.binaryScalaVersion(scalaVersion.value)
+      )
+  ) dependsOn(streaming % "test->test; provided", redis)
 }

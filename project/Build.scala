@@ -444,6 +444,18 @@ object Build extends sbt.Build {
       )
   ) dependsOn(services % "test->test;compile->compile", core % "provided")
 
+  lazy val redis = Project(
+    id = "gearpump-experiments-redis",
+    base = file("experiments/redis"),
+    settings = commonSettings ++ noPublish ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "redis.clients" % "jedis" % "2.8.1"
+        )
+      )
+  ) dependsOn(services % "test->test;compile->compile", core % "provided")
+
+
   lazy val external_hbase = Project(
     id = "gearpump-external-hbase",
     base = file("external/hbase"),
@@ -522,4 +534,5 @@ object Build extends sbt.Build {
         )
       )
   ) dependsOn (streaming % "test->test; provided")
+
 }
