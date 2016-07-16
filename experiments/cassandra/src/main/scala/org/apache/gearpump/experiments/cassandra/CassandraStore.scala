@@ -25,7 +25,8 @@ import com.twitter.bijection.Bijection
 import org.apache.gearpump.TimeStamp
 import org.apache.gearpump.experiments.cassandra.AbstractCassandraStoreFactory._
 import org.apache.gearpump.experiments.cassandra.CassandraStore._
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, Logging, StoreConf}
+import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnectorConf, CassandraConnector,
+Logging, StoreConf}
 import org.apache.gearpump.streaming.transaction.api.{CheckpointStore, CheckpointStoreFactory}
 
 object AbstractCassandraStoreFactory {
@@ -47,18 +48,20 @@ object AbstractCassandraStoreFactory {
 }
 
 class AbstractCassandraStoreFactory(
-    connector: CassandraConnector,
+    connectorConf: CassandraConnectorConf,
     storeConf: StoreConf)
   extends CheckpointStoreFactory {
 
   // TODO: Non blocking
   override def getCheckpointStore(name: String): CheckpointStore = {
+    val connector = new CassandraConnector(connectorConf)
     val session = connector.openSession()
     session.execute(createKeyspace(storeConf.keyspaceName, storeConf.replicationStrategyCql))
     session.execute(
       createTable(storeConf.keyspaceName, storeConf.tableName, storeConf.compactionStrategyCql))
 
-    new CassandraStore(name, connector, storeConf)
+    connector.evictCache()
+    new CassandraStore(name, connectorConf, storeConf)
   }
 }
 
@@ -79,11 +82,12 @@ object CassandraStore {
 
 class CassandraStore private[cassandra] (
     name: String,
-    connector: CassandraConnector,
+    connectorConf: CassandraConnectorConf,
     storeConf: StoreConf)
   extends CheckpointStore
   with Logging {
 
+  private[this] val connector = new CassandraConnector(connectorConf)
   private[this] val session = connector.openSession()
 
   private[this] val preparedRead =
@@ -110,5 +114,5 @@ class CassandraStore private[cassandra] (
       .headOption.map(_.getBytes("checkpoint").array())
   }
 
-  override def close(): Unit = connector.close(session)
+  override def close(): Unit = connector.evictCache()
 }

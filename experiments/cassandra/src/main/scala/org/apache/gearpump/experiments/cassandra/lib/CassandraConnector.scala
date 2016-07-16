@@ -17,19 +17,18 @@
  */
 package org.apache.gearpump.experiments.cassandra.lib
 
-import com.datastax.driver.core.{Cluster, Session}
+import com.datastax.driver.core.Session
 
 // TODO: Proper cluster, session and statement management
 class CassandraConnector(conf: CassandraConnectorConf) extends Serializable {
 
-  private[this] var cluster: Cluster = _
   private[this] var session: Session = _
 
   private[this] var counter = 0
 
   private def openSessionInternal() = synchronized {
     if (counter == 0) {
-      cluster = conf.connectionFactory.createCluster(conf)
+      val cluster = conf.connectionFactory.createCluster(conf)
       session = cluster.connect()
     }
 
@@ -43,6 +42,7 @@ class CassandraConnector(conf: CassandraConnectorConf) extends Serializable {
   def evictCache(): Unit = synchronized {
     if (counter > 0) {
       counter = 0
+      val cluster = session.getCluster
       session.close()
       cluster.close()
     }
@@ -53,9 +53,18 @@ class CassandraConnector(conf: CassandraConnectorConf) extends Serializable {
       counter = counter - 1
 
       if (counter == 0) {
+        val cluster = session.getCluster
         session.close()
         cluster.close()
       }
     }
+  }
+
+  // TODO: Ensure the caller can not close the session
+  def withSession[T](block: Session => T): T = {
+    val session = openSession()
+    val result = block(session)
+    close(session)
+    result
   }
 }

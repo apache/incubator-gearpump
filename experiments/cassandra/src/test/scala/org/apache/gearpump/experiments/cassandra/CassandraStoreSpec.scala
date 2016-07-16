@@ -46,7 +46,7 @@ class CassandraStoreSpec
   }
 
   "CassandraStoreFactory" should "create the appropriate tables" in {
-    val factory = new AbstractCassandraStoreFactory(connector, storeConfig)
+    val factory = new AbstractCassandraStoreFactory(connectorConf, storeConfig)
     factory.getCheckpointStore(name)
 
     val session = connector.openSession()
@@ -55,7 +55,7 @@ class CassandraStoreSpec
 
   "CassandraStore" should "persist and recover snapshots" in {
     val store =
-      new AbstractCassandraStoreFactory(connector, storeConfig)
+      new AbstractCassandraStoreFactory(connectorConf, storeConfig)
         .getCheckpointStore(name)
 
     val checkpoint = "test"
@@ -69,7 +69,7 @@ class CassandraStoreSpec
 
   "CassandraStore" should "not recover non existent snapshots" in {
     val store =
-      new AbstractCassandraStoreFactory(connector, storeConfig)
+      new AbstractCassandraStoreFactory(connectorConf, storeConfig)
         .getCheckpointStore(name)
 
     val recovered = store.recover(1L)

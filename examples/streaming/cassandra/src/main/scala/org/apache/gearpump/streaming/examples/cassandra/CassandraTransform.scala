@@ -102,8 +102,7 @@ object CassandraTransform extends AkkaApp with ArgumentsParser {
 
     val appConfig = UserConfig.empty
 
-    val connector = new CassandraConnector(
-      CassandraConnectorConf(hosts = Set(cassandraHost), port = cassandraPort))
+    val connectorConf = CassandraConnectorConf(hosts = Set(cassandraHost), port = cassandraPort)
 
     case class SensorData(id: String, inserted: Date, temperature: Int, location: String)
 
@@ -119,7 +118,7 @@ object CassandraTransform extends AkkaApp with ArgumentsParser {
         row.getInt("temperature"),
         row.getString("location"))
 
-    val source = new CassandraSource[SensorData](connector, ReadConf(), query)
+    val source = new CassandraSource[SensorData](connectorConf, ReadConf(), query)
     val sourceProcessor = DataSourceProcessor(source, sourceNum)
 
     implicit val statementBuilder2: BoundStatementBuilder[SensorData] = value =>
@@ -129,7 +128,7 @@ object CassandraTransform extends AkkaApp with ArgumentsParser {
         Bijection[Int, java.lang.Integer](value.temperature),
         value.location)
 
-    val sink = new CassandraSink[SensorData](connector, WriteConf(), insert)
+    val sink = new CassandraSink[SensorData](connectorConf, WriteConf(), insert)
     val sinkProcessor = DataSinkProcessor(sink, sinkNum)
 
     val computation = sourceProcessor ~> sinkProcessor

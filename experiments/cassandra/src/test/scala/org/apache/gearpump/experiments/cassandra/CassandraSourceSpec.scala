@@ -56,7 +56,7 @@ class CassandraSourceSpec extends CassandraSpecBase {
       row.getInt("clustering_key")
 
     val source = new CassandraSource[Data](
-      connector,
+      connectorConf,
       ReadConf(),
       queryWithWhereCql)
 

@@ -17,44 +17,88 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
-import org.apache.gearpump.experiments.cassandra.lib.RowExtractor._
+import com.datastax.driver.core.{Row, Session, Statement}
+import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.CassandraPartitionGenerator
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, PrefetchingResultSetIterator, ReadConf}
+import org.apache.gearpump.experiments.cassandra.lib._
+import org.apache.gearpump.experiments.cassandra.lib.partitioner.{CassandraPartitionGenerator, CqlTokenRange, DefaultPartitionGrouper}
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.streaming.transaction.api.TimeStampFilter
 import org.apache.gearpump.{Message, TimeStamp}
 
 // TODO: Analyse query, compute token ranges, automatically convert types, ...
 class CassandraFilteringSource[T: RowExtractor](
-    connector: CassandraConnector,
+    connectorConf: CassandraConnectorConf,
     conf: ReadConf,
-    queryCql: String,
-    table: String,
     keyspace: String,
-    timeStampFilter: TimeStampFilter
+    table: String,
+    columns: Seq[String],
+    partitionKeyColumns: Seq[String],
+    clusteringKeyColumns: Seq[String],
+    where: CqlWhereClause,
+    timeStampFilter: TimeStampFilter,
+    clusteringOrder: Option[ClusteringOrder] = None,
+    limit: Option[Long] = None
   )(implicit timeStampExtractor: TimeStampExtractor)
-  extends CassandraSourceBase[T](connector, conf) {
-
-  val partitioner = CassandraPartitionGenerator(connector, keyspace, table, Some(3), 3)
-
-  val partitions = partitioner.partitions
-  println(partitions.size)
-  println(partitions)
+  extends CassandraSourceBase[T](connectorConf, conf) {
 
   private[this] var startTime: TimeStamp = _
 
+  private def tokenRangeToCqlQuery(range: CqlTokenRange[_, _]): (String, Seq[Any]) = {
+    val (cql, values) = if (where.containsPartitionKey) {
+      ("", Seq.empty)
+    } else {
+      range.cql(partitionKeyColumns.mkString(","))
+    }
+    val filter = (cql +: where.predicates).filter(_.nonEmpty).mkString(" AND ")
+    val limitClause = limit.map(limit => s"LIMIT $limit").getOrElse("")
+    val orderBy = clusteringOrder.map(_.toCql(clusteringKeyColumns)).getOrElse("")
+    val selectColums = columns.mkString(",")
+    val queryTemplate =
+      s"SELECT $selectColums " +
+        s"FROM $keyspace.$table " +
+        s"WHERE $filter $orderBy $limitClause ALLOW FILTERING"
+    val queryParamValues = values ++ where.values
+    (queryTemplate, queryParamValues)
+  }
+
+  private def createStatement(session: Session, cql: String, values: Any*): Statement = {
+    val stmt = session.prepare(cql)
+    stmt.setConsistencyLevel(conf.consistencyLevel)
+    val bstm = stmt.bind(values.map(_.asInstanceOf[AnyRef]): _*)
+    bstm.setFetchSize(conf.fetchSizeInRows)
+    bstm
+  }
+
+  private def fetchTokenRange(
+      session: Session,
+      range: CqlTokenRange[_, _]
+    ): Iterator[Row] = {
+
+    val (cql, values) = tokenRangeToCqlQuery(range)
+    val stmt = createStatement(session, cql, values: _*)
+    val rs = session.execute(stmt)
+    new PrefetchingResultSetIterator(rs, conf.fetchSizeInRows)
+  }
+
   // TODO: Non blocking
   def open(context: TaskContext, startTime: Long): Unit = {
+    connector = new CassandraConnector(connectorConf)
+    session = connector.openSession()
+
+    val partitioner =
+      CassandraPartitionGenerator(connector, keyspace, table, conf.splitCount, conf.splitSizeInMB)
+    val assignedTokenRanges =
+      new DefaultPartitionGrouper()
+        .group(context.parallelism, context.taskId.index, partitioner.partitions)
+
     this.startTime = startTime
 
-    val resultSet =
-      session.execute(
-        session.prepare(queryCql)
-          .bind()
-          .setConsistencyLevel(conf.consistencyLevel))
-
-    iterator = Some(new PrefetchingResultSetIterator(resultSet, conf.fetchSizeInRows))
+    iterator =
+      Some(
+        assignedTokenRanges
+          .iterator
+          .flatMap(fetchTokenRange(session, _: CqlTokenRange[_, _])))
   }
 
   override def read(): Message =

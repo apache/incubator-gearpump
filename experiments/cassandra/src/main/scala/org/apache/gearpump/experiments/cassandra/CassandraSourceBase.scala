@@ -17,21 +17,23 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
-import org.apache.gearpump.experiments.cassandra.lib.RowExtractor._
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, Logging, PrefetchingResultSetIterator, ReadConf}
+import com.datastax.driver.core.{Row, Session}
+import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
+import org.apache.gearpump.experiments.cassandra.lib._
 import org.apache.gearpump.streaming.transaction.api.{CheckpointStoreFactory, TimeReplayableSource}
 
 private[cassandra] abstract class CassandraSourceBase[T: RowExtractor](
-    connector: CassandraConnector,
+    connectorConf: CassandraConnectorConf,
     conf: ReadConf)
   extends TimeReplayableSource
   with Logging {
 
-  protected var iterator: Option[PrefetchingResultSetIterator] = None
+  protected var iterator: Option[Iterator[Row]] = None
 
-  protected val session = connector.openSession()
+  protected var connector: CassandraConnector = _
+  protected var session: Session = _
   protected val rowExtractor = implicitly[RowExtractor[T]]
 
   override def setCheckpointStore(factory: CheckpointStoreFactory): Unit = { }
-  override def close(): Unit = connector.close(session)
+  override def close(): Unit = connector.evictCache()
 }

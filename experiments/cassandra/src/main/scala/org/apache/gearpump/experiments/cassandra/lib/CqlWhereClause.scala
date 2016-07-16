@@ -15,17 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra
+package org.apache.gearpump.experiments.cassandra.lib
 
-import java.net.InetAddress
+case class CqlWhereClause(
+    predicates: Seq[String],
+    values: Seq[Any],
+    containsPartitionKey: Boolean)
 
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, CassandraConnectorConf}
-
-trait CassandraConnection {
-
-  protected val connectorConf = CassandraConnectorConf(
-    port = 9042,
-    hosts = Set(InetAddress.getByName("127.0.0.1")))
-
-  protected val connector = new CassandraConnector(connectorConf)
+object CqlWhereClause {
+  val empty = new CqlWhereClause(Nil, Nil, false)
 }

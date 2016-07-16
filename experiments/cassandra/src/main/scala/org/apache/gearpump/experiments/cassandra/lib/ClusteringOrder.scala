@@ -15,22 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.gearpump.experiments.cassandra.lib
 
-import com.datastax.driver.core.ConsistencyLevel
-import org.apache.gearpump.experiments.cassandra.lib.ReadConf._
-
-case class ReadConf(
-    splitCount: Option[Int] = splitCountDefault,
-    splitSizeInMB: Int = splitSizeInMBDefault,
-    fetchSizeInRows: Int = fetchSizeInRowsDefault,
-    consistencyLevel: ConsistencyLevel = consistencyLevelDefault)
-    // taskMetricsEnabled: Boolean = ReadConf.TaskMetricParam.default)
-
-object ReadConf {
-  private val splitCountDefault = None
-  private val splitSizeInMBDefault = 64
-  private val fetchSizeInRowsDefault = 1000
-  private val consistencyLevelDefault = ConsistencyLevel.LOCAL_ONE
+sealed trait ClusteringOrder extends Serializable {
+  private[cassandra] def toCql(clusteringColumns: Seq[String]): String
 }
+
+object ClusteringOrder {
+  private[cassandra] def cqlClause(clusteringColumns: Seq[String], order: String) =
+    clusteringColumns.headOption.map(cc => s"""ORDER BY "$cc" $order""")
+      .getOrElse(
+        throw new IllegalArgumentException(
+          "Order by can be specified only if there are some clustering columns"))
+
+  case object Ascending extends ClusteringOrder {
+    override private[cassandra] def toCql(
+        clusteringColumns: Seq[String]
+      ): String = cqlClause(clusteringColumns, "ASC")
+  }
+
+  case object Descending extends ClusteringOrder {
+    override private[cassandra] def toCql(
+        clusteringColumns: Seq[String]
+      ): String = cqlClause(clusteringColumns, "DESC")
+  }
+
+}
+

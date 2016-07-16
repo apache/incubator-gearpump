@@ -27,15 +27,18 @@ import org.apache.gearpump.streaming.task.TaskContext
 
 // TODO: Analyse query, compute token ranges, automatically convert types, ...
 class CassandraSource[T: RowExtractor] (
-    connector: CassandraConnector,
+    connectorConf: CassandraConnectorConf,
     conf: ReadConf,
     queryCql: String
   )(implicit boundStatementBuilder: BoundStatementBuilder[Long],
     timeStampExtractor: TimeStampExtractor)
-  extends CassandraSourceBase[T](connector, conf) {
+  extends CassandraSourceBase[T](connectorConf, conf) {
 
   // TODO: Non blocking
   def open(context: TaskContext, startTime: Long): Unit = {
+    connector = new CassandraConnector(connectorConf)
+    session = connector.openSession()
+
     val resultSet =
       session.execute(
         session.prepare(queryCql)

@@ -52,7 +52,7 @@ class CassandraSinkSpec extends CassandraSpecBase {
       value => Seq(value._1, Bijection[Int, java.lang.Integer](value._2), value._3)
 
     val sink = new CassandraSink[(String, Int, String)](
-      connector,
+      connectorConf,
       WriteConf(),
       insertCql)
 

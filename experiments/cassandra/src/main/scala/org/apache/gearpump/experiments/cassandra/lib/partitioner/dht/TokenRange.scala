@@ -20,7 +20,10 @@ package org.apache.gearpump.experiments.cassandra.lib.partitioner.dht
 import java.net.InetAddress
 
 case class TokenRange[V, T <: Token[V]] (
-    start: T, end: T, replicas: Set[InetAddress], dataSize: Long) {
+    start: T,
+    end: T,
+    replicas: Set[InetAddress],
+    dataSize: Long) {
 
   def isWrappedAround(implicit tf: TokenFactory[V, T]): Boolean =
     start >= end && end != tf.minToken
@@ -33,12 +36,14 @@ case class TokenRange[V, T <: Token[V]] (
 
   def unwrap(implicit tf: TokenFactory[V, T]): Seq[TokenRange[V, T]] = {
     val minToken = tf.minToken
-    if (isWrappedAround)
+
+    if (isWrappedAround) {
       Seq(
         TokenRange(start, minToken, replicas, dataSize / 2),
         TokenRange(minToken, end, replicas, dataSize / 2))
-    else
+    } else {
       Seq(this)
+    }
   }
 
   def contains(token: T)(implicit tf: TokenFactory[V, T]): Boolean = {

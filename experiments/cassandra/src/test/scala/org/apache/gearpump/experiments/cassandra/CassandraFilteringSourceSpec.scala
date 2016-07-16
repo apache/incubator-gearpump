@@ -18,11 +18,11 @@
 package org.apache.gearpump.experiments.cassandra
 
 import akka.actor.ActorSystem
-import org.apache.gearpump.experiments.cassandra.lib.ReadConf
+import org.apache.gearpump.experiments.cassandra.lib.{CqlWhereClause, ReadConf}
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor._
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.streaming.source.DefaultTimeStampFilter
-import org.apache.gearpump.streaming.task.TaskContext
+import org.apache.gearpump.streaming.task.{TaskId, TaskContext}
 import org.mockito.Mockito._
 
 class CassandraFilteringSourceSpec extends CassandraSpecBase {
@@ -45,16 +45,23 @@ class CassandraFilteringSourceSpec extends CassandraSpecBase {
       row.getInt("clustering_key")
 
     val source = new CassandraFilteringSource[Data](
-      connector,
+      connectorConf,
       ReadConf(),
-      selectAllCql,
-      table,
       keyspace,
-      new DefaultTimeStampFilter())
+      table,
+      Seq("partitioning_key", "clustering_key", "data"),
+      Seq("partitioning_key"),
+      Seq("clustering_key"),
+      CqlWhereClause.empty,
+      new DefaultTimeStampFilter(),
+      None,
+      None)
 
     val actorSystem = ActorSystem("CassandraSourceEmbeddedSpec")
     val taskContext = mock[TaskContext]
     when(taskContext.system).thenReturn(actorSystem)
+    when(taskContext.parallelism).thenReturn(1)
+    when(taskContext.taskId).thenReturn(TaskId(1, 0))
 
     source.open(taskContext, 5)
     assert((0 to 4).map(_ => source.read()) == (0 to 4).map(_ => null))

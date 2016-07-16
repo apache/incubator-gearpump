@@ -15,17 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra
+package org.apache.gearpump.experiments.cassandra.lib.partitioner
 
-import java.net.InetAddress
+import scala.math.ceil
+import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.Token
 
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, CassandraConnectorConf}
+// TODO: Group based on
+class DefaultPartitionGrouper {
+  def group[V, T <: Token[V]](
+      taskNum: Int,
+      taskIndex: Int,
+      cassandraPartitions: Seq[CassandraPartition[V, T]]
+    ): Seq[CqlTokenRange[V, T]] = {
 
-trait CassandraConnection {
-
-  protected val connectorConf = CassandraConnectorConf(
-    port = 9042,
-    hosts = Set(InetAddress.getByName("127.0.0.1")))
-
-  protected val connector = new CassandraConnector(connectorConf)
+    val tokenRanges = cassandraPartitions.flatMap(_.tokenRanges)
+    val array =
+      tokenRanges.grouped(ceil(tokenRanges.size.toDouble / taskNum.toDouble).toInt).toArray
+    array(taskIndex)
+  }
 }
