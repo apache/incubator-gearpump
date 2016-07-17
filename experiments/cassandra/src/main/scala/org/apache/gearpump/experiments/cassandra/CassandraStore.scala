@@ -25,8 +25,7 @@ import com.twitter.bijection.Bijection
 import org.apache.gearpump.TimeStamp
 import org.apache.gearpump.experiments.cassandra.AbstractCassandraStoreFactory._
 import org.apache.gearpump.experiments.cassandra.CassandraStore._
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnectorConf, CassandraConnector,
-Logging, StoreConf}
+import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, CassandraConnectorConf, Logging, StoreConf}
 import org.apache.gearpump.streaming.transaction.api.{CheckpointStore, CheckpointStoreFactory}
 
 object AbstractCassandraStoreFactory {

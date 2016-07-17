@@ -39,6 +39,4 @@ object ClusteringOrder {
         clusteringColumns: Seq[String]
       ): String = cqlClause(clusteringColumns, "DESC")
   }
-
 }
-

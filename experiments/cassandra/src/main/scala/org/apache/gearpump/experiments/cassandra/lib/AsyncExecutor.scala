@@ -73,7 +73,6 @@ class AsyncExecutor[T, R](
   }
 
   def successful: Boolean = _successful
-
 }
 
 object AsyncExecutor {

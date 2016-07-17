@@ -29,8 +29,6 @@ case class CassandraConnectorConf(
     hosts: Set[InetAddress] = Set(hostDefault),
     port: Int = portDefault,
     authConf: AuthConf = NoAuthConf,
-    // localDC: Option[String] = None,
-    // keepAliveMillis: Int = keepAliveMillisDefault,
     minReconnectionDelayMillis: Int = minReconnectionDelayMillisDefault,
     maxReconnectionDelayMillis: Int = maxReconnectionDelayMillisDefault,
     compression: ProtocolOptions.Compression = compressionDefault,
@@ -73,7 +71,7 @@ object CassandraConnectorConf {
       require(delay.length >= 0, "Delay must not be negative")
 
       override def forRetry(nbRetry: Int): Duration = delay
-      override def toString(): String = s"${delay.length}"
+      override def toString: String = s"${delay.length}"
     }
 
     case class LinearDelay(initialDelay: Duration, increaseBy: Duration) extends RetryDelayConf {
@@ -82,7 +80,7 @@ object CassandraConnectorConf {
 
       override def forRetry(nbRetry: Int): Duration =
         initialDelay + (increaseBy * (nbRetry - 1).max(0))
-      override def toString(): String = s"${initialDelay.length} + $increaseBy"
+      override def toString: String = s"${initialDelay.length} + $increaseBy"
     }
 
     case class ExponentialDelay(initialDelay: Duration, increaseBy: Double) extends RetryDelayConf {
@@ -91,7 +89,7 @@ object CassandraConnectorConf {
 
       override def forRetry(nbRetry: Int): Duration =
         (initialDelay.toMillis * math.pow(increaseBy, (nbRetry - 1).max(0))).toLong.milliseconds
-      override def toString(): String = s"${initialDelay.length} * $increaseBy"
+      override def toString: String = s"${initialDelay.length} * $increaseBy"
     }
 
     private val ConstantDelayEx = """(\d+)""".r

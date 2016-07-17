@@ -23,7 +23,6 @@ import com.datastax.driver.core.Session
 class CassandraConnector(conf: CassandraConnectorConf) extends Serializable {
 
   private[this] var session: Session = _
-
   private[this] var counter = 0
 
   private def openSessionInternal() = synchronized {

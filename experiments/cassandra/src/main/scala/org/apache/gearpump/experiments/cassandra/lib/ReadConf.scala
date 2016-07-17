@@ -26,7 +26,6 @@ case class ReadConf(
     splitSizeInMB: Int = splitSizeInMBDefault,
     fetchSizeInRows: Int = fetchSizeInRowsDefault,
     consistencyLevel: ConsistencyLevel = consistencyLevelDefault)
-    // taskMetricsEnabled: Boolean = ReadConf.TaskMetricParam.default)
 
 object ReadConf {
   private val splitCountDefault = None
