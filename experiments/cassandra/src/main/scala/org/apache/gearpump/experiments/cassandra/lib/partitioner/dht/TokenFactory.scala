@@ -94,7 +94,6 @@ object TokenFactory {
       Ordering.by(_.value)
   }
 
-
   def forCassandraPartitioner(partitionerClassName: String): TokenFactory[V, T] = {
     val partitioner =
       partitionerClassName match {

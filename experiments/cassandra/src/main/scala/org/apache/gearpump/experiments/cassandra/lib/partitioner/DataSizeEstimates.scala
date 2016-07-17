@@ -89,30 +89,3 @@ class DataSizeEstimates[V, T <: Token[V]](
     tokenRanges.map(_.totalSizeInBytes).sum
   }
 }
-
-object DataSizeEstimates {
-
-  def waitForDataSizeEstimates(
-      conn: CassandraConnector,
-      keyspaceName: String,
-      tableName: String,
-      timeoutInMs: Int
-    ): Boolean = {
-
-    val session = conn.openSession()
-
-    def hasSizeEstimates: Boolean = {
-      session.execute(
-        s"SELECT * FROM system.size_estimates " +
-          s"WHERE keyspace_name = '$keyspaceName' AND table_name = '$tableName'")
-        .all().asScala.nonEmpty
-    }
-
-    val startTime = System.currentTimeMillis()
-    while (!hasSizeEstimates && System.currentTimeMillis() < startTime + timeoutInMs) {
-      Thread.sleep(1000)
-    }
-
-    hasSizeEstimates
-  }
-}

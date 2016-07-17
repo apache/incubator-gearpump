@@ -20,37 +20,26 @@ package org.apache.gearpump.experiments.cassandra.lib
 import java.net.InetAddress
 
 import scala.concurrent.duration.{Duration, _}
-import scala.util.Try
 
 import com.datastax.driver.core.ProtocolOptions
 import org.apache.gearpump.experiments.cassandra.lib.CassandraConnectorConf._
 
 case class CassandraConnectorConf(
-    hosts: Set[InetAddress] = Set(hostDefault),
-    port: Int = portDefault,
+    hosts: Set[InetAddress] = Set(InetAddress.getLocalHost),
+    port: Int = 9042,
     authConf: AuthConf = NoAuthConf,
-    minReconnectionDelayMillis: Int = minReconnectionDelayMillisDefault,
-    maxReconnectionDelayMillis: Int = maxReconnectionDelayMillisDefault,
-    compression: ProtocolOptions.Compression = compressionDefault,
-    queryRetryCount: Int = queryRetryCountDefault,
-    connectTimeoutMillis: Int = connectTimeoutMillisDefault,
-    readTimeoutMillis: Int = readTimeoutMillisDefault,
+    minReconnectionDelayMillis: Int = 1000,
+    maxReconnectionDelayMillis: Int = 6000,
+    compression: ProtocolOptions.Compression = ProtocolOptions.Compression.NONE,
+    queryRetryCount: Int = 10,
+    connectTimeoutMillis: Int = 5000,
+    readTimeoutMillis: Int = 120000,
     connectionFactory: CassandraConnectionFactory = DefaultConnectionFactory,
-    cassandraSSLConf: CassandraConnectorConf.CassandraSSLConf = cassandraSslConfDefault,
-    queryRetryDelay: CassandraConnectorConf.RetryDelayConf = queryRetryDelayParamDefault
-)
+    cassandraSSLConf: CassandraConnectorConf.CassandraSSLConf = CassandraSSLConf(),
+    queryRetryDelay: CassandraConnectorConf.RetryDelayConf =
+      RetryDelayConf.ExponentialDelay(4.seconds, 1.5d))
 
 object CassandraConnectorConf {
-  val hostDefault = InetAddress.getLocalHost
-  val portDefault = 9042
-
-  val keepAliveMillisDefault = 5000
-  val minReconnectionDelayMillisDefault = 1000
-  val maxReconnectionDelayMillisDefault = 6000
-  val compressionDefault = ProtocolOptions.Compression.NONE
-  val queryRetryCountDefault = 10
-  val connectTimeoutMillisDefault = 5000
-  val readTimeoutMillisDefault = 120000
 
   case class CassandraSSLConf(
       enabled: Boolean = false,
@@ -91,39 +80,5 @@ object CassandraConnectorConf {
         (initialDelay.toMillis * math.pow(increaseBy, (nbRetry - 1).max(0))).toLong.milliseconds
       override def toString: String = s"${initialDelay.length} * $increaseBy"
     }
-
-    private val ConstantDelayEx = """(\d+)""".r
-    private val LinearDelayEx = """(\d+)\+(.+)""".r
-    private val ExponentialDelayEx = """(\d+)\*(.+)""".r
-
-    def fromString(s: String): Option[RetryDelayConf] = s.trim match {
-      case "" => None
-
-      case ConstantDelayEx(delayStr) =>
-        val d = for (delay <- Try(delayStr.toInt)) yield ConstantDelay(delay.milliseconds)
-        d.toOption.orElse(throw new IllegalArgumentException(
-          s"Invalid format of constant delay: $s; it should be <integer number>."))
-
-      case LinearDelayEx(delayStr, increaseStr) =>
-        val d = for (delay <- Try(delayStr.toInt); increaseBy <- Try(increaseStr.toInt))
-          yield LinearDelay(delay.milliseconds, increaseBy.milliseconds)
-        d.toOption.orElse(
-          throw new IllegalArgumentException(
-            s"Invalid format of linearly increasing delay: $s; " +
-              s"it should be <integer number>+<integer number>"))
-
-      case ExponentialDelayEx(delayStr, increaseStr) =>
-        val d = for (delay <- Try(delayStr.toInt); increaseBy <- Try(increaseStr.toDouble))
-          yield ExponentialDelay(delay.milliseconds, increaseBy)
-        d.toOption.orElse(
-          throw new IllegalArgumentException(
-            s"Invalid format of exponentially increasing delay: $s; " +
-              s"it should be <integer number>*<real number>"))
-    }
   }
-
-  val cassandraSslConfDefault = CassandraSSLConf()
-
-  val queryRetryDelayParamDefault = RetryDelayConf.ExponentialDelay(4.seconds, 1.5d)
-
 }
