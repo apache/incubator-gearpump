@@ -15,14 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
 import java.net.InetAddress
 
 import scala.concurrent.duration.{Duration, _}
 
 import com.datastax.driver.core.ProtocolOptions
-import org.apache.gearpump.experiments.cassandra.lib.CassandraConnectorConf._
+import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf.{CassandraSSLConf, RetryDelayConf}
 
 case class CassandraConnectorConf(
     hosts: Set[InetAddress] = Set(InetAddress.getLocalHost),

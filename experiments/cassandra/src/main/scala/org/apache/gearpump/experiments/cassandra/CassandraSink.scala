@@ -21,6 +21,7 @@ import com.datastax.driver.core.Session
 import org.apache.gearpump.Message
 import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
 import org.apache.gearpump.experiments.cassandra.lib._
+import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf
 import org.apache.gearpump.streaming.sink.DataSink
 import org.apache.gearpump.streaming.task.TaskContext
 

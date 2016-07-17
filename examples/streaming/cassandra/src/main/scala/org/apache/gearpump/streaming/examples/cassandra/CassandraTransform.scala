@@ -28,13 +28,15 @@ import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption, ParseResult}
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
+import org.apache.gearpump.experiments.cassandra.lib.connector.{CqlWhereClause,
+CassandraConnectorConf}
 import org.apache.gearpump.experiments.cassandra.{CassandraSink, CassandraSource}
 import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
 import org.apache.gearpump.experiments.cassandra.lib._
 import org.apache.gearpump.streaming.StreamApplication
 import org.apache.gearpump.streaming.sink.DataSinkProcessor
-import org.apache.gearpump.streaming.source.DataSourceProcessor
+import org.apache.gearpump.streaming.source.{DefaultTimeStampFilter, DataSourceProcessor}
 import org.apache.gearpump.util.Graph._
 import org.apache.gearpump.util.{AkkaApp, Graph}
 
@@ -118,7 +120,17 @@ object CassandraTransform extends AkkaApp with ArgumentsParser {
         row.getInt("temperature"),
         row.getString("location"))
 
-    val source = new CassandraSource[SensorData](connectorConf, ReadConf(), query)
+    val source = new CassandraSource[SensorData](
+      connectorConf,
+      ReadConf(),
+      "example",
+      "sensor_data",
+      Seq("id", "inserted", "temperature", "location"),
+      Seq("id"),
+      Seq("inserted"),
+      CqlWhereClause.empty,
+      new DefaultTimeStampFilter())
+
     val sourceProcessor = DataSourceProcessor(source, sourceNum)
 
     implicit val statementBuilder2: BoundStatementBuilder[SensorData] = value =>

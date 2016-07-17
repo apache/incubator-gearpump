@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
 import java.util.concurrent.Semaphore
 
@@ -23,7 +23,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.Try
 
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture, SettableFuture}
-import org.apache.gearpump.experiments.cassandra.lib.AsyncExecutor.Handler
+import org.apache.gearpump.experiments.cassandra.lib.connector.AsyncExecutor.Handler
 
 class AsyncExecutor[T, R](
     asyncAction: T => ListenableFuture[R],

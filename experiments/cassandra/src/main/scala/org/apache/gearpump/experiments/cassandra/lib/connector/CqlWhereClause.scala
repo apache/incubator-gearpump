@@ -15,18 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
-import com.datastax.driver.core._
-import org.apache.gearpump.experiments.cassandra.lib.AsyncExecutor.Handler
+case class CqlWhereClause(
+    predicates: Seq[String],
+    values: Seq[Any],
+    containsPartitionKey: Boolean)
 
-class QueryExecutor(
-    session: Session,
-    maxConcurrentQueries: Int,
-    successHandler: Option[Handler[Statement]],
-    failureHandler: Option[Handler[Statement]])
-  extends AsyncExecutor[Statement, ResultSet](
-    stmt => session.executeAsync(stmt),
-    maxConcurrentQueries,
-    successHandler,
-    failureHandler)
+object CqlWhereClause {
+  val empty = new CqlWhereClause(Nil, Nil, false)
+}

@@ -18,9 +18,10 @@
 package org.apache.gearpump.experiments.cassandra
 
 import org.apache.gearpump._
-import org.apache.gearpump.experiments.cassandra.lib.{CqlWhereClause, ReadConf}
+import org.apache.gearpump.experiments.cassandra.lib.ReadConf
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor._
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
+import org.apache.gearpump.experiments.cassandra.lib.connector.CqlWhereClause
 import org.apache.gearpump.streaming.source.DefaultTimeStampFilter
 import org.apache.gearpump.streaming.task.{TaskId, TaskContext}
 import org.apache.gearpump.streaming.transaction.api.TimeStampFilter

@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner.dht
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.MonotonicBucketing
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.MonotonicBucketing.LongBucketing
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.MonotonicBucketing
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.MonotonicBucketing.LongBucketing
 
 trait Token[T] extends Ordered[Token[T]] {
   def ord: Ordering[T]

@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
 import java.net.InetAddress
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{TokenRange, TokenFactory, Token}
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{TokenRange, TokenFactory, Token}
 
 case class CqlTokenRange[V, T <: Token[V]](
     range: TokenRange[V, T]

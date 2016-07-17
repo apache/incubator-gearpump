@@ -18,13 +18,7 @@
 package org.apache.gearpump.experiments.cassandra.lib
 
 import com.datastax.driver.core.ConsistencyLevel
-import org.apache.gearpump.experiments.cassandra.lib.WriteConf._
 
 case class WriteConf(
-    consistencyLevel: ConsistencyLevel = consistencyLevelDefault,
-    parallelismLevel: Int = parallelismLevelDefault)
-
-object WriteConf {
-  private val consistencyLevelDefault = ConsistencyLevel.LOCAL_QUORUM
-  private val parallelismLevelDefault = 5
-}
+    consistencyLevel: ConsistencyLevel = ConsistencyLevel.LOCAL_QUORUM,
+    parallelismLevel: Int = 5)

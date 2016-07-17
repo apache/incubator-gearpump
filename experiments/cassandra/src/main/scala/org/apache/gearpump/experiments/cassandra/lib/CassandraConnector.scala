@@ -18,6 +18,7 @@
 package org.apache.gearpump.experiments.cassandra.lib
 
 import com.datastax.driver.core.Session
+import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf
 
 // TODO: Proper cluster, session and statement management
 class CassandraConnector(conf: CassandraConnectorConf) extends Serializable {

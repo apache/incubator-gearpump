@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
 import scala.collection.JavaConverters._
 
 import com.datastax.driver.core.exceptions.InvalidQueryException
 import org.apache.gearpump.experiments.cassandra.lib.{Logging, CassandraConnector}
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{TokenFactory, Token}
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{TokenFactory, Token}
 
 class DataSizeEstimates[V, T <: Token[V]](
     conn: CassandraConnector,

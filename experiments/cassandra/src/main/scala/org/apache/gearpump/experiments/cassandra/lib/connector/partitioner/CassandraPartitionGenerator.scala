@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
 import scala.collection.JavaConverters._
 import scala.collection.parallel.ForkJoinTaskSupport
@@ -23,7 +23,7 @@ import scala.concurrent.forkjoin.ForkJoinPool
 import scala.language.existentials
 
 import com.datastax.driver.core.{Metadata, TokenRange => DriverTokenRange}
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{Token, TokenFactory}
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{Token, TokenFactory}
 import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, Logging}
 
 private[cassandra] class CassandraPartitionGenerator[V, T <: Token[V]] private (

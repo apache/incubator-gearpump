@@ -17,11 +17,22 @@
  */
 package org.apache.gearpump.experiments.cassandra.lib
 
-case class CqlWhereClause(
-    predicates: Seq[String],
-    values: Seq[Any],
-    containsPartitionKey: Boolean)
+import scala.math.ceil
 
-object CqlWhereClause {
-  val empty = new CqlWhereClause(Nil, Nil, false)
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.Token
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.{CassandraPartition, CqlTokenRange}
+
+// TODO: Group based on locality
+class DefaultPartitionGrouper {
+  def group[V, T <: Token[V]](
+      taskNum: Int,
+      taskIndex: Int,
+      cassandraPartitions: Seq[CassandraPartition[V, T]]
+    ): Seq[CqlTokenRange[V, T]] = {
+
+    val tokenRanges = cassandraPartitions.flatMap(_.tokenRanges)
+    val array =
+      tokenRanges.grouped(ceil(tokenRanges.size.toDouble / taskNum.toDouble).toInt).toArray
+    array(taskIndex)
+  }
 }

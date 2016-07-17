@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner.dht
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht
 
 import scala.language.existentials
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.MonotonicBucketing
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.MonotonicBucketing
 
 trait TokenFactory[V, T <: Token[V]] extends Serializable {
   def minToken: T

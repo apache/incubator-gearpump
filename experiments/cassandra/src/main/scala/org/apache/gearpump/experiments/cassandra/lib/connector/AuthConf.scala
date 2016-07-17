@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.experiments.cassandra.lib
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
 import com.datastax.driver.core.{AuthProvider, PlainTextAuthProvider}
 

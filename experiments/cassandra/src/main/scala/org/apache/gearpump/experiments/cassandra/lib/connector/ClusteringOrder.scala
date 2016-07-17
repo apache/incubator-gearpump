@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
 sealed trait ClusteringOrder extends Serializable {
   private[cassandra] def toCql(clusteringColumns: Seq[String]): String

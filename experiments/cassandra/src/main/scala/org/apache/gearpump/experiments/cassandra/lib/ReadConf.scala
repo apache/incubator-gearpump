@@ -15,21 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.gearpump.experiments.cassandra.lib
 
 import com.datastax.driver.core.ConsistencyLevel
-import org.apache.gearpump.experiments.cassandra.lib.ReadConf._
 
 case class ReadConf(
-    splitCount: Option[Int] = splitCountDefault,
-    splitSizeInMB: Int = splitSizeInMBDefault,
-    fetchSizeInRows: Int = fetchSizeInRowsDefault,
-    consistencyLevel: ConsistencyLevel = consistencyLevelDefault)
-
-object ReadConf {
-  private val splitCountDefault = None
-  private val splitSizeInMBDefault = 64
-  private val fetchSizeInRowsDefault = 1000
-  private val consistencyLevelDefault = ConsistencyLevel.LOCAL_ONE
-}
+    splitCount: Option[Int] = None,
+    splitSizeInMB: Int = 64,
+    fetchSizeInRows: Int = 1000,
+    consistencyLevel: ConsistencyLevel = ConsistencyLevel.LOCAL_ONE)

@@ -15,22 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
-import scala.math.ceil
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.Token
+import com.datastax.driver.core._
+import org.apache.gearpump.experiments.cassandra.lib.connector.AsyncExecutor.Handler
 
-// TODO: Group based on
-class DefaultPartitionGrouper {
-  def group[V, T <: Token[V]](
-      taskNum: Int,
-      taskIndex: Int,
-      cassandraPartitions: Seq[CassandraPartition[V, T]]
-    ): Seq[CqlTokenRange[V, T]] = {
-
-    val tokenRanges = cassandraPartitions.flatMap(_.tokenRanges)
-    val array =
-      tokenRanges.grouped(ceil(tokenRanges.size.toDouble / taskNum.toDouble).toInt).toArray
-    array(taskIndex)
-  }
-}
+class QueryExecutor(
+    session: Session,
+    maxConcurrentQueries: Int,
+    successHandler: Option[Handler[Statement]],
+    failureHandler: Option[Handler[Statement]])
+  extends AsyncExecutor[Statement, ResultSet](
+    stmt => session.executeAsync(stmt),
+    maxConcurrentQueries,
+    successHandler,
+    failureHandler)

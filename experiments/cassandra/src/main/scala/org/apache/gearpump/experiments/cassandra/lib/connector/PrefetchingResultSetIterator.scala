@@ -15,15 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{Token, TokenRange}
+import com.datastax.driver.core.{ResultSet, Row}
 
-trait TokenRangeSplitter[V, T <: Token[V]] {
-  def split(range: TokenRange[V, T], splitSize: Long): Seq[TokenRange[V, T]]
+class PrefetchingResultSetIterator(
+    resultSet: ResultSet,
+    prefetchWindowSize: Int
+  ) extends Iterator[Row] {
+
+  private[this] val iterator = resultSet.iterator()
+
+  override def hasNext: Boolean = iterator.hasNext
+
+  private[this] def maybePrefetch(): Unit = {
+    if (!resultSet.isFullyFetched && resultSet.getAvailableWithoutFetching < prefetchWindowSize) {
+      resultSet.fetchMoreResults()
+    }
+  }
+
+  override def next(): Row = {
+    maybePrefetch()
+    iterator.next()
+  }
 }
-
-
-
-
-

@@ -21,7 +21,8 @@ import com.datastax.driver.core.{Row, Session, Statement}
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.experiments.cassandra.lib._
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.{CassandraPartitionGenerator, CqlTokenRange, DefaultPartitionGrouper}
+import org.apache.gearpump.experiments.cassandra.lib.connector._
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.{CassandraPartitionGenerator, CqlTokenRange}
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.streaming.transaction.api.{CheckpointStoreFactory, TimeReplayableSource, TimeStampFilter}
 import org.apache.gearpump.{Message, TimeStamp}

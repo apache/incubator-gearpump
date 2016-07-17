@@ -15,14 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
 import java.net.InetAddress
 
 import scala.Ordering.Implicits._
 import scala.annotation.tailrec
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{Token, TokenRange}
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{Token, TokenRange}
 
 class TokenRangeClusterer[V, T <: Token[V]](
     maxRowCountPerGroup: Long,

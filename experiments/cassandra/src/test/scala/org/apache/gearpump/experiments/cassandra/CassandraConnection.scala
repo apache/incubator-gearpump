@@ -19,7 +19,8 @@ package org.apache.gearpump.experiments.cassandra
 
 import java.net.InetAddress
 
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnector, CassandraConnectorConf}
+import org.apache.gearpump.experiments.cassandra.lib.CassandraConnector
+import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf
 
 trait CassandraConnection {
 

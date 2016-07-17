@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{LongToken, TokenFactory, TokenRange}
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{LongToken, TokenFactory, TokenRange}
 
 class Murmur3PartitionerTokenRangeSplitter(dataSize: Long)
   extends TokenRangeSplitter[Long, LongToken] {

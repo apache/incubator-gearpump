@@ -22,7 +22,8 @@ import scala.concurrent.ExecutionContext
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.experiments.cassandra.CassandraSink
 import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
-import org.apache.gearpump.experiments.cassandra.lib.{CassandraConnectorConf, WriteConf}
+import org.apache.gearpump.experiments.cassandra.lib.WriteConf
+import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf
 import org.apache.gearpump.streaming.dsl
 
 class CassandraDSLSink[T: BoundStatementBuilder](stream: dsl.Stream[T]) {

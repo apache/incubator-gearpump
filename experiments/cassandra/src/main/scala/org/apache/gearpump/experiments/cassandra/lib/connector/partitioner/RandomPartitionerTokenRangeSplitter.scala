@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.experiments.cassandra.lib.partitioner
+package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{BigIntToken, TokenFactory, TokenRange}
+import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{BigIntToken, TokenFactory, TokenRange}
 
 class RandomPartitionerTokenRangeSplitter(dataSize: Long)
   extends TokenRangeSplitter[BigInt, BigIntToken] {

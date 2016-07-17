@@ -21,6 +21,7 @@ import java.io.IOException
 
 import com.datastax.driver.core.PreparedStatement
 import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
+import org.apache.gearpump.experiments.cassandra.lib.connector.QueryExecutor
 
 class TableWriter[T: BoundStatementBuilder] (
     connector: CassandraConnector,
