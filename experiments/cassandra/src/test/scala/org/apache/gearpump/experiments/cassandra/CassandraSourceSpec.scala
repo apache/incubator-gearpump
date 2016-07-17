@@ -17,14 +17,13 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
-import akka.actor.ActorSystem
-import com.twitter.bijection.Bijection
-import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
+import org.apache.gearpump._
 import org.apache.gearpump.experiments.cassandra.lib.{CqlWhereClause, ReadConf}
-import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
-import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor._
+import org.apache.gearpump.experiments.cassandra.lib.RowExtractor._
+import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.streaming.source.DefaultTimeStampFilter
 import org.apache.gearpump.streaming.task.{TaskId, TaskContext}
+import org.apache.gearpump.streaming.transaction.api.TimeStampFilter
 import org.mockito.Mockito._
 
 class CassandraSourceSpec extends CassandraSpecBase {
@@ -34,29 +33,52 @@ class CassandraSourceSpec extends CassandraSpecBase {
     storeTestData(10, 10)
   }
 
-  "CassandraSource" should "read data from Cassandra" in {
-    val queryWithWhereCql =
-      s"""
-        |SELECT *
-        |FROM $keyspace.$table
-        |WHERE partitioning_key = ? AND clustering_key >= ?
-      """.stripMargin
+  case class Data(partitioningKey: String, clusteringKey: Int, data: String)
 
-    case class Data(partitioningKey: String, clusteringKey: Int, data: String)
+  implicit val rowExtractor: RowExtractor[Data] = row =>
+    Data(
+      row.getString("partitioning_key"),
+      row.getInt("clustering_key"),
+      row.getString("data"))
 
-    implicit val builder: BoundStatementBuilder[Long] =
-      _ => Seq("5", Bijection[Int, java.lang.Integer](5))
+  implicit val timeStampExtractor: TimeStampExtractor = row =>
+    row.getInt("clustering_key")
 
-    implicit val rowExtractor: RowExtractor[Data] = row =>
-      Data(
-        row.getString("partitioning_key"),
-        row.getInt("clustering_key"),
-        row.getString("data"))
+  "CassandraSource" should "read data from Cassandra without a where predicate" in {
 
-    implicit val timeStampExtractor: TimeStampExtractor = row =>
-      row.getInt("clustering_key")
+    val source = new CassandraSource[Data](
+      connectorConf,
+      ReadConf(),
+      keyspace,
+      table,
+      Seq("partitioning_key", "clustering_key", "data"),
+      Seq("partitioning_key"),
+      Seq("clustering_key"),
+      CqlWhereClause.empty,
+      new DefaultTimeStampFilter(),
+      None,
+      None)
 
-    val source = new CassandraFilteringSource[Data](
+    val taskContext = mock[TaskContext]
+    when(taskContext.parallelism).thenReturn(1)
+    when(taskContext.taskId).thenReturn(TaskId(1, 0))
+
+    source.open(taskContext, 5)
+    assert((0 to 4).map(_ => source.read()) == (0 to 4).map(_ => null))
+
+    val result = source.read()
+    assert(result.timestamp == 5L)
+    assert(result.msg.asInstanceOf[Data].clusteringKey == 5)
+    assert(result.msg.asInstanceOf[Data].data == "data")
+
+    val result2 = source.read()
+    assert(result2.timestamp == 6L)
+    assert(result2.msg.asInstanceOf[Data].data == "data")
+    assert(result2.msg.asInstanceOf[Data].clusteringKey == 6)
+  }
+
+  it should "read data from Cassandra when where clause is specified" in {
+    val source = new CassandraSource[Data](
       connectorConf,
       ReadConf(),
       keyspace,
@@ -68,13 +90,14 @@ class CassandraSourceSpec extends CassandraSpecBase {
         Seq("partitioning_key = ?", "clustering_key >= ?"),
         Seq("5", 5),
         containsPartitionKey = true),
-      new DefaultTimeStampFilter(),
+      new TimeStampFilter() {
+        override def filter(msg: Message, predicate: TimeStamp): Option[Message] =
+          Some(msg)
+      },
       None,
       None)
 
-    val actorSystem = ActorSystem("CassandraSourceEmbeddedSpec")
     val taskContext = mock[TaskContext]
-    when(taskContext.system).thenReturn(actorSystem)
     when(taskContext.parallelism).thenReturn(1)
     when(taskContext.taskId).thenReturn(TaskId(1, 0))
 

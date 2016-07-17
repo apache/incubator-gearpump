@@ -32,7 +32,7 @@ private[cassandra] class CassandraPartitionGenerator[V, T <: Token[V]] private (
     tableName: String,
     splitCount: Option[Int],
     splitSize: Long
-  )(implicit tokenFactory: TokenFactory[V, T]) extends Logging{
+  )(implicit tokenFactory: TokenFactory[V, T]) extends Logging {
 
   type Token = dht.Token[T]
   type TokenRange = dht.TokenRange[V, T]

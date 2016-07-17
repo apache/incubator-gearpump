@@ -17,43 +17,116 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
-import org.apache.gearpump.Message
-import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
+import com.datastax.driver.core.{Row, Session, Statement}
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
-import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor._
+import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.experiments.cassandra.lib._
+import org.apache.gearpump.experiments.cassandra.lib.partitioner.{CassandraPartitionGenerator, CqlTokenRange, DefaultPartitionGrouper}
 import org.apache.gearpump.streaming.task.TaskContext
+import org.apache.gearpump.streaming.transaction.api.{CheckpointStoreFactory, TimeReplayableSource, TimeStampFilter}
+import org.apache.gearpump.{Message, TimeStamp}
 
 // TODO: Analyse query, automatically convert types, ...
-class CassandraSource[T: RowExtractor] (
+class CassandraSource[T: RowExtractor](
     connectorConf: CassandraConnectorConf,
     conf: ReadConf,
-    queryCql: String
-  )(implicit boundStatementBuilder: BoundStatementBuilder[Long],
-    timeStampExtractor: TimeStampExtractor)
-  extends CassandraSourceBase[T](connectorConf, conf) {
+    keyspace: String,
+    table: String,
+    columns: Seq[String],
+    partitionKeyColumns: Seq[String],
+    clusteringKeyColumns: Seq[String],
+    where: CqlWhereClause,
+    timeStampFilter: TimeStampFilter,
+    clusteringOrder: Option[ClusteringOrder] = None,
+    limit: Option[Long] = None
+  )(implicit timeStampExtractor: TimeStampExtractor)
+  extends TimeReplayableSource
+  with Logging {
+
+  protected var iterator: Option[Iterator[Row]] = None
+  protected var connector: CassandraConnector = _
+  protected var session: Session = _
+
+  protected val rowExtractor = implicitly[RowExtractor[T]]
+
+  private[this] var startTime: TimeStamp = _
+
+  private def tokenRangeToCqlQuery(range: CqlTokenRange[_, _]): (String, Seq[Any]) = {
+    val (cql, values) = if (where.containsPartitionKey) {
+      ("", Seq.empty)
+    } else {
+      range.cql(partitionKeyColumns.mkString(","))
+    }
+    val filter = (cql +: where.predicates).filter(_.nonEmpty).mkString(" AND ")
+    val limitClause = limit.map(limit => s"LIMIT $limit").getOrElse("")
+    val orderBy = clusteringOrder.map(_.toCql(clusteringKeyColumns)).getOrElse("")
+    val selectColums = columns.mkString(",")
+    val queryTemplate =
+      s"SELECT $selectColums " +
+      s"FROM $keyspace.$table " +
+      s"WHERE $filter $orderBy $limitClause ALLOW FILTERING"
+    val queryParamValues = values ++ where.values
+    (queryTemplate, queryParamValues)
+  }
+
+  private def createStatement(session: Session, cql: String, values: Any*): Statement = {
+    val stmt = session.prepare(cql)
+    stmt.setConsistencyLevel(conf.consistencyLevel)
+    val bstm = stmt.bind(values.map(_.asInstanceOf[AnyRef]): _*)
+    bstm.setFetchSize(conf.fetchSizeInRows)
+    bstm
+  }
+
+  private def fetchTokenRange(
+      session: Session,
+      range: CqlTokenRange[_, _]
+    ): Iterator[Row] = {
+
+    val (cql, values) = tokenRangeToCqlQuery(range)
+    val stmt = createStatement(session, cql, values: _*)
+    val rs = session.execute(stmt)
+    new PrefetchingResultSetIterator(rs, conf.fetchSizeInRows)
+  }
 
   // TODO: Non blocking
-  def open(context: TaskContext, startTime: Long): Unit = {
+  override def open(context: TaskContext, startTime: Long): Unit = {
     connector = new CassandraConnector(connectorConf)
     session = connector.openSession()
 
-    val resultSet =
-      session.execute(
-        session.prepare(queryCql)
-          .bind(boundStatementBuilder(startTime): _*)
-          .setConsistencyLevel(conf.consistencyLevel))
+    val partitioner = if (where.containsPartitionKey) {
+      CassandraPartitionGenerator(connector, keyspace, table, Some(1), conf.splitSizeInMB)
+    } else {
+      CassandraPartitionGenerator(connector, keyspace, table, conf.splitCount, conf.splitSizeInMB)
+    }
 
-    iterator = Some(new PrefetchingResultSetIterator(resultSet, conf.fetchSizeInRows))
+    val assignedTokenRanges =
+      new DefaultPartitionGrouper()
+        .group(context.parallelism, context.taskId.index, partitioner.partitions)
+
+    this.startTime = startTime
+
+    iterator =
+      Some(
+        assignedTokenRanges
+          .iterator
+          .flatMap(fetchTokenRange(session, _: CqlTokenRange[_, _])))
   }
 
-  def read(): Message =
-    iterator.map { i =>
+  override def read(): Message =
+    iterator.map{ i =>
       if (i.hasNext) {
         val message = i.next()
-        Message(rowExtractor(message), timeStampExtractor(message))
+        val timeStamp = timeStampExtractor(message)
+
+        timeStampFilter.filter(
+          Message(rowExtractor(message), timeStamp),
+          startTime).orNull
       } else {
         null
       }
     }.orNull
+
+  override def setCheckpointStore(factory: CheckpointStoreFactory): Unit = { }
+
+  override def close(): Unit = connector.evictCache()
 }
