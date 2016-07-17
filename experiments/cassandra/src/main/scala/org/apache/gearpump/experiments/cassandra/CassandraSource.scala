@@ -22,10 +22,9 @@ import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.Bound
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor._
 import org.apache.gearpump.experiments.cassandra.lib._
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.CassandraPartitionGenerator
 import org.apache.gearpump.streaming.task.TaskContext
 
-// TODO: Analyse query, compute token ranges, automatically convert types, ...
+// TODO: Analyse query, automatically convert types, ...
 class CassandraSource[T: RowExtractor] (
     connectorConf: CassandraConnectorConf,
     conf: ReadConf,

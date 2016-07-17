@@ -17,11 +17,8 @@
  */
 package org.apache.gearpump.experiments.cassandra.lib.partitioner
 
-import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{TokenRange, TokenFactory,
-LongToken}
+import org.apache.gearpump.experiments.cassandra.lib.partitioner.dht.{LongToken, TokenFactory, TokenRange}
 
-/** Fast token range splitter assuming that data are spread out evenly in the whole range.
-  * @param dataSize estimate of the size of the data in the whole ring */
 class Murmur3PartitionerTokenRangeSplitter(dataSize: Long)
   extends TokenRangeSplitter[Long, LongToken] {
 
@@ -30,8 +27,6 @@ class Murmur3PartitionerTokenRangeSplitter(dataSize: Long)
 
   private type TR = TokenRange[Long, LongToken]
 
-  /** Splits the token range uniformly into sub-ranges.
-    * @param splitSize requested sub-split size, given in the same units as `dataSize` */
   def split(range: TR, splitSize: Long): Seq[TR] = {
     val rangeSize = range.dataSize
     val rangeTokenCount = tokenFactory.distance(range.start, range.end)

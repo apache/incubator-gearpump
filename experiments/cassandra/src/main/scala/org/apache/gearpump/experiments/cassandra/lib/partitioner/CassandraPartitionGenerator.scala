@@ -68,8 +68,9 @@ private[cassandra] class CassandraPartitionGenerator[V, T <: Token[V]] private (
   }
 
   private def splitsOf(
-    tokenRanges: Iterable[TokenRange],
-    splitter: TokenRangeSplitter[V, T]): Iterable[TokenRange] = {
+      tokenRanges: Iterable[TokenRange],
+      splitter: TokenRangeSplitter[V, T]
+    ): Iterable[TokenRange] = {
 
     val parTokenRanges = tokenRanges.par
     parTokenRanges.tasksupport = new ForkJoinTaskSupport(CassandraPartitionGenerator.pool)
@@ -125,8 +126,10 @@ object CassandraPartitionGenerator {
 
   private val pool: ForkJoinPool = new ForkJoinPool(MaxParallelism)
 
+  // scalastyle:off
   type V = t forSome { type t }
   type T = t forSome { type t <: Token[V] }
+  // scalastyle:on
 
   def apply(
       conn: CassandraConnector,
@@ -145,7 +148,7 @@ object CassandraPartitionGenerator {
       splitSize)(tokenFactory)
   }
 
-  def getTokenFactory[V, T <: Token[V]](conn: CassandraConnector) : TokenFactory[V, T] = {
+  def getTokenFactory(conn: CassandraConnector) : TokenFactory[V, T] = {
     val session = conn.openSession()
     val partitionerName =
       session.execute("SELECT partitioner FROM system.local").one().getString(0)

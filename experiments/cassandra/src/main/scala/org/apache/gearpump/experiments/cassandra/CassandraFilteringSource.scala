@@ -26,7 +26,7 @@ import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.streaming.transaction.api.TimeStampFilter
 import org.apache.gearpump.{Message, TimeStamp}
 
-// TODO: Analyse query, compute token ranges, automatically convert types, ...
+// TODO: Analyse query, automatically convert types, ...
 class CassandraFilteringSource[T: RowExtractor](
     connectorConf: CassandraConnectorConf,
     conf: ReadConf,
@@ -56,8 +56,8 @@ class CassandraFilteringSource[T: RowExtractor](
     val selectColums = columns.mkString(",")
     val queryTemplate =
       s"SELECT $selectColums " +
-        s"FROM $keyspace.$table " +
-        s"WHERE $filter $orderBy $limitClause ALLOW FILTERING"
+      s"FROM $keyspace.$table " +
+      s"WHERE $filter $orderBy $limitClause ALLOW FILTERING"
     val queryParamValues = values ++ where.values
     (queryTemplate, queryParamValues)
   }
@@ -86,8 +86,12 @@ class CassandraFilteringSource[T: RowExtractor](
     connector = new CassandraConnector(connectorConf)
     session = connector.openSession()
 
-    val partitioner =
+    val partitioner = if (where.containsPartitionKey) {
+      CassandraPartitionGenerator(connector, keyspace, table, Some(1), conf.splitSizeInMB)
+    } else {
       CassandraPartitionGenerator(connector, keyspace, table, conf.splitCount, conf.splitSizeInMB)
+    }
+
     val assignedTokenRanges =
       new DefaultPartitionGrouper()
         .group(context.parallelism, context.taskId.index, partitioner.partitions)

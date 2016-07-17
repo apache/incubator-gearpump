@@ -20,10 +20,11 @@ package org.apache.gearpump.experiments.cassandra
 import akka.actor.ActorSystem
 import com.twitter.bijection.Bijection
 import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
-import org.apache.gearpump.experiments.cassandra.lib.ReadConf
+import org.apache.gearpump.experiments.cassandra.lib.{CqlWhereClause, ReadConf}
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor._
-import org.apache.gearpump.streaming.task.TaskContext
+import org.apache.gearpump.streaming.source.DefaultTimeStampFilter
+import org.apache.gearpump.streaming.task.{TaskId, TaskContext}
 import org.mockito.Mockito._
 
 class CassandraSourceSpec extends CassandraSpecBase {
@@ -55,14 +56,27 @@ class CassandraSourceSpec extends CassandraSpecBase {
     implicit val timeStampExtractor: TimeStampExtractor = row =>
       row.getInt("clustering_key")
 
-    val source = new CassandraSource[Data](
+    val source = new CassandraFilteringSource[Data](
       connectorConf,
       ReadConf(),
-      queryWithWhereCql)
+      keyspace,
+      table,
+      Seq("partitioning_key", "clustering_key", "data"),
+      Seq("partitioning_key"),
+      Seq("clustering_key"),
+      CqlWhereClause(
+        Seq("partitioning_key = ?", "clustering_key >= ?"),
+        Seq("5", 5),
+        containsPartitionKey = true),
+      new DefaultTimeStampFilter(),
+      None,
+      None)
 
     val actorSystem = ActorSystem("CassandraSourceEmbeddedSpec")
     val taskContext = mock[TaskContext]
     when(taskContext.system).thenReturn(actorSystem)
+    when(taskContext.parallelism).thenReturn(1)
+    when(taskContext.taskId).thenReturn(TaskId(1, 0))
 
     source.open(taskContext, 5L)
 
