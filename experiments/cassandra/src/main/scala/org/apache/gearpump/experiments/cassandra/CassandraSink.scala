@@ -32,7 +32,7 @@ class CassandraSink[T: BoundStatementBuilder] (
     writeCql: String)
   extends DataSink
   with Logging {
-
+  
   private[this] var connector: CassandraConnector = _
   private[this] var session: Session = _
 

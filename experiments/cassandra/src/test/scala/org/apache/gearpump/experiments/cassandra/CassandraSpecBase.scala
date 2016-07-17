@@ -17,6 +17,7 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
+import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -25,7 +26,7 @@ trait CassandraSpecBase
   with Matchers
   with BeforeAndAfterAll
   with MockitoSugar
-  with CassandraConnection {
+  with CassandraSpecConnection {
 
   protected val keyspace = "demo"
   protected val table = "CassandraSourceEmbeddedSpec"
@@ -50,20 +51,16 @@ trait CassandraSpecBase
       """.stripMargin)
   }
 
-  protected def cleanTables() = {
-    val session = connector.openSession()
-    session.execute(s"DROP KEYSPACE $keyspace")
-  }
-
   protected val selectAllCql = s"SELECT * FROM $keyspace.$table"
 
   override def beforeAll(): Unit = {
+    EmbeddedCassandraServerHelper.startEmbeddedCassandra()
     createTables()
   }
 
   override def afterAll(): Unit = {
-    cleanTables()
     connector.evictCache()
+    EmbeddedCassandraServerHelper.cleanEmbeddedCassandra()
   }
 
   protected def storeTestData(partitions: Int, rows: Int) = {

@@ -77,7 +77,7 @@ class CassandraSource[T: RowExtractor](
     bstm.setFetchSize(conf.fetchSizeInRows)
     bstm
   }
-
+  
   private def fetchTokenRange(
       session: Session,
       range: CqlTokenRange[_, _]

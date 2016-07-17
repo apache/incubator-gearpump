@@ -22,10 +22,10 @@ import java.net.InetAddress
 import org.apache.gearpump.experiments.cassandra.lib.CassandraConnector
 import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf
 
-trait CassandraConnection {
+trait CassandraSpecConnection {
 
   protected val connectorConf = CassandraConnectorConf(
-    port = 9042,
+    port = 9142,
     hosts = Set(InetAddress.getByName("127.0.0.1")))
 
   protected val connector = new CassandraConnector(connectorConf)

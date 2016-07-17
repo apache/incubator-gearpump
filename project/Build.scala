@@ -218,8 +218,6 @@ object Build extends sbt.Build {
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", "io.netty.versions.properties") =>
         MergeStrategy.first
-      case PathList("com", "google", "common", "util", "concurrent", "Futures.class") =>
-        MergeStrategy.first
       case x =>
         val oldStrategy = (assemblyMergeStrategy in assembly).value
         oldStrategy(x)
@@ -466,9 +464,9 @@ object Build extends sbt.Build {
       Seq(
         libraryDependencies ++= Seq(
           "com.datastax.cassandra"  % "cassandra-driver-core" % cassandraVersion,
-          "com.twitter" %% "bijection-core" % bijectionVersion
-          // "org.cassandraunit"       %  "cassandra-unit"       % "3.0.0.1" % "test"
-          //   excludeAll ExclusionRule("org.slf4j")
+          "com.twitter"            %% "bijection-core"        % bijectionVersion,
+          "org.cassandraunit"       %  "cassandra-unit"       % "3.0.0.1" % "test"
+            excludeAll ExclusionRule("org.slf4j")
         )
       )
   )

@@ -18,13 +18,14 @@
 package org.apache.gearpump.experiments.cassandra
 
 import org.apache.gearpump.experiments.cassandra.lib.StoreConf
+import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class CassandraStoreSpec
   extends FlatSpec
   with Matchers
   with BeforeAndAfterAll
-  with CassandraConnection {
+  with CassandraSpecConnection {
 
   private[this] val keyspace = "demo"
   private[this] val table = "CassandraStoreEmbeddedSpec"
@@ -35,14 +36,13 @@ class CassandraStoreSpec
 
   private[this] val storeConfig = StoreConf(keyspace, table)
 
-  protected def cleanTables() = {
-    val session = connector.openSession()
-    session.execute(s"DROP KEYSPACE $keyspace")
+  override def beforeAll(): Unit = {
+    EmbeddedCassandraServerHelper.startEmbeddedCassandra()
   }
 
   override def afterAll(): Unit = {
-    cleanTables()
     connector.evictCache()
+    EmbeddedCassandraServerHelper.cleanEmbeddedCassandra()
   }
 
   "CassandraStoreFactory" should "create the appropriate tables" in {
@@ -53,7 +53,7 @@ class CassandraStoreSpec
     assert(session.execute(checkTableExistsCql).all().isEmpty === true)
   }
 
-  "CassandraStore" should "persist and recover snapshots" in {
+  it should "persist and recover snapshots" in {
     val store =
       new AbstractCassandraStoreFactory(connectorConf, storeConfig)
         .getCheckpointStore(name)
@@ -67,7 +67,7 @@ class CassandraStoreSpec
     assert(new String(recovered.get) === checkpoint)
   }
 
-  "CassandraStore" should "not recover non existent snapshots" in {
+  it should "not recover non existent snapshots" in {
     val store =
       new AbstractCassandraStoreFactory(connectorConf, storeConfig)
         .getCheckpointStore(name)

@@ -144,7 +144,7 @@ object CassandraTransform extends AkkaApp with ArgumentsParser {
     val sinkProcessor = DataSinkProcessor(sink, sinkNum)
 
     val computation = sourceProcessor ~> sinkProcessor
-    val app = StreamApplication("KafkaWordCount", Graph(computation), appConfig)
+    val app = StreamApplication("CassandraTransform", Graph(computation), appConfig)
     app
   }
 

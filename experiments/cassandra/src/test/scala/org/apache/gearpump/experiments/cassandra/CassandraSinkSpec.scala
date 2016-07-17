@@ -38,15 +38,6 @@ class CassandraSinkSpec extends CassandraSpecBase {
     session.execute(selectAllCql)
   }
 
-  override def beforeAll(): Unit = {
-    createTables()
-  }
-
-  override def afterAll(): Unit = {
-    cleanTables()
-    connector.evictCache()
-  }
-
   "CassandraSink" should "write data to Cassandra" in {
     implicit val builder: BoundStatementBuilder[(String, Int, String)] =
       value => Seq(value._1, Bijection[Int, java.lang.Integer](value._2), value._3)
