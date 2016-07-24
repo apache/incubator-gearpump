@@ -23,11 +23,13 @@ import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStam
 import org.apache.gearpump.experiments.cassandra.lib._
 import org.apache.gearpump.experiments.cassandra.lib.connector._
 import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.{CassandraPartitionGenerator, CqlTokenRange}
+import org.apache.gearpump.streaming.source.DataSource
 import org.apache.gearpump.streaming.task.TaskContext
-import org.apache.gearpump.streaming.transaction.api.{CheckpointStoreFactory, TimeReplayableSource, TimeStampFilter}
+import org.apache.gearpump.streaming.transaction.api.TimeStampFilter
 import org.apache.gearpump.{Message, TimeStamp}
 
 // TODO: Analyse query, automatically convert types, ...
+// TODO: Make a TimeReplayableSource
 class CassandraSource[T: RowExtractor](
     connectorConf: CassandraConnectorConf,
     conf: ReadConf,
@@ -41,7 +43,7 @@ class CassandraSource[T: RowExtractor](
     clusteringOrder: Option[ClusteringOrder] = None,
     limit: Option[Long] = None
   )(implicit timeStampExtractor: TimeStampExtractor)
-  extends TimeReplayableSource
+  extends DataSource
   with Logging {
 
   protected var iterator: Option[Iterator[Row]] = None
@@ -126,8 +128,6 @@ class CassandraSource[T: RowExtractor](
         null
       }
     }.orNull
-
-  override def setCheckpointStore(factory: CheckpointStoreFactory): Unit = { }
 
   override def close(): Unit = connector.evictCache()
 }
