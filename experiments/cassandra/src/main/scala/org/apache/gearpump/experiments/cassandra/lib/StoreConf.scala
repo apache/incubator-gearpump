@@ -18,21 +18,11 @@
 package org.apache.gearpump.experiments.cassandra.lib
 
 import com.datastax.driver.core.ConsistencyLevel
-import org.apache.gearpump.experiments.cassandra.lib.StoreConf._
 
 case class StoreConf(
-    keyspaceName: String = keyspaceNameDefault,
-    tableName: String = tableNameDefault,
-    replicationStrategyCql: String = replicationStrategyCql,
-    persistConsistencyLevel: ConsistencyLevel = persistConsistencyLevelDefault,
-    recoverConsistencyLevel: ConsistencyLevel = recoverConsistencyLevelDefault,
-    compactionStrategyCql: String = compactionStrategyCqlDefault)
-
-object StoreConf {
-  private val keyspaceNameDefault = "gearpump"
-  private val tableNameDefault = "checkpoints"
-  private val replicationStrategyCql = "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 }"
-  private val persistConsistencyLevelDefault = ConsistencyLevel.LOCAL_ONE
-  private val recoverConsistencyLevelDefault = ConsistencyLevel.LOCAL_ONE
-  private val compactionStrategyCqlDefault = "{'class' : 'SizeTieredCompactionStrategy' }"
-}
+    keyspaceName: String = "gearpump",
+    tableName: String = "checkpoints",
+    replicationStrategyCql: String = "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 }",
+    persistConsistencyLevel: ConsistencyLevel = ConsistencyLevel.LOCAL_ONE,
+    recoverConsistencyLevel: ConsistencyLevel = ConsistencyLevel.LOCAL_ONE,
+    compactionStrategyCql: String = "{'class' : 'SizeTieredCompactionStrategy' }")

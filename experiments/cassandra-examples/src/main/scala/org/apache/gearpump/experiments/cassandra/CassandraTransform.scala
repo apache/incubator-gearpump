@@ -15,28 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.gearpump.streaming.examples.cassandra
+package org.apache.gearpump.experiments.cassandra
 
 import java.net.InetAddress
 import java.util.Date
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 import akka.actor.ActorSystem
 import com.twitter.bijection.Bijection
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption, ParseResult}
-import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
-import org.apache.gearpump.experiments.cassandra.lib.connector.{CqlWhereClause,
-CassandraConnectorConf}
-import org.apache.gearpump.experiments.cassandra.{CassandraSink, CassandraSource}
 import org.apache.gearpump.experiments.cassandra.lib.BoundStatementBuilder.BoundStatementBuilder
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
+import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.experiments.cassandra.lib._
+import org.apache.gearpump.experiments.cassandra.lib.connector.{CassandraConnectorConf, CqlWhereClause}
+import org.apache.gearpump.experiments.cassandra.{CassandraSink, CassandraSource}
 import org.apache.gearpump.streaming.StreamApplication
 import org.apache.gearpump.streaming.sink.DataSinkProcessor
-import org.apache.gearpump.streaming.source.{DefaultTimeStampFilter, DataSourceProcessor}
+import org.apache.gearpump.streaming.source.{DataSourceProcessor, DefaultTimeStampFilter}
 import org.apache.gearpump.util.Graph._
 import org.apache.gearpump.util.{AkkaApp, Graph}
 

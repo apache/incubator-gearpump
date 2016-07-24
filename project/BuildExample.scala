@@ -237,11 +237,12 @@ object BuildExample extends sbt.Build {
 
   lazy val examples_cassandra = Project(
     id = "gearpump-examples-cassandra",
-    base = file("examples/streaming/cassandra"),
+    base = file("experiments/cassandra-examples/src/main/scala" +
+      "/org/apache/gearpump/experiments/cassandra"),
     settings = commonSettings ++ noPublish ++ myAssemblySettings ++
       Seq(
         mainClass in(Compile, packageBin) :=
-          Some("org.apache.gearpump.streaming.examples.cassandra.CassandraTransform"),
+          Some("org.apache.gearpump.experiments.cassandra.CassandraTransform"),
 
         target in assembly := baseDirectory.value.getParentFile.getParentFile / "target" /
           CrossVersion.binaryScalaVersion(scalaVersion.value)

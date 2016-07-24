@@ -24,8 +24,3 @@ import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{
 trait TokenRangeSplitter[V, T <: Token[V]] {
   def split(range: TokenRange[V, T], splitSize: Long): Seq[TokenRange[V, T]]
 }
-
-
-
-
-
