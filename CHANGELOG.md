@@ -2,6 +2,11 @@ Apache Gearpump 0.8.1
 ==================
 Change log:
 ------------------
+- GEARPUMP-184 Create 0.8.1-RC5 release
+- GEARPUMP-183 missing licenses headers and files
+- GEARPUMP-182 Correct references required for source release in LICENSE file
+- GEARPUMP-181 Create 0.8.1-RC4 release
+- GEARPUMP-180 Add DISCLAIMER to release artifacts
 - GEARPUMP-178 Create 0.8.1-RC3 release
 - GEARPUMP-177 Documentation build errors when trying to generate documentation
 - GEARPUMP-176 Create 0.8.1-RC2 release
