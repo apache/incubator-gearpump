@@ -14,8 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The original file (spark-cassandra-connector 1.6.0) was modified
  */
 package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
@@ -26,6 +24,9 @@ import scala.annotation.tailrec
 
 import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{Token, TokenRange}
 
+/**
+ * The original file (spark-cassandra-connector 1.6.0) was modified
+ */
 class TokenRangeClusterer[V, T <: Token[V]](
     maxRowCountPerGroup: Long,
     maxGroupSize: Int = Int.MaxValue) {

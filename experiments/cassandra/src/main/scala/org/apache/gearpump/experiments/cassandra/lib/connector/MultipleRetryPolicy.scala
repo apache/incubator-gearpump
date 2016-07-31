@@ -14,8 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The original file (spark-cassandra-connector 1.6.0) was modified
  */
 package org.apache.gearpump.experiments.cassandra.lib.connector
 
@@ -24,6 +22,9 @@ import com.datastax.driver.core.policies.RetryPolicy
 import com.datastax.driver.core.policies.RetryPolicy.RetryDecision
 import com.datastax.driver.core.{ConsistencyLevel, Statement, WriteType}
 
+/**
+ * The original file (spark-cassandra-connector 1.6.0) was modified
+ */
 class MultipleRetryPolicy(maxRetryCount: Int, retryDelay: CassandraConnectorConf.RetryDelayConf)
   extends RetryPolicy {
 

@@ -125,4 +125,6 @@ The netty transport code work is based on [Apache Storm](http://storm.apache.org
 
 The cgroup code work is based on [JStorm](https://github.com/alibaba/jstorm). Thanks JStorm contributors.
 
+The cassandra integration code work is based on [spark-cassandra-connector](https://github.com/datastax/spark-cassandra-connector). Thanks spark-cassandra-connector contributors.
+
 Thanks to Jetbrains for providing a [IntelliJ IDEA Free Open Source License](https://www.jetbrains.com/buy/opensource/?product=idea).

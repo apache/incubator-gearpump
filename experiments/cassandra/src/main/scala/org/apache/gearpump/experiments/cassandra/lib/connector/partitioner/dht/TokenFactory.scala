@@ -14,8 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The original file (spark-cassandra-connector 1.6.0) was modified
  */
 package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht
 
@@ -23,6 +21,9 @@ import scala.language.existentials
 
 import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.MonotonicBucketing
 
+/**
+ * The original file (spark-cassandra-connector 1.6.0) was modified
+ */
 trait TokenFactory[V, T <: Token[V]] extends Serializable {
   def minToken: T
   def maxToken: T

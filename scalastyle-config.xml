@@ -61,8 +61,8 @@ This file is divided into 3 sections:
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.\E[\w\W]*\Q
- */\E]]></parameter>
+ * limitations under the License.
+ */]]></parameter>
     </parameters>
   </check>
 

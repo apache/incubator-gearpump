@@ -14,8 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The original file (spark-cassandra-connector 1.6.0) was modified
  */
 package org.apache.gearpump.experiments.cassandra.lib.connector
 
@@ -26,6 +24,9 @@ import scala.concurrent.duration.{Duration, _}
 import com.datastax.driver.core.ProtocolOptions
 import org.apache.gearpump.experiments.cassandra.lib.connector.CassandraConnectorConf.{CassandraSSLConf, RetryDelayConf}
 
+/**
+ * The original file (spark-cassandra-connector 1.6.0) was modified
+ */
 case class CassandraConnectorConf(
     hosts: Set[InetAddress] = Set(InetAddress.getLocalHost),
     port: Int = 9042,

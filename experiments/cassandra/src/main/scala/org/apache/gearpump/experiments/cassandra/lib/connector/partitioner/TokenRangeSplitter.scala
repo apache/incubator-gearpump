@@ -14,13 +14,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The original file (spark-cassandra-connector 1.6.0) was modified
  */
 package org.apache.gearpump.experiments.cassandra.lib.connector.partitioner
 
 import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.dht.{Token, TokenRange}
 
+/**
+ * The original file (spark-cassandra-connector 1.6.0) was modified
+ */
 trait TokenRangeSplitter[V, T <: Token[V]] {
   def split(range: TokenRange[V, T], splitSize: Long): Seq[TokenRange[V, T]]
 }

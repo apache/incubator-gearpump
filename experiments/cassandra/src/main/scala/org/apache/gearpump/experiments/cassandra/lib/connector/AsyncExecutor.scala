@@ -14,8 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The original file (spark-cassandra-connector 1.6.0) was modified
  */
 package org.apache.gearpump.experiments.cassandra.lib.connector
 
@@ -27,6 +25,9 @@ import scala.util.Try
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture, SettableFuture}
 import org.apache.gearpump.experiments.cassandra.lib.connector.AsyncExecutor.Handler
 
+/**
+ * The original file (spark-cassandra-connector 1.6.0) was modified
+ */
 class AsyncExecutor[T, R](
     asyncAction: T => ListenableFuture[R],
     maxConcurrentTasks: Int,
