@@ -37,7 +37,7 @@ class CassandraStoreSpec
   private[this] val storeConfig = StoreConf(keyspace, table)
 
   override def beforeAll(): Unit = {
-    EmbeddedCassandraServerHelper.startEmbeddedCassandra()
+    EmbeddedCassandraServerHelper.startEmbeddedCassandra(30000)
   }
 
   override def afterAll(): Unit = {

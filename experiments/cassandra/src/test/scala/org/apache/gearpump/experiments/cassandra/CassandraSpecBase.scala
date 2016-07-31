@@ -54,7 +54,7 @@ trait CassandraSpecBase
   protected val selectAllCql = s"SELECT * FROM $keyspace.$table"
 
   override def beforeAll(): Unit = {
-    EmbeddedCassandraServerHelper.startEmbeddedCassandra()
+    EmbeddedCassandraServerHelper.startEmbeddedCassandra(30000)
     createTables()
   }
 
