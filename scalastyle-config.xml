@@ -45,8 +45,7 @@ This file is divided into 3 sections:
 
   <check level="error" class="org.scalastyle.file.HeaderMatchesChecker" enabled="true">
     <parameters>
-      <parameter name="regex">true</parameter>
-      <parameter name="header"><![CDATA[\Q/*
+      <parameter name="header"><![CDATA[/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
