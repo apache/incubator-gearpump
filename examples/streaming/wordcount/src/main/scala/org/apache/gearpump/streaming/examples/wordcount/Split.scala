@@ -23,28 +23,33 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.source.Watermark
+import org.apache.gearpump.streaming.source.{DataSource, DataSourceTask, Watermark}
 import org.apache.gearpump.streaming.task.{Task, TaskContext}
 
-class Split(taskContext: TaskContext, conf: UserConfig) extends Task(taskContext, conf) {
-  import taskContext.output
 
-  override def onStart(startTime: Instant): Unit = {
-    self ! Watermark(Instant.now)
-  }
+class Split() extends DataSource {
 
-  override def onNext(msg: Message): Unit = {
+
+  override def open(context: TaskContext, startTime: Instant): Unit = {}
+
+
+  override def read(): Message = {
     Split.TEXT_TO_SPLIT.lines.foreach { line =>
       line.split("[\\s]+").filter(_.nonEmpty).foreach { msg =>
-        output(new Message(msg, System.currentTimeMillis()))
+        new Message(msg, System.currentTimeMillis())
       }
     }
-
-    import scala.concurrent.duration._
-    taskContext.scheduleOnce(Duration(100, TimeUnit.MILLISECONDS))(self !
-      Watermark(Instant.now))
+    Message("message")
   }
+
+  override def close(): Unit = {}
+
+  override def getWatermark: Instant = Instant.now()
+
+  Watermark(Instant.now)
+
 }
+
 
 object Split {
   val TEXT_TO_SPLIT =
@@ -66,3 +71,4 @@ object Split {
       |   limitations under the License.
     """.stripMargin
 }
+
