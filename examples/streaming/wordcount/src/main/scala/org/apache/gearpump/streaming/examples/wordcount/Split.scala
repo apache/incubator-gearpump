@@ -41,7 +41,6 @@ class Split extends DataSource {
 
   override def open(context: TaskContext, startTime: Instant): Unit = {}
 
-
   override def read(): Message = {
 
     if (item < result.size - 1) {
