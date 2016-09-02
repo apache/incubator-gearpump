@@ -32,7 +32,7 @@ class Split extends DataSource {
   val result = ArrayBuffer[Message]()
   var item = -1
   Split.TEXT_TO_SPLIT.lines.foreach { line =>
-    line.split("[\\s]+").filter(_.nonEmpty).foreach { msg => //  => 为匿名函数,传入一个msg参数执行右边的操作
+    line.split("[\\s]+").filter(_.nonEmpty).foreach { msg =>
       result.append(new Message(msg, System.currentTimeMillis()))
 
     }
