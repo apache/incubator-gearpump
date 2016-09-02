@@ -19,34 +19,45 @@
 package org.apache.gearpump.streaming.examples.wordcount
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 import org.apache.gearpump.Message
-import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.source.{DataSource, DataSourceTask, Watermark}
-import org.apache.gearpump.streaming.task.{Task, TaskContext}
+import org.apache.gearpump.streaming.source.DataSource
+import org.apache.gearpump.streaming.task.TaskContext
+
+import scala.collection.mutable.ArrayBuffer
 
 
-class Split() extends DataSource {
+class Split extends DataSource {
 
+  val result = ArrayBuffer[Message]()
+  var item = -1
+  Split.TEXT_TO_SPLIT.lines.foreach { line =>
+    line.split("[\\s]+").filter(_.nonEmpty).foreach { msg => //  => 为匿名函数,传入一个msg参数执行右边的操作
+      result.append(new Message(msg, System.currentTimeMillis()))
+
+    }
+
+  }
 
   override def open(context: TaskContext, startTime: Instant): Unit = {}
 
 
   override def read(): Message = {
-    Split.TEXT_TO_SPLIT.lines.foreach { line =>
-      line.split("[\\s]+").filter(_.nonEmpty).foreach { msg =>
-        new Message(msg, System.currentTimeMillis())
-      }
+
+    if (item < result.size - 1) {
+      item += 1
+      result(item)
+    } else {
+      item = 0
+      result(item)
     }
-    Message("message")
+
   }
 
   override def close(): Unit = {}
 
   override def getWatermark: Instant = Instant.now()
 
-  Watermark(Instant.now)
 
 }
 
