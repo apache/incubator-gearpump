@@ -40,6 +40,7 @@ class SplitSpec extends WordSpec with Matchers {
       implicit val system: ActorSystem = ActorSystem("test", TestUtil.DEFAULT_CONFIG)
 
       val mockTaskActor = TestProbe()
+
       when(taskContext.self).thenReturn(mockTaskActor.ref)
 
       val split = new Split
