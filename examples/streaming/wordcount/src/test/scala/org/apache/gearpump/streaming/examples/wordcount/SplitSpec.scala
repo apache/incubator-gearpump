@@ -20,7 +20,7 @@ package org.apache.gearpump.streaming.examples.wordcount
 import java.time.Instant
 
 import akka.actor.ActorSystem
-import akka.http.javadsl.model.ws.Message
+import org.apache.gearpump.Message
 import akka.testkit.TestProbe
 import org.apache.gearpump.cluster.TestUtil
 import org.apache.gearpump.streaming.MockUtil
