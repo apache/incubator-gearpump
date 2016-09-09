@@ -18,6 +18,8 @@
 
 package org.apache.gearpump.streaming.examples.state.processor
 
+import java.time.Instant
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -33,7 +35,7 @@ import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
 import org.apache.gearpump.streaming.state.api.PersistentTask
 import org.apache.gearpump.streaming.state.impl.{InMemoryCheckpointStoreFactory, PersistentStateConfig}
-import org.apache.gearpump.streaming.task.{UpdateCheckpointClock, StartTime}
+import org.apache.gearpump.streaming.task.UpdateCheckpointClock
 import org.apache.gearpump.streaming.transaction.api.CheckpointStoreFactory
 
 class CountProcessorSpec extends PropSpec with PropertyChecks with Matchers {
@@ -59,21 +61,16 @@ class CountProcessorSpec extends PropSpec with PropertyChecks with Matchers {
         val appMaster = TestProbe()(system)
         when(taskContext.appMaster).thenReturn(appMaster.ref)
 
-        count.onStart(StartTime(0L))
+        count.onStart(Instant.EPOCH)
         appMaster.expectMsg(UpdateCheckpointClock(taskContext.taskId, 0L))
 
         for (i <- 0L to num) {
           count.onNext(Message("", i))
-          count.state.get shouldBe Some(i + 1)
+          count.getState.get shouldBe Some(i + 1)
         }
-        // Next checkpoint time is not arrived yet
-        when(taskContext.upstreamMinClock).thenReturn(0L)
-        count.onNext(PersistentTask.CHECKPOINT)
-        appMaster.expectNoMsg(10.milliseconds)
 
         // Time to checkpoint
-        when(taskContext.upstreamMinClock).thenReturn(num)
-        count.onNext(PersistentTask.CHECKPOINT)
+        count.onWatermarkProgress(Instant.ofEpochMilli(num))
         // Only the state before checkpoint time is checkpointed
         appMaster.expectMsg(UpdateCheckpointClock(taskContext.taskId, num))
     }

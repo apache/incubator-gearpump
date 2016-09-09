@@ -18,30 +18,43 @@
 
 package org.apache.gearpump.streaming.examples.wordcount
 
-import java.util.concurrent.TimeUnit
+import java.time.Instant
 
 import org.apache.gearpump.Message
-import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.task.{StartTime, Task, TaskContext}
+import org.apache.gearpump.streaming.source.DataSource
+import org.apache.gearpump.streaming.task.TaskContext
 
-class Split(taskContext: TaskContext, conf: UserConfig) extends Task(taskContext, conf) {
-  import taskContext.output
+import scala.collection.mutable.ArrayBuffer
 
-  override def onStart(startTime: StartTime): Unit = {
-    self ! Message("start")
+
+class Split extends DataSource {
+
+  private val result = ArrayBuffer[String]()
+  private var item = -1
+  Split.TEXT_TO_SPLIT.lines.foreach { line =>
+    line.split("[\\s]+").filter(_.nonEmpty).foreach { msg =>
+      result.append(msg)
+    }
   }
 
-  override def onNext(msg: Message): Unit = {
-    Split.TEXT_TO_SPLIT.lines.foreach { line =>
-      line.split("[\\s]+").filter(_.nonEmpty).foreach { msg =>
-        output(new Message(msg, System.currentTimeMillis()))
-      }
+  override def open(context: TaskContext, startTime: Instant): Unit = {}
+
+  override def read(): Message = {
+
+    if (item < result.size - 1) {
+      item += 1
+      Message(result(item), System.currentTimeMillis())
+    } else {
+      item = 0
+      Message(result(item), System.currentTimeMillis())
     }
 
-    import scala.concurrent.duration._
-    taskContext.scheduleOnce(Duration(100, TimeUnit.MILLISECONDS))(self !
-      Message("continue", System.currentTimeMillis()))
   }
+
+  override def close(): Unit = {}
+
+  override def getWatermark: Instant = Instant.now()
+
 }
 
 object Split {
@@ -64,3 +77,4 @@ object Split {
       |   limitations under the License.
     """.stripMargin
 }
+

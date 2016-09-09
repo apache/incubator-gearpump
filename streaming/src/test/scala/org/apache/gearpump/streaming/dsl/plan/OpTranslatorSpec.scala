@@ -18,24 +18,25 @@
 
 package org.apache.gearpump.streaming.dsl.plan
 
+import java.time.Instant
+
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
 import akka.actor.ActorSystem
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalatest._
-
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.{TestUtil, UserConfig}
 import org.apache.gearpump.streaming.Constants._
 import org.apache.gearpump.streaming.MockUtil
 import org.apache.gearpump.streaming.dsl.CollectionDataSource
 import org.apache.gearpump.streaming.dsl.plan.OpTranslator._
-import org.apache.gearpump.streaming.task.StartTime
+import org.apache.gearpump.streaming.source.DataSourceTask
 
 class OpTranslatorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
+
 
   "andThen" should "chain multiple single input function" in {
     val dummy = new DummyInputFunction[String]
@@ -67,33 +68,37 @@ class OpTranslatorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   "Source" should "iterate over input source and apply attached operator" in {
 
     val taskContext = MockUtil.mockTaskContext
+    implicit val actorSystem = MockUtil.system
 
-    val conf = UserConfig.empty
     val data = "one two three".split("\\s")
+    val dataSource = new CollectionDataSource[String](data)
+    val conf = UserConfig.empty.withValue(GEARPUMP_STREAMING_SOURCE, dataSource)
 
     // Source with no transformer
-    val source = new SourceTask[String, String](new CollectionDataSource[String](data), None,
+    val source = new DataSourceTask[String, String](
       taskContext, conf)
-    source.onStart(StartTime(0))
+    source.onStart(Instant.EPOCH)
     source.onNext(Message("next"))
-    verify(taskContext, times(1)).output(anyObject())
+    data.foreach { s =>
+      verify(taskContext, times(1)).output(Message(s))
+    }
 
     // Source with transformer
     val anotherTaskContext = MockUtil.mockTaskContext
     val double = new FlatMapFunction[String, String](word => List(word, word), "double")
-    val another = new SourceTask(new CollectionDataSource[String](data), Some(double),
-      anotherTaskContext, conf)
-    another.onStart(StartTime(0))
+    val another = new DataSourceTask(anotherTaskContext,
+      conf.withValue(GEARPUMP_STREAMING_OPERATOR, double))
+    another.onStart(Instant.EPOCH)
     another.onNext(Message("next"))
-    verify(anotherTaskContext, times(2)).output(anyObject())
+    data.foreach { s =>
+      verify(anotherTaskContext, times(2)).output(Message(s))
+    }
   }
 
   "GroupByTask" should "group input by groupBy Function and " +
     "apply attached operator for each group" in {
 
     val data = "1 2  2  3 3  3"
-
-    var map = Map.empty[String, Int]
 
     val concat = new ReduceFunction[String]({ (left, right) =>
       left + right
@@ -106,7 +111,7 @@ class OpTranslatorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val taskContext = MockUtil.mockTaskContext
 
     val task = new GroupByTask[String, String, String](input => input, taskContext, config)
-    task.onStart(StartTime(0))
+    task.onStart(Instant.EPOCH)
 
     val peopleCaptor = ArgumentCaptor.forClass(classOf[Message])
 
@@ -117,7 +122,7 @@ class OpTranslatorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     import scala.collection.JavaConverters._
 
-    val values = peopleCaptor.getAllValues().asScala.map(input => input.msg.asInstanceOf[String])
+    val values = peopleCaptor.getAllValues.asScala.map(input => input.msg.asInstanceOf[String])
     assert(values.mkString(",") == "1,2,22,3,33,333")
     system.terminate()
     Await.result(system.whenTerminated, Duration.Inf)
@@ -130,7 +135,7 @@ class OpTranslatorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val conf = UserConfig.empty
     val double = new FlatMapFunction[String, String](word => List(word, word), "double")
     val task = new TransformTask[String, String](Some(double), taskContext, conf)
-    task.onStart(StartTime(0))
+    task.onStart(Instant.EPOCH)
 
     val data = "1 2  2  3 3  3".split("\\s+")
 

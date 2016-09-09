@@ -18,18 +18,21 @@
 
 package org.apache.gearpump.streaming.examples.state.processor
 
+import java.time.Instant
+
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.task.{StartTime, Task, TaskContext}
+import org.apache.gearpump.streaming.source.Watermark
+import org.apache.gearpump.streaming.task.{Task, TaskContext}
 
 class NumberGeneratorProcessor(taskContext: TaskContext, conf: UserConfig)
   extends Task(taskContext, conf) {
   import taskContext.output
 
   private var num = 0L
-  override def onStart(startTime: StartTime): Unit = {
-    num = startTime.startTime
-    self ! Message("start")
+  override def onStart(startTime: Instant): Unit = {
+    num = startTime.toEpochMilli
+    self ! Watermark(startTime)
   }
 
   override def onNext(msg: Message): Unit = {
@@ -37,6 +40,6 @@ class NumberGeneratorProcessor(taskContext: TaskContext, conf: UserConfig)
     num += 1
 
     import scala.concurrent.duration._
-    taskContext.scheduleOnce(Duration(1, MILLISECONDS))(self ! Message("next"))
+    taskContext.scheduleOnce(Duration(1, MILLISECONDS))(self ! Watermark(Instant.ofEpochMilli(num)))
   }
 }

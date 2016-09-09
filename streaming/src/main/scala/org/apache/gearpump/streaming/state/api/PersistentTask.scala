@@ -18,18 +18,16 @@
 
 package org.apache.gearpump.streaming.state.api
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.FiniteDuration
+import java.time.Instant
 
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.state.impl.{CheckpointManager, PersistentStateConfig}
-import org.apache.gearpump.streaming.task.{UpdateCheckpointClock, StartTime, Task, TaskContext}
+import org.apache.gearpump.streaming.task.{UpdateCheckpointClock, Task, TaskContext}
 import org.apache.gearpump.streaming.transaction.api.CheckpointStoreFactory
 import org.apache.gearpump.util.LogUtil
 import org.apache.gearpump.{Message, TimeStamp}
 
 object PersistentTask {
-  val CHECKPOINT = Message("checkpoint")
   val LOG = LogUtil.getLogger(getClass)
 }
 
@@ -51,8 +49,6 @@ abstract class PersistentTask[T](taskContext: TaskContext, conf: UserConfig)
     s"app$appId-task${taskId.processorId}_${taskId.index}")
   val checkpointInterval = conf.getLong(PersistentStateConfig.STATE_CHECKPOINT_INTERVAL_MS).get
   val checkpointManager = new CheckpointManager(checkpointInterval, checkpointStore)
-  // System time interval to attempt checkpoint
-  private val checkpointAttemptInterval = 1000L
 
   /**
    * Subclass should override this method to pass in a PersistentState. the framework has already
@@ -68,45 +64,39 @@ abstract class PersistentTask[T](taskContext: TaskContext, conf: UserConfig)
   def processMessage(state: PersistentState[T], message: Message): Unit
 
   /** Persistent state that will be stored (by checkpointing) automatically to storage like HDFS */
-  val state = persistentState
+  private var state: PersistentState[T] = _
 
-  final override def onStart(startTime: StartTime): Unit = {
-    val timestamp = startTime.startTime
+  def getState: PersistentState[T] = state
+
+  final override def onStart(startTime: Instant): Unit = {
+    state = persistentState
+    val timestamp = startTime.toEpochMilli
     checkpointManager
       .recover(timestamp)
       .foreach(state.recover(timestamp, _))
 
     reportCheckpointClock(timestamp)
-    scheduleCheckpoint(checkpointAttemptInterval)
   }
 
   final override def onNext(message: Message): Unit = {
-    message match {
-      case CHECKPOINT =>
-        val upstreamMinClock = taskContext.upstreamMinClock
-        if (checkpointManager.shouldCheckpoint(upstreamMinClock)) {
-          checkpointManager.getCheckpointTime.foreach { checkpointTime =>
-            val serialized = state.checkpoint()
-            checkpointManager.checkpoint(checkpointTime, serialized)
-              .foreach(state.setNextCheckpointTime)
-            taskContext.output(Message(serialized, checkpointTime))
-            reportCheckpointClock(checkpointTime)
-          }
-        }
-        scheduleCheckpoint(checkpointAttemptInterval)
-      case _ =>
-        checkpointManager.update(message.timestamp)
+    checkpointManager.update(message.timestamp)
+      .foreach(state.setNextCheckpointTime)
+    processMessage(state, message)
+  }
+
+  final override def onWatermarkProgress(watermark: Instant): Unit = {
+    if (checkpointManager.shouldCheckpoint(watermark.toEpochMilli)) {
+      checkpointManager.getCheckpointTime.foreach { checkpointTime =>
+        val serialized = state.checkpoint()
+        checkpointManager.checkpoint(checkpointTime, serialized)
           .foreach(state.setNextCheckpointTime)
-        processMessage(state, message)
+        reportCheckpointClock(checkpointTime)
+      }
     }
   }
 
   final override def onStop(): Unit = {
     checkpointManager.close()
-  }
-
-  private def scheduleCheckpoint(interval: Long): Unit = {
-    scheduleOnce(new FiniteDuration(interval, TimeUnit.MILLISECONDS))(self ! CHECKPOINT)
   }
 
   private def reportCheckpointClock(timestamp: TimeStamp): Unit = {

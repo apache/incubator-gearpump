@@ -18,10 +18,11 @@
 
 package org.apache.gearpump.streaming.source
 
+import java.time.Instant
+
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
-import org.apache.gearpump.streaming.task.{TaskContext, StartTime}
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar
@@ -31,16 +32,16 @@ import org.scalatest.prop.PropertyChecks
 class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with MockitoSugar {
 
   property("DataSourceTask.onStart should call DataSource.open") {
-    forAll(Gen.chooseNum[Long](0L, 1000L)) { (startTime: Long) =>
+    forAll(Gen.chooseNum[Long](0L, 1000L).map(Instant.ofEpochMilli)) { (startTime: Instant) =>
       val taskContext = MockUtil.mockTaskContext
       implicit val system = MockUtil.system
       val dataSource = mock[DataSource]
       val config = UserConfig.empty
         .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
 
-      val sourceTask = new DataSourceTask(taskContext, config, dataSource)
+      val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, None)
 
-      sourceTask.onStart(StartTime(startTime))
+      sourceTask.onStart(startTime)
       verify(dataSource).open(taskContext, startTime)
     }
   }
@@ -53,7 +54,7 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
       val config = UserConfig.empty
         .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
 
-      val sourceTask = new DataSourceTask(taskContext, config, dataSource)
+      val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, None)
       val msg = Message(str)
       when(dataSource.read()).thenReturn(msg)
 
@@ -68,7 +69,7 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
     val dataSource = mock[DataSource]
     val config = UserConfig.empty
       .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-    val sourceTask = new DataSourceTask(taskContext, config, dataSource)
+    val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, None)
 
     sourceTask.onStop()
     verify(dataSource).close()

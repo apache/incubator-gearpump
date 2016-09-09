@@ -18,20 +18,21 @@
 
 package org.apache.gearpump.streaming.kafka
 
+import java.time.Instant
 import java.util.Properties
 
 import com.twitter.bijection.Injection
 import kafka.common.TopicAndPartition
 import org.apache.gearpump.streaming.MockUtil
+import org.apache.gearpump.streaming.kafka.lib.{MessageAndWatermark, KafkaMessageDecoder}
 import org.apache.gearpump.streaming.kafka.lib.source.consumer.FetchThread.FetchThreadFactory
 import org.apache.gearpump.streaming.kafka.lib.source.grouper.PartitionGrouper
-import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient
-import KafkaClient.KafkaClientFactory
+import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient.KafkaClientFactory
 import org.apache.gearpump.streaming.kafka.lib.source.consumer.{KafkaMessage, FetchThread}
 import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient
 import org.apache.gearpump.streaming.kafka.util.KafkaConfig
 import org.apache.gearpump.streaming.kafka.util.KafkaConfig.KafkaConfigFactory
-import org.apache.gearpump.streaming.transaction.api.{CheckpointStore, CheckpointStoreFactory, MessageDecoder, TimeStampFilter}
+import org.apache.gearpump.streaming.transaction.api.{CheckpointStore, CheckpointStoreFactory}
 import org.apache.gearpump.Message
 import org.mockito.Matchers._
 import org.mockito.Mockito._
@@ -42,7 +43,7 @@ import org.scalatest.{Matchers, PropSpec}
 
 class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with MockitoSugar {
 
-  val startTimeGen = Gen.choose[Long](0L, 100L)
+  val startTimeGen = Gen.choose[Long](0L, 100L).map(Instant.ofEpochMilli)
   val offsetGen = Gen.choose[Long](0L, 100L)
   val topicAndPartitionGen = for {
     topic <- Gen.alphaStr suchThat (_.nonEmpty)
@@ -51,7 +52,7 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
   val tpsGen = Gen.listOf[TopicAndPartition](topicAndPartitionGen) suchThat (_.nonEmpty)
 
   property("KafkaSource open should not recover without checkpoint") {
-    forAll(startTimeGen, tpsGen) { (startTime: Long, tps: List[TopicAndPartition]) =>
+    forAll(startTimeGen, tpsGen) { (startTime: Instant, tps: List[TopicAndPartition]) =>
       val taskContext = MockUtil.mockTaskContext
       val fetchThread = mock[FetchThread]
       val kafkaClient = mock[KafkaClient]
@@ -84,7 +85,7 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
 
   property("KafkaSource open should recover with checkpoint") {
     forAll(startTimeGen, offsetGen, tpsGen) {
-      (startTime: Long, offset: Long, tps: List[TopicAndPartition]) =>
+      (startTime: Instant, offset: Long, tps: List[TopicAndPartition]) =>
         val taskContext = MockUtil.mockTaskContext
         val checkpointStoreFactory = mock[CheckpointStoreFactory]
         val checkpointStores = tps.map(_ -> mock[CheckpointStore]).toMap
@@ -115,7 +116,8 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
         checkpointStores.foreach { case (tp, store) =>
           when(checkpointStoreFactory.getCheckpointStore(
             KafkaConfig.getCheckpointStoreNameSuffix(tp))).thenReturn(store)
-          when(store.recover(startTime)).thenReturn(Some(Injection[Long, Array[Byte]](offset)))
+          when(store.recover(startTime.toEpochMilli))
+            .thenReturn(Some(Injection[Long, Array[Byte]](offset)))
         }
 
         source.setCheckpointStore(checkpointStoreFactory)
@@ -138,8 +140,7 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
       val properties = mock[Properties]
       val config = mock[KafkaConfig]
       val configFactory = mock[KafkaConfigFactory]
-      val timestampFilter = mock[TimeStampFilter]
-      val messageDecoder = mock[MessageDecoder]
+      val messageDecoder = mock[KafkaMessageDecoder]
       val kafkaClient = mock[KafkaClient]
       val clientFactory = mock[KafkaClientFactory]
       val fetchThread = mock[FetchThread]
@@ -154,10 +155,8 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
           .getCheckpointStoreNameSuffix(tp))).thenReturn(store)
       }
       when(configFactory.getKafkaConfig(properties)).thenReturn(config)
-      when(config.getConfiguredInstance(KafkaConfig.TIMESTAMP_FILTER_CLASS_CONFIG,
-        classOf[TimeStampFilter])).thenReturn(timestampFilter)
       when(config.getConfiguredInstance(KafkaConfig.MESSAGE_DECODER_CLASS_CONFIG,
-        classOf[MessageDecoder])).thenReturn(messageDecoder)
+        classOf[KafkaMessageDecoder])).thenReturn(messageDecoder)
       when(clientFactory.getKafkaClient(config)).thenReturn(kafkaClient)
       when(threadFactory.getFetchThread(config, kafkaClient)).thenReturn(fetchThread)
 
@@ -172,8 +171,8 @@ class KafkaSourceSpec extends PropSpec with PropertyChecks with Matchers with Mo
         msgQueue.foreach { kafkaMsg =>
           when(fetchThread.poll).thenReturn(Option(kafkaMsg))
           val message = Message(kafkaMsg.msg, kafkaMsg.offset)
-          when(messageDecoder.fromBytes(kafkaMsg.key.get, kafkaMsg.msg)).thenReturn(message)
-          when(timestampFilter.filter(message, 0)).thenReturn(Some(message))
+          val msgAndWmk = MessageAndWatermark(message, Instant.ofEpochMilli(kafkaMsg.offset))
+          when(messageDecoder.fromBytes(kafkaMsg.key.get, kafkaMsg.msg)).thenReturn(msgAndWmk)
           source.read() shouldBe Message(kafkaMsg.msg, kafkaMsg.offset)
           verify(checkpointStores(kafkaMsg.topicAndPartition)).persist(
             kafkaMsg.offset, Injection[Long, Array[Byte]](kafkaMsg.offset))

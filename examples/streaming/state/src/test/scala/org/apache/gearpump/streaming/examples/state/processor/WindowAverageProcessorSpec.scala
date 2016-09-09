@@ -18,6 +18,8 @@
 
 package org.apache.gearpump.streaming.examples.state.processor
 
+import java.time.Instant
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -32,9 +34,8 @@ import org.scalatest.{Matchers, PropSpec}
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
-import org.apache.gearpump.streaming.state.api.PersistentTask
 import org.apache.gearpump.streaming.state.impl.{InMemoryCheckpointStoreFactory, PersistentStateConfig, WindowConfig}
-import org.apache.gearpump.streaming.task.{UpdateCheckpointClock, StartTime}
+import org.apache.gearpump.streaming.task.UpdateCheckpointClock
 import org.apache.gearpump.streaming.transaction.api.CheckpointStoreFactory
 
 class WindowAverageProcessorSpec extends PropSpec with PropertyChecks with Matchers {
@@ -61,22 +62,16 @@ class WindowAverageProcessorSpec extends PropSpec with PropertyChecks with Match
         val appMaster = TestProbe()(system)
         when(taskContext.appMaster).thenReturn(appMaster.ref)
 
-        windowAverage.onStart(StartTime(0L))
+        windowAverage.onStart(Instant.EPOCH)
         appMaster.expectMsg(UpdateCheckpointClock(taskContext.taskId, 0L))
 
         for (i <- 0L until num) {
           windowAverage.onNext(Message("" + data, i))
-          windowAverage.state.get shouldBe Some(AveragedValue(i + 1, data))
+          windowAverage.getState.get shouldBe Some(AveragedValue(i + 1, data))
         }
 
-        // Next checkpoint time is not arrived yet
-        when(taskContext.upstreamMinClock).thenReturn(0L)
-        windowAverage.onNext(PersistentTask.CHECKPOINT)
-        appMaster.expectNoMsg(10.milliseconds)
-
         // Time to checkpoint
-        when(taskContext.upstreamMinClock).thenReturn(num)
-        windowAverage.onNext(PersistentTask.CHECKPOINT)
+        windowAverage.onWatermarkProgress(Instant.ofEpochMilli(num))
         appMaster.expectMsg(UpdateCheckpointClock(taskContext.taskId, num))
     }
 

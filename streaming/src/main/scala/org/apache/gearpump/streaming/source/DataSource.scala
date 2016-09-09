@@ -18,10 +18,10 @@
 
 package org.apache.gearpump.streaming.source
 
+import java.time.Instant
+
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.Message
-
-import scala.util.Random
 
 /**
  * Interface to implement custom source where data is read into the system.
@@ -45,6 +45,7 @@ import scala.util.Random
  */
 trait DataSource extends java.io.Serializable {
 
+
   /**
    * Opens connection to data source
    * invoked in onStart() method of [[org.apache.gearpump.streaming.source.DataSourceTask]]
@@ -52,7 +53,7 @@ trait DataSource extends java.io.Serializable {
    * @param context is the task context at runtime
    * @param startTime is the start time of system
    */
-  def open(context: TaskContext, startTime: Long): Unit
+  def open(context: TaskContext, startTime: Instant): Unit
 
   /**
    * Reads next message from data source and
@@ -67,4 +68,11 @@ trait DataSource extends java.io.Serializable {
    * invoked in onStop() method of [[org.apache.gearpump.streaming.source.DataSourceTask]]
    */
   def close(): Unit
+
+  /**
+   * Returns a watermark
+   * no timestamp earlier than the watermark
+   * should enter the system
+   */
+  def getWatermark: Instant
 }

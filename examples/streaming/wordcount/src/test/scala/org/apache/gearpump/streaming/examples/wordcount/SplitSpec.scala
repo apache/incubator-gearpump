@@ -17,19 +17,18 @@
  */
 package org.apache.gearpump.streaming.examples.wordcount
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import java.time.Instant
 
 import akka.actor.ActorSystem
+import org.apache.gearpump.Message
 import akka.testkit.TestProbe
-import org.mockito.Matchers._
+import org.apache.gearpump.cluster.TestUtil
+import org.apache.gearpump.streaming.MockUtil
 import org.mockito.Mockito._
 import org.scalatest.{Matchers, WordSpec}
 
-import org.apache.gearpump.Message
-import org.apache.gearpump.cluster.{TestUtil, UserConfig}
-import org.apache.gearpump.streaming.MockUtil
-import org.apache.gearpump.streaming.task.StartTime
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class SplitSpec extends WordSpec with Matchers {
 
@@ -42,19 +41,13 @@ class SplitSpec extends WordSpec with Matchers {
 
       val mockTaskActor = TestProbe()
 
-      // Mock self ActorRef
       when(taskContext.self).thenReturn(mockTaskActor.ref)
 
-      val conf = UserConfig.empty
-      val split = new Split(taskContext, conf)
-      split.onStart(StartTime(0))
-      mockTaskActor.expectMsgType[Message]
-
-      val expectedWordCount = Split.TEXT_TO_SPLIT.split( """[\s\n]+""").filter(_.nonEmpty).length
-
-      split.onNext(Message("next"))
-      verify(taskContext, times(expectedWordCount)).output(anyObject())
-
+      val split = new Split
+      split.open(taskContext, Instant.now())
+      split.read() shouldBe a[Message]
+      split.close()
+      split.getWatermark
       system.terminate()
       Await.result(system.whenTerminated, Duration.Inf)
     }
