@@ -24,9 +24,9 @@ import xerial.sbt.Pack._
 object Pack extends sbt.Build {
   val daemonClassPath = Seq(
     "${PROG_HOME}/conf",
-    "${PROG_HOME}/lib/daemon/*"
+    "${PROG_HOME}/lib/daemon/*",
     // This is for DFSJarStore
-    // "${PROG_HOME}/lib/yarn/*"
+    "${PROG_HOME}/lib/yarn/*"
   )
 
   val applicationClassPath = Seq(

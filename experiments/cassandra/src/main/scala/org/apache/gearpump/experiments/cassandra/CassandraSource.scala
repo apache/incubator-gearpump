@@ -129,5 +129,6 @@ class CassandraSource[T: RowExtractor](
 
   override def close(): Unit = connector.evictCache()
 
+  // TODO: Watermark only set at open. Make this a TimeReplayableSource
   override def getWatermark: Instant = watermark
 }
