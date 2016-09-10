@@ -17,14 +17,13 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
-import org.apache.gearpump._
+import java.time.Instant
+
 import org.apache.gearpump.experiments.cassandra.lib.ReadConf
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor._
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.experiments.cassandra.lib.connector.CqlWhereClause
-import org.apache.gearpump.streaming.source.DefaultTimeStampFilter
-import org.apache.gearpump.streaming.task.{TaskId, TaskContext}
-import org.apache.gearpump.streaming.transaction.api.TimeStampFilter
+import org.apache.gearpump.streaming.task.{TaskContext, TaskId}
 import org.mockito.Mockito._
 
 class CassandraSourceSpec extends CassandraSpecBase {
@@ -56,26 +55,25 @@ class CassandraSourceSpec extends CassandraSpecBase {
       Seq("partitioning_key"),
       Seq("clustering_key"),
       CqlWhereClause.empty,
-      new DefaultTimeStampFilter(),
       None,
       None)
+
 
     val taskContext = mock[TaskContext]
     when(taskContext.parallelism).thenReturn(1)
     when(taskContext.taskId).thenReturn(TaskId(1, 0))
 
-    source.open(taskContext, 5)
-    assert((0 to 4).map(_ => source.read()) == (0 to 4).map(_ => null))
+    source.open(taskContext, Instant.now())
 
     val result = source.read()
-    assert(result.timestamp == 5L)
-    assert(result.msg.asInstanceOf[Data].clusteringKey == 5)
+    assert(result.timestamp == 0L)
+    assert(result.msg.asInstanceOf[Data].clusteringKey == 0)
     assert(result.msg.asInstanceOf[Data].data == "data")
 
     val result2 = source.read()
-    assert(result2.timestamp == 6L)
+    assert(result2.timestamp == 1L)
     assert(result2.msg.asInstanceOf[Data].data == "data")
-    assert(result2.msg.asInstanceOf[Data].clusteringKey == 6)
+    assert(result2.msg.asInstanceOf[Data].clusteringKey == 1)
   }
 
   it should "read data from Cassandra when where clause is specified" in {
@@ -91,10 +89,6 @@ class CassandraSourceSpec extends CassandraSpecBase {
         Seq("partitioning_key = ?", "clustering_key >= ?"),
         Seq("5", 5),
         containsPartitionKey = true),
-      new TimeStampFilter() {
-        override def filter(msg: Message, predicate: TimeStamp): Option[Message] =
-          Some(msg)
-      },
       None,
       None)
 
@@ -102,7 +96,7 @@ class CassandraSourceSpec extends CassandraSpecBase {
     when(taskContext.parallelism).thenReturn(1)
     when(taskContext.taskId).thenReturn(TaskId(1, 0))
 
-    source.open(taskContext, 5L)
+    source.open(taskContext, Instant.now())
 
     val result = source.read()
     assert(result.timestamp == 5L)
