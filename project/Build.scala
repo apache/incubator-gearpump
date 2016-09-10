@@ -36,6 +36,7 @@ object Build extends sbt.Build {
   val copySharedSourceFiles = TaskKey[Unit]("copied shared services source code")
 
   val akkaVersion = "2.4.3"
+  val cassandraVersion = "3.0.2"
   val hadoopVersion = "2.6.0"
   val hbaseVersion = "1.0.0"
   val commonsHttpVersion = "3.1"
@@ -213,10 +214,18 @@ object Build extends sbt.Build {
     },
     assemblyJarName in assembly := {
       s"${name.value.split("-").last}-${scalaBinaryVersion.value}-${version.value}-assembly.jar"
+    },
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", "io.netty.versions.properties") =>
+        MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
     }
   )
 
   val projectsWithDoc = inProjects(
+    cassandra,
     core,
     streaming,
     external_kafka,
@@ -249,9 +258,9 @@ object Build extends sbt.Build {
     id = "gearpump",
     base = file("."),
     settings = commonSettings ++ noPublish ++ gearpumpUnidocSetting)
-      .aggregate(shaded, core, daemon, streaming, services, external_kafka, external_monoid,
-      external_serializer, examples, storm, yarn, external_hbase, packProject,
-      external_hadoopfs, integration_test).settings(Defaults.itSettings: _*)
+      .aggregate(shaded, cassandra, core, daemon, streaming, services, external_kafka,
+      external_monoid, external_serializer, examples, storm, yarn, external_hbase,
+      packProject, external_hadoopfs, integration_test).settings(Defaults.itSettings: _*)
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val core = Project(
@@ -446,6 +455,22 @@ object Build extends sbt.Build {
       ))
       .dependsOn(services % "test->test;compile->compile", daemon % "provided", core % "provided")
       .disablePlugins(sbtassembly.AssemblyPlugin)
+
+  lazy val cassandra = Project(
+    id = "gearpump-experiments-cassandra",
+    base = file("experiments/cassandra"),
+    settings = commonSettings ++ noPublish ++ // myAssemblySettings ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "com.datastax.cassandra"  % "cassandra-driver-core" % cassandraVersion,
+          "com.twitter"            %% "bijection-core"        % bijectionVersion,
+          "org.cassandraunit"       %  "cassandra-unit"       % "3.0.0.1" % "test"
+            excludeAll ExclusionRule("org.slf4j")
+        )
+      )
+  )
+  .dependsOn (streaming % "test->test; provided")
+  .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val external_hbase = Project(
     id = "gearpump-external-hbase",
