@@ -17,7 +17,10 @@
  */
 package org.apache.gearpump.experiments.cassandra
 
+import java.time.Instant
+
 import com.datastax.driver.core.{Row, Session, Statement}
+import org.apache.gearpump.Message
 import org.apache.gearpump.experiments.cassandra.lib.RowExtractor.RowExtractor
 import org.apache.gearpump.experiments.cassandra.lib.TimeStampExtractor.TimeStampExtractor
 import org.apache.gearpump.experiments.cassandra.lib._
@@ -25,8 +28,6 @@ import org.apache.gearpump.experiments.cassandra.lib.connector._
 import org.apache.gearpump.experiments.cassandra.lib.connector.partitioner.{CassandraPartitionGenerator, CqlTokenRange}
 import org.apache.gearpump.streaming.source.DataSource
 import org.apache.gearpump.streaming.task.TaskContext
-import org.apache.gearpump.streaming.transaction.api.TimeStampFilter
-import org.apache.gearpump.{Message, TimeStamp}
 
 // TODO: Analyse query, automatically convert types, ...
 // TODO: Make a TimeReplayableSource
@@ -39,20 +40,19 @@ class CassandraSource[T: RowExtractor](
     partitionKeyColumns: Seq[String],
     clusteringKeyColumns: Seq[String],
     where: CqlWhereClause,
-    timeStampFilter: TimeStampFilter,
     clusteringOrder: Option[ClusteringOrder] = None,
     limit: Option[Long] = None
   )(implicit timeStampExtractor: TimeStampExtractor)
   extends DataSource
   with Logging {
 
-  protected var iterator: Option[Iterator[Row]] = None
-  protected var connector: CassandraConnector = _
-  protected var session: Session = _
+  private[this] var iterator: Option[Iterator[Row]] = None
+  private[this] var connector: CassandraConnector = _
+  private[this] var session: Session = _
+
+  private[this] var watermark: Instant = Instant.EPOCH
 
   protected val rowExtractor = implicitly[RowExtractor[T]]
-
-  private[this] var startTime: TimeStamp = _
 
   private def tokenRangeToCqlQuery(range: CqlTokenRange[_, _]): (String, Seq[Any]) = {
     val (cql, values) = if (where.containsPartitionKey) {
@@ -92,7 +92,7 @@ class CassandraSource[T: RowExtractor](
   }
 
   // TODO: Non blocking
-  override def open(context: TaskContext, startTime: Long): Unit = {
+  override def open(context: TaskContext, startTime: Instant): Unit = {
     connector = new CassandraConnector(connectorConf)
     session = connector.openSession()
 
@@ -106,7 +106,7 @@ class CassandraSource[T: RowExtractor](
       new DefaultPartitionGrouper()
         .group(context.parallelism, context.taskId.index, partitioner.partitions)
 
-    this.startTime = startTime
+    this.watermark = startTime
 
     iterator =
       Some(
@@ -116,18 +116,18 @@ class CassandraSource[T: RowExtractor](
   }
 
   override def read(): Message =
-    iterator.map{ i =>
+    iterator.map { i =>
       if (i.hasNext) {
         val message = i.next()
         val timeStamp = timeStampExtractor(message)
 
-        timeStampFilter.filter(
-          Message(rowExtractor(message), timeStamp),
-          startTime).orNull
+        Message(rowExtractor(message), timeStamp)
       } else {
         null
       }
     }.orNull
 
   override def close(): Unit = connector.evictCache()
+
+  override def getWatermark: Instant = watermark
 }
