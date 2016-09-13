@@ -32,17 +32,31 @@ import org.apache.gearpump.streaming.sink.DataSink
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.util.{Constants, FileUtils}
 
-class HBaseSink(
-    userconfig: UserConfig, tableName: String, @transient var configuration: Configuration)
-  extends DataSink{
-  lazy val connection = HBaseSink.getConnection(userconfig, configuration)
+class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connection: Connection,
+    @transient var configuration: Configuration, @transient var isTest: Boolean)
+  extends DataSink {
+
+    connection =
+  if (isTest) {
+    connection
+  } else {
+    HBaseSink.getConnection(userconfig, configuration)
+  }
+  // var connection = HBaseSink.getConnection(userconfig, configuration)
   lazy val table = connection.getTable(TableName.valueOf(tableName))
 
   override def open(context: TaskContext): Unit = {}
 
   def this(userconfig: UserConfig, tableName: String) = {
-    this(userconfig, tableName, HBaseConfiguration.create())
+    this(userconfig, tableName, HBaseSink.getConnection(userconfig, HBaseConfiguration.create()),
+      HBaseConfiguration.create(), false)
   }
+  def this(userconfig: UserConfig, tableName: String, configuration: Configuration) = {
+    this(userconfig, tableName, HBaseSink.getConnection(userconfig, HBaseConfiguration.create()),
+      HBaseConfiguration.create(), false)
+  }
+
+
 
   def insert(rowKey: String, columnGroup: String, columnName: String, value: String): Unit = {
     insert(Bytes.toBytes(rowKey), Bytes.toBytes(columnGroup),
@@ -51,7 +65,7 @@ class HBaseSink(
 
   def insert(
       rowKey: Array[Byte], columnGroup: Array[Byte], columnName: Array[Byte], value: Array[Byte])
-    : Unit = {
+  : Unit = {
     val put = new Put(rowKey)
     put.addColumn(columnGroup, columnName, value)
     table.put(put)
@@ -87,19 +101,12 @@ class HBaseSink(
     connection.close()
   }
 
-  /**
-   * Overrides Java's default serialization
-   * Please do not remove this
-   */
+
   private def writeObject(out: ObjectOutputStream): Unit = {
     out.defaultWriteObject()
     configuration.write(out)
   }
 
-  /**
-   * Overrides Java's default deserialization
-   * Please do not remove this
-   */
   private def readObject(in: ObjectInputStream): Unit = {
     in.defaultReadObject()
     val clientConf = new Configuration(false)
@@ -115,13 +122,22 @@ object HBaseSink {
   val COLUMN_NAME = "hbase.table.column.name"
   val HBASE_USER = "hbase.user"
 
-  def apply[T](userconfig: UserConfig, tableName: String): HBaseSink = {
-    new HBaseSink(userconfig, tableName)
-  }
 
   def apply[T](userconfig: UserConfig, tableName: String, configuration: Configuration)
-    : HBaseSink = {
+  : HBaseSink = {
     new HBaseSink(userconfig, tableName, configuration)
+  }
+
+  def apply[T](
+      userconfig: UserConfig, tableName: String)
+  : HBaseSink = {
+    new HBaseSink(userconfig, tableName)
+  }
+  def apply[T](
+      userconfig: UserConfig, tableName: String, connection: Connection,
+      configuration: Configuration, isTest: Boolean )
+  : HBaseSink = {
+    new HBaseSink(userconfig, tableName, connection, configuration, isTest)
   }
 
   private def getConnection(userConfig: UserConfig, configuration: Configuration): Connection = {
