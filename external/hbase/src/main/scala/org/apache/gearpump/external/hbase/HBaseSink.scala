@@ -164,6 +164,7 @@ object HBaseSink {
     val userName = userConfig.getString(HBASE_USER)
     if (userName.isEmpty) {
       ConnectionFactory.createConnection(configuration)
+
     } else {
       val user = UserProvider.instantiate(configuration)
         .create(UserGroupInformation.createRemoteUser(userName.get))
