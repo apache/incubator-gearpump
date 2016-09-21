@@ -19,29 +19,23 @@ package org.apache.gearpump.external.hbase
 
 import java.io.{File, ObjectInputStream, ObjectOutputStream}
 
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Put}
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
-import org.apache.hadoop.hbase.security.{User, UserProvider}
-import org.apache.hadoop.security.UserGroupInformation
-
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.sink.DataSink
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.util.{Constants, FileUtils}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Put}
+import org.apache.hadoop.hbase.security.UserProvider
+import org.apache.hadoop.hbase.util.Bytes
+import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
+import org.apache.hadoop.security.UserGroupInformation
 
 class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connection: Connection,
-    @transient var configuration: Configuration, @transient var isTest: Boolean)
+    @transient var configuration: Configuration)
   extends DataSink {
 
-    connection =
-  if (isTest) {
-    connection
-  } else {
-    HBaseSink.getConnection(userconfig, configuration)
-  }
+
   // var connection = HBaseSink.getConnection(userconfig, configuration)
   lazy val table = connection.getTable(TableName.valueOf(tableName))
 
@@ -49,11 +43,11 @@ class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connec
 
   def this(userconfig: UserConfig, tableName: String) = {
     this(userconfig, tableName, HBaseSink.getConnection(userconfig, HBaseConfiguration.create()),
-      HBaseConfiguration.create(), false)
+      HBaseConfiguration.create())
   }
   def this(userconfig: UserConfig, tableName: String, configuration: Configuration) = {
     this(userconfig, tableName, HBaseSink.getConnection(userconfig, HBaseConfiguration.create()),
-      HBaseConfiguration.create(), false)
+      HBaseConfiguration.create())
   }
 
 
@@ -135,9 +129,9 @@ object HBaseSink {
   }
   def apply[T](
       userconfig: UserConfig, tableName: String, connection: Connection,
-      configuration: Configuration, isTest: Boolean )
+      configuration: Configuration)
   : HBaseSink = {
-    new HBaseSink(userconfig, tableName, connection, configuration, isTest)
+    new HBaseSink(userconfig, tableName, connection, configuration )
   }
 
   private def getConnection(userConfig: UserConfig, configuration: Configuration): Connection = {
@@ -170,6 +164,18 @@ object HBaseSink {
         .create(UserGroupInformation.createRemoteUser(userName.get))
       ConnectionFactory.createConnection(configuration, user)
     }
+
+
+  }
+  def getConn(connection: Connection, isTest: Boolean, userConfig: UserConfig,
+      configuration: Configuration): Connection = {
+    val conn =
+      if (isTest) {
+        connection
+      } else {
+        HBaseSink.getConnection(userConfig, configuration)
+      }
+    conn
 
   }
 }
