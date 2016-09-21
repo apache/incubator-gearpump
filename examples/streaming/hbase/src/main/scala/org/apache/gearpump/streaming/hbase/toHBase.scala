@@ -35,8 +35,8 @@ class toHBase(hBaseSink: HBaseSink) extends DataSink {
 
   var x = 1
   while (x < 100) {
-    hBaseSink.insert(Bytes.toBytes("row5"), Bytes.toBytes("group"),
-      Bytes.toBytes("group:name"), Bytes.toBytes("10000"))
+    hBaseSink.insert(Bytes.toBytes("row6"), Bytes.toBytes("group"),
+      Bytes.toBytes("group:name"), Bytes.toBytes("100000"))
     x += 1
     // scalastyle:off
     println("This is : " + x )

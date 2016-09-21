@@ -35,7 +35,8 @@ class HBaseSinkSpec extends PropSpec with PropertyChecks with Matchers with Mock
 
     val table = mock[Table]
     val config = mock[Configuration]
-    val connection = mock[Connection]
+    val conn = mock[Connection]
+    // val connection = mock[Connection]
     val taskContext = mock[TaskContext]
     // val connectionFactory = mock[ConnectionFactory]
 
@@ -52,13 +53,14 @@ class HBaseSinkSpec extends PropSpec with PropertyChecks with Matchers with Mock
     val name = "name"
     val value = "1.2"
 
-    when(connection.getTable(TableName.valueOf(tablename))).thenReturn(table)
-
+    when(conn.getTable(TableName.valueOf(tablename))).thenReturn(table)
+    // when(HBaseSink.getConn(conn, true, userconfig, config)).thenReturn(connection)
+    val connection = HBaseSink.getConn(conn, true, userconfig, config)
 
     val put = new Put(Bytes.toBytes(row))
     put.addColumn(Bytes.toBytes(group), Bytes.toBytes(name), Bytes.toBytes(value))
 
-    val hbaseSink = HBaseSink(userconfig, tablename, connection, config, true)
+    val hbaseSink = HBaseSink(userconfig, tablename, connection, config)
     hbaseSink.open(taskContext)
     hbaseSink.insert(Bytes.toBytes(row), Bytes.toBytes(group), Bytes.toBytes(name),
       Bytes.toBytes(value))
