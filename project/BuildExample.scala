@@ -27,7 +27,7 @@ object BuildExample extends sbt.Build {
     id = "gearpump-examples",
     base = file("examples"),
     settings = commonSettings ++ noPublish
-  ).aggregate(wordcount, wordcountJava, complexdag, sol, fsio, examples_kafka, hbase,
+  ).aggregate(wordcount, wordcountJava, complexdag, sol, fsio, examples_kafka,
     distributedshell, stockcrawler, transport, examples_state, pagerank, distributeservice).
     disablePlugins(sbtassembly.AssemblyPlugin)
 
@@ -56,19 +56,6 @@ object BuildExample extends sbt.Build {
           CrossVersion.binaryScalaVersion(scalaVersion.value)
       )
   ) dependsOn(streaming % "test->test; provided", daemon % "test->test; provided")
-
-  lazy val hbase = Project(
-    id = "gearpump-examples-hbase",
-    base = file("examples/streaming/hbase"),
-    settings = commonSettings ++ noPublish ++ myAssemblySettings ++
-      Seq(
-        mainClass in(Compile, packageBin) :=
-          Some("org.apache.gearpump.streaming.examples.hbase.HbaseConn"),
-
-        target in assembly := baseDirectory.value.getParentFile.getParentFile / "target" /
-          CrossVersion.binaryScalaVersion(scalaVersion.value)
-      )
-  ) dependsOn(streaming % "test->test; provided", daemon % "test->test; provided", external_hbase)
 
   lazy val sol = Project(
     id = "gearpump-examples-sol",
