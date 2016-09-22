@@ -57,7 +57,6 @@ object BuildExample extends sbt.Build {
       )
   ) dependsOn(streaming % "test->test; provided", daemon % "test->test; provided")
 
-
   lazy val sol = Project(
     id = "gearpump-examples-sol",
     base = file("examples/streaming/sol"),

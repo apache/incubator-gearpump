@@ -35,8 +35,6 @@ class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connec
     @transient var configuration: Configuration)
   extends DataSink {
 
-
-  // var connection = HBaseSink.getConnection(userconfig, configuration)
   lazy val table = connection.getTable(TableName.valueOf(tableName))
 
   override def open(context: TaskContext): Unit = {}
@@ -47,10 +45,8 @@ class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connec
   }
   def this(userconfig: UserConfig, tableName: String, configuration: Configuration) = {
     this(userconfig, tableName, HBaseSink.getConnection(userconfig, HBaseConfiguration.create()),
-      HBaseConfiguration.create())
+      configuration)
   }
-
-
 
   def insert(rowKey: String, columnGroup: String, columnName: String, value: String): Unit = {
     insert(Bytes.toBytes(rowKey), Bytes.toBytes(columnGroup),
@@ -95,12 +91,19 @@ class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connec
     connection.close()
   }
 
-
+  /**
+   * Overrides Java's default serialization
+   * Please do not remove this
+   */
   private def writeObject(out: ObjectOutputStream): Unit = {
     out.defaultWriteObject()
     configuration.write(out)
   }
 
+  /**
+   * Overrides Java's default serialization
+   * Please do not remove this
+   */
   private def readObject(in: ObjectInputStream): Unit = {
     in.defaultReadObject()
     val clientConf = new Configuration(false)
@@ -116,7 +119,6 @@ object HBaseSink {
   val COLUMN_NAME = "hbase.table.column.name"
   val HBASE_USER = "hbase.user"
 
-
   def apply[T](userconfig: UserConfig, tableName: String, configuration: Configuration)
   : HBaseSink = {
     new HBaseSink(userconfig, tableName, configuration)
@@ -127,6 +129,7 @@ object HBaseSink {
   : HBaseSink = {
     new HBaseSink(userconfig, tableName)
   }
+
   def apply[T](
       userconfig: UserConfig, tableName: String, connection: Connection,
       configuration: Configuration)
@@ -158,24 +161,11 @@ object HBaseSink {
     val userName = userConfig.getString(HBASE_USER)
     if (userName.isEmpty) {
       ConnectionFactory.createConnection(configuration)
-
     } else {
       val user = UserProvider.instantiate(configuration)
         .create(UserGroupInformation.createRemoteUser(userName.get))
       ConnectionFactory.createConnection(configuration, user)
     }
-
-
-  }
-  def getConn(connection: Connection, isTest: Boolean, userConfig: UserConfig,
-      configuration: Configuration): Connection = {
-    val conn =
-      if (isTest) {
-        connection
-      } else {
-        HBaseSink.getConnection(userConfig, configuration)
-      }
-    conn
 
   }
 }
