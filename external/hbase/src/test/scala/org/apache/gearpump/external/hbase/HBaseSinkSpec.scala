@@ -48,7 +48,7 @@ class HBaseSinkSpec extends PropSpec with PropertyChecks with Matchers with Mock
     val row = "row"
     val group = "group"
     val name = "name"
-    val value = "1.2"
+    val value = "2.0"
 
     when(connection.getTable(TableName.valueOf(tablename))).thenReturn(table)
 
