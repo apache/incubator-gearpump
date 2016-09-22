@@ -58,6 +58,7 @@ class HBaseSinkSpec extends PropSpec with PropertyChecks with Matchers with Mock
     hbaseSink.open(taskContext)
     hbaseSink.insert(Bytes.toBytes(row), Bytes.toBytes(group), Bytes.toBytes(name),
       Bytes.toBytes(value))
+
     verify(table).put(MockUtil.argMatch[Put](_.getRow sameElements Bytes.toBytes(row)))
   }
 }
