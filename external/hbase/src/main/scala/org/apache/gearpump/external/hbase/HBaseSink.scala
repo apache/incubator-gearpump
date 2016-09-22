@@ -130,13 +130,6 @@ object HBaseSink {
     new HBaseSink(userconfig, tableName)
   }
 
-  def apply[T](
-      userconfig: UserConfig, tableName: String, connection: Connection,
-      configuration: Configuration)
-  : HBaseSink = {
-    new HBaseSink(userconfig, tableName, connection, configuration )
-  }
-
   private def getConnection(userConfig: UserConfig, configuration: Configuration): Connection = {
     if (UserGroupInformation.isSecurityEnabled) {
       val principal = userConfig.getString(Constants.GEARPUMP_KERBEROS_PRINCIPAL)

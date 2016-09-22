@@ -54,7 +54,7 @@ class HBaseSinkSpec extends PropSpec with PropertyChecks with Matchers with Mock
 
     val put = new Put(Bytes.toBytes(row))
     put.addColumn(Bytes.toBytes(group), Bytes.toBytes(name), Bytes.toBytes(value))
-    val hbaseSink = HBaseSink(userconfig, tablename, connection, config)
+    val hbaseSink = new HBaseSink(userconfig, tablename, connection, config)
     hbaseSink.open(taskContext)
     hbaseSink.insert(Bytes.toBytes(row), Bytes.toBytes(group), Bytes.toBytes(name),
       Bytes.toBytes(value))
