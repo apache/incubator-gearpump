@@ -39,13 +39,13 @@ class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connec
 
   override def open(context: TaskContext): Unit = {}
 
-  def this(userconfig: UserConfig, tableName: String) = {
-    this(userconfig, tableName, HBaseSink.getConnection(userconfig, HBaseSink.CONFIG),
-      HBaseSink.CONFIG)
-  }
   def this(userconfig: UserConfig, tableName: String, configuration: Configuration) = {
     this(userconfig, tableName, HBaseSink.getConnection(userconfig, configuration),
       configuration)
+  }
+
+  def this(userconfig: UserConfig, tableName: String) = {
+    this(userconfig, tableName, HBaseConfiguration.create())
   }
 
   def insert(rowKey: String, columnGroup: String, columnName: String, value: String): Unit = {
@@ -118,7 +118,6 @@ object HBaseSink {
   val COLUMN_FAMILY = "hbase.table.column.family"
   val COLUMN_NAME = "hbase.table.column.name"
   val HBASE_USER = "hbase.user"
-  private val CONFIG = HBaseConfiguration.create()
 
   def apply[T](userconfig: UserConfig, tableName: String, configuration: Configuration)
   : HBaseSink = {
