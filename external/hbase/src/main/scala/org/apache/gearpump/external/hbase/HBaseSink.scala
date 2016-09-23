@@ -124,8 +124,7 @@ object HBaseSink {
     new HBaseSink(userconfig, tableName, configuration)
   }
 
-  def apply[T](
-      userconfig: UserConfig, tableName: String)
+  def apply[T](userconfig: UserConfig, tableName: String)
   : HBaseSink = {
     new HBaseSink(userconfig, tableName)
   }
