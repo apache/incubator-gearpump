@@ -20,21 +20,22 @@ package org.apache.gearpump.external.hbase
 import java.io.{File, ObjectInputStream, ObjectOutputStream}
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Put}
-import org.apache.hadoop.hbase.util.Bytes
+import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Delete, Increment, Put}
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.hadoop.hbase.security.{User, UserProvider}
 import org.apache.hadoop.security.UserGroupInformation
-
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
+import org.apache.gearpump.external.hbase.HBaseMessage.{DeleteMessage, IncrementMessage, PutMessage}
 import org.apache.gearpump.streaming.sink.DataSink
 import org.apache.gearpump.streaming.task.TaskContext
-import org.apache.gearpump.util.{Constants, FileUtils}
+import org.apache.gearpump.util.{Constants, FileUtils, LogUtil}
+import org.slf4j.Logger
 
 class HBaseSink(
     userconfig: UserConfig, tableName: String, @transient var configuration: Configuration)
   extends DataSink{
+  val LOG: Logger = LogUtil.getLogger(getClass)
   lazy val connection = HBaseSink.getConnection(userconfig, configuration)
   lazy val table = connection.getTable(TableName.valueOf(tableName))
 
@@ -44,42 +45,40 @@ class HBaseSink(
     this(userconfig, tableName, HBaseConfiguration.create())
   }
 
-  def insert(rowKey: String, columnGroup: String, columnName: String, value: String): Unit = {
-    insert(Bytes.toBytes(rowKey), Bytes.toBytes(columnGroup),
-      Bytes.toBytes(columnName), Bytes.toBytes(value))
-  }
-
-  def insert(
-      rowKey: Array[Byte], columnGroup: Array[Byte], columnName: Array[Byte], value: Array[Byte])
-    : Unit = {
-    val put = new Put(rowKey)
-    put.addColumn(columnGroup, columnName, value)
+  def put(message: PutMessage): Unit = {
+    val columnMap = message.columnMap
+    val put = new Put(message.rowKey)
+    columnMap.map {
+      case (key, value) => put.addColumn(message.columnFamily, key, value)
+    }
     table.put(put)
   }
 
-  def put(msg: Any): Unit = {
-    msg match {
-      case seq: Seq[Any] =>
-        seq.foreach(put)
-      case tuple: (_, _, _, _) => {
-        tuple._1 match {
-          case str: String => {
-            insert(tuple._1.asInstanceOf[String], tuple._2.asInstanceOf[String],
-              tuple._3.asInstanceOf[String], tuple._4.asInstanceOf[String])
-          }
-          case byteArray: Array[Byte@unchecked] => {
-            insert(tuple._1.asInstanceOf[Array[Byte]], tuple._2.asInstanceOf[Array[Byte]],
-              tuple._3.asInstanceOf[Array[Byte]], tuple._4.asInstanceOf[Array[Byte]])
-          }
-          case _ =>
-          // Skip
-        }
-      }
+  def delete(message: DeleteMessage): Unit = {
+    val columns = message.columns
+    val delete = new Delete(message.rowKey)
+    columns.map(column => delete.addColumn(message.columnFamily, column))
+    table.delete(delete)
+  }
+
+  def increment(message: IncrementMessage): Unit = {
+    val columnMap = message.columnMap
+    val increment = new Increment(message.rowKey)
+    columnMap.map {
+      case (key, value) => increment.addColumn(message.columnFamily, key, value)
     }
+    table.increment(increment)
   }
 
   override def write(message: Message): Unit = {
-    put(message.msg)
+    val msg = message.msg
+
+    msg match {
+      case putMessage: PutMessage => put(putMessage)
+      case deleteMessage: DeleteMessage => delete(deleteMessage)
+      case incrementMessage: IncrementMessage => increment(incrementMessage)
+      case _ =>
+    }
   }
 
   def close(): Unit = {
