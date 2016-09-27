@@ -43,18 +43,19 @@ class HBaseSinkSpec extends PropSpec with PropertyChecks with Matchers with Mock
       "HBASE_USER" -> "hbase.user", "GEARPUMP_KERBEROS_PRINCIPAL" -> "gearpump.kerberos.principal",
       "GEARPUMP_KEYTAB_FILE" -> "gearpump.keytab.file"
     )
-    val userconfig = new UserConfig(map)
-    val tablename = "hbase"
+    val userConfig = new UserConfig(map)
+    val tableName = "hbase"
     val row = "row"
     val group = "group"
     val name = "name"
     val value = "2.0"
 
-    when(connection.getTable(TableName.valueOf(tablename))).thenReturn(table)
+    when(connection.getTable(TableName.valueOf(tableName))).thenReturn(table)
 
     val put = new Put(Bytes.toBytes(row))
     put.addColumn(Bytes.toBytes(group), Bytes.toBytes(name), Bytes.toBytes(value))
-    val hbaseSink = new HBaseSink(userconfig, tablename, connection, config)
+    val hbaseSink = new HBaseSink(userConfig, tableName, (userConfig, config)
+    => connection, config)
     hbaseSink.open(taskContext)
     hbaseSink.insert(Bytes.toBytes(row), Bytes.toBytes(group), Bytes.toBytes(name),
       Bytes.toBytes(value))

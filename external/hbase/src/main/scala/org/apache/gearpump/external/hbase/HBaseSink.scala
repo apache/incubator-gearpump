@@ -31,17 +31,19 @@ import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.hadoop.security.UserGroupInformation
 
-class HBaseSink(userconfig: UserConfig, tableName: String, @transient var connection: Connection,
-    @transient var configuration: Configuration)
+class HBaseSink(userconfig: UserConfig, tableName: String,
+    val conn: (UserConfig, Configuration)
+    => Connection, @transient var configuration: Configuration)
   extends DataSink {
 
+  lazy val connection = conn(userconfig, configuration)
   lazy val table = connection.getTable(TableName.valueOf(tableName))
 
   override def open(context: TaskContext): Unit = {}
 
   def this(userconfig: UserConfig, tableName: String, configuration: Configuration) = {
-    this(userconfig, tableName, HBaseSink.getConnection(userconfig, configuration),
-      configuration)
+    this(userconfig, tableName, (userconfig: UserConfig, config: Configuration) =>
+      {HBaseSink.getConnection(userconfig, config)}, configuration)
   }
 
   def this(userconfig: UserConfig, tableName: String) = {
