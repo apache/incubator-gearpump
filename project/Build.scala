@@ -36,6 +36,7 @@ object Build extends sbt.Build {
   val copySharedSourceFiles = TaskKey[Unit]("copied shared services source code")
 
   val akkaVersion = "2.4.3"
+  val apacheRepo = "https://repository.apache.org/"
   val hadoopVersion = "2.6.0"
   val hbaseVersion = "1.0.0"
   val commonsHttpVersion = "3.1"
@@ -100,11 +101,10 @@ object Build extends sbt.Build {
       pomIncludeRepository := { _ => false },
 
       publishTo := {
-        val nexus = "https://repository.apache.org/"
         if (isSnapshot.value) {
-          Some("snapshots" at nexus + "content/repositories/snapshots")
+          Some("snapshots" at apacheRepo + "content/repositories/snapshots")
         } else {
-          Some("releases" at nexus + "service/local/staging/deploy/maven2")
+          Some("releases" at apacheRepo + "content/repositories/releases")
         }
       },
 
@@ -144,8 +144,6 @@ object Build extends sbt.Build {
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
       "commons-logging" % "commons-logging" % commonsLoggingVersion,
       "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion,
       "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided"
@@ -184,6 +182,8 @@ object Build extends sbt.Build {
       "com.typesafe.akka" %% "akka-agent" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.akka" %% "akka-kernel" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
       "org.scala-lang" % "scala-reflect" % scalaVersionNumber,
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
@@ -310,8 +310,7 @@ object Build extends sbt.Build {
   lazy val services: Project = services_full.jvm.
     settings(serviceJvmSettings: _*)
     .settings(compile in Compile <<= (compile in Compile))
-    .dependsOn(streaming % "test->test;compile->compile",
-      daemon % "test->test;compile->compile;provided")
+    .dependsOn(streaming % "test->test;compile->compile")
 
   lazy val serviceJvmSettings = commonSettings ++ noPublish ++ Seq(
     libraryDependencies ++= Seq(
@@ -445,7 +444,7 @@ object Build extends sbt.Build {
           "org.apache.hadoop" % "hadoop-yarn-server-nodemanager" % hadoopVersion % "provided"
         )
       ))
-      .dependsOn(services % "test->test;compile->compile", core % "provided")
+      .dependsOn(services % "test->test;compile->compile", daemon % "provided", core % "provided")
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val external_hbase = Project(
