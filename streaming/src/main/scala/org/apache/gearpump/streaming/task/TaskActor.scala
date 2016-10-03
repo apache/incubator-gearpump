@@ -23,8 +23,6 @@ import java.util
 import java.util.concurrent.TimeUnit
 
 import akka.actor._
-import org.apache.gearpump.streaming.source.{Watermark, DataSourceTask}
-import org.slf4j.Logger
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.gs.collections.impl.map.mutable.primitive.IntShortHashMap
 import org.apache.gearpump.metrics.Metrics
@@ -32,8 +30,10 @@ import org.apache.gearpump.serializer.SerializationFramework
 import org.apache.gearpump.streaming.AppMasterToExecutor._
 import org.apache.gearpump.streaming.ExecutorToAppMaster._
 import org.apache.gearpump.streaming.ProcessorId
+import org.apache.gearpump.streaming.source.Watermark
 import org.apache.gearpump.util.{LogUtil, TimeOutScheduler}
 import org.apache.gearpump.{Message, TimeStamp}
+import org.slf4j.Logger
 
 /**
  *
@@ -52,16 +52,15 @@ class TaskActor(
 
   def serializerPool: SerializationFramework = inputSerializerPool
 
-  import taskContextData._
-
   import org.apache.gearpump.streaming.Constants._
   import org.apache.gearpump.streaming.task.TaskActor._
+  import taskContextData._
   val config = context.system.settings.config
 
   val LOG: Logger = LogUtil.getLogger(getClass, app = appId, executor = executorId, task = taskId)
 
   // Metrics
-  private val metricName = s"app${appId}.processor${taskId.processorId}.task${taskId.index}"
+  private val metricName = s"app$appId.processor${taskId.processorId}.task${taskId.index}"
   private val receiveLatency = Metrics(context.system).histogram(
     s"$metricName:receiveLatency", sampleRate = 1)
   private val processTime = Metrics(context.system).histogram(s"$metricName:processTime")
@@ -76,9 +75,9 @@ class TaskActor(
   private var life = taskContextData.life
 
   // Latency probe
-  import scala.concurrent.duration._
-
   import context.dispatcher
+
+  import scala.concurrent.duration._
   final val LATENCY_PROBE_INTERVAL = FiniteDuration(1, TimeUnit.SECONDS)
 
   // Clock report interval

@@ -64,7 +64,7 @@ class OpTranslator extends java.io.Serializable {
               userConfig)
           case ProcessorOp(processor, parallelism, conf, description) =>
             DefaultProcessor(parallelism,
-              description = description + "." + func.description,
+              description = description + " " + func.description,
               userConfig, processor)
           case DataSinkOp(dataSink, parallelism, conf, description) =>
             DataSinkProcessor(dataSink, parallelism, description + func.description)
