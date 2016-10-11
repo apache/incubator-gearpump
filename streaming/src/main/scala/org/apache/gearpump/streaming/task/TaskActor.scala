@@ -60,7 +60,7 @@ class TaskActor(
   val LOG: Logger = LogUtil.getLogger(getClass, app = appId, executor = executorId, task = taskId)
 
   // Metrics
-  private val metricName = s"app$appId.processor${taskId.processorId}.task${taskId.index}"
+  private val metricName = s"app${appId}.processor${taskId.processorId}.task${taskId.index}"
   private val receiveLatency = Metrics(context.system).histogram(
     s"$metricName:receiveLatency", sampleRate = 1)
   private val processTime = Metrics(context.system).histogram(s"$metricName:processTime")
@@ -307,9 +307,9 @@ class TaskActor(
 
   private def updateUpstreamMinClock(upstreamClock: TimeStamp): Unit = {
     if (upstreamClock > this.upstreamMinClock) {
+      this.upstreamMinClock = upstreamClock
       task.onWatermarkProgress(Instant.ofEpochMilli(this.upstreamMinClock))
     }
-    this.upstreamMinClock = upstreamClock
 
     val subMinClock = subscriptions.foldLeft(Long.MaxValue) { (min, sub) =>
       val subMin = sub._2.minClock
