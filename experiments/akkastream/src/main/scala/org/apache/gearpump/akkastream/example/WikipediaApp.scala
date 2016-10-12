@@ -81,13 +81,11 @@ object WikipediaApp extends ArgumentsParser with AkkaApp {
       }
     )
 
-    g.run().onComplete { x =>
-      x match {
-        case Success((t, f)) => printResults(t, f)
-        // scalastyle:off println
-        case Failure(tr) => println("Something went wrong")
-        // scalastyle:on println
-      }
+    g.run().onComplete {
+      case Success((t, f)) => printResults(t, f)
+      // scalastyle:off println
+      case Failure(tr) => println("Something went wrong")
+      // scalastyle:on println
     }
     Await.result(system.whenTerminated, 60.minutes)
   }

@@ -29,14 +29,13 @@ import akka.stream.impl.Stages.SymbolicGraphStage
 import akka.stream.impl.StreamLayout._
 import akka.stream.impl._
 import akka.stream.impl.fusing.{GraphInterpreterShell, GraphStageModule}
-import akka.stream.scaladsl.ModuleExtractor
 import akka.stream.stage.GraphStage
 import org.apache.gearpump.akkastream.GearpumpMaterializer.Edge
 import org.apache.gearpump.akkastream.graph.GraphPartitioner.Strategy
 import org.apache.gearpump.akkastream.graph.LocalGraph.LocalGraphMaterializer
 import org.apache.gearpump.akkastream.graph.RemoteGraph.RemoteGraphMaterializer
 import org.apache.gearpump.akkastream.graph._
-import org.apache.gearpump.akkastream.util.MaterializedValueOps
+import org.apache.gearpump.util.{Graph => GGraph}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContextExecutor, Promise}
@@ -137,7 +136,7 @@ class GearpumpMaterializer(override val system: ActorSystem,
 
   override def logger: LoggingAdapter = Logging.getLogger(system, this)
 
-  override def isShutdown: Boolean = system.isTerminated
+  override def isShutdown: Boolean = system.whenTerminated.isCompleted
 
   override def effectiveSettings(opAttr: Attributes): ActorMaterializerSettings = {
     import ActorAttributes._
@@ -177,7 +176,6 @@ class GearpumpMaterializer(override val system: ActorSystem,
       Nil)
 
     val info = Fusing.aggressive(runnableGraph).module.info
-    import _root_.org.apache.gearpump.util.{Graph => GGraph}
     val graph = GGraph.empty[Module, Edge]
 
     info.allModules.foreach(module => {
@@ -204,33 +202,7 @@ class GearpumpMaterializer(override val system: ActorSystem,
     })
 
     if(Debug) {
-      val iterator = graph.topologicalOrderIterator
-      while (iterator.hasNext) {
-        val module = iterator.next()
-        // scalastyle:off println
-        module match {
-          case graphStageModule: GraphStageModule =>
-            graphStageModule.stage match {
-              case symbolicGraphStage: SymbolicGraphStage[_, _, _] =>
-                val symbolicName = symbolicGraphStage.symbolicStage.getClass.getSimpleName
-                println(
-                  s"${module.getClass.getSimpleName}(${symbolicName})"
-                )
-              case graphStage: GraphStage[_] =>
-                val name = graphStage.getClass.getSimpleName
-                println(
-                  s"${module.getClass.getSimpleName}(${name})"
-                )
-              case other =>
-                println(
-                  s"${module.getClass.getSimpleName}(${other.getClass.getSimpleName})"
-                )
-            }
-          case _ =>
-            println(module.getClass.getSimpleName)
-        }
-        // scalastyle:on println
-      }
+      printGraph(graph)
     }
 
     val subGraphs = GraphPartitioner(strategy).partition(graph)
@@ -264,6 +236,36 @@ class GearpumpMaterializer(override val system: ActorSystem,
       }
     })
     rt.getOrElse(null).asInstanceOf[Mat]
+  }
+
+  private def printGraph(graph: GGraph[Module, Edge]): Unit = {
+    val iterator = graph.topologicalOrderIterator
+    while (iterator.hasNext) {
+      val module = iterator.next()
+      // scalastyle:off println
+      module match {
+        case graphStageModule: GraphStageModule =>
+          graphStageModule.stage match {
+            case symbolicGraphStage: SymbolicGraphStage[_, _, _] =>
+              val symbolicName = symbolicGraphStage.symbolicStage.getClass.getSimpleName
+              println(
+                s"${module.getClass.getSimpleName}(${symbolicName})"
+              )
+            case graphStage: GraphStage[_] =>
+              val name = graphStage.getClass.getSimpleName
+              println(
+                s"${module.getClass.getSimpleName}(${name})"
+              )
+            case other =>
+              println(
+                s"${module.getClass.getSimpleName}(${other.getClass.getSimpleName})"
+              )
+          }
+        case _ =>
+          println(module.getClass.getSimpleName)
+      }
+      // scalastyle:on println
+    }
   }
 
   override def materialize[Mat](runnableGraph: Graph[ClosedShape, Mat],

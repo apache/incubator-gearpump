@@ -56,7 +56,7 @@ object GearSource{
    *
    */
   def from[OUT](source: DataSource): Source[OUT, Unit] = {
-    val taskSource = new Source[OUT, Unit](new SourceTaskModule(source, UserConfig.empty))
+    val taskSource = new Source[OUT, Unit](SourceTaskModule(source, UserConfig.empty))
     taskSource
   }
 

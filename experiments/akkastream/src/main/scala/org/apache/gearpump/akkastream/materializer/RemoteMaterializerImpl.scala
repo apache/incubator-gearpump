@@ -28,14 +28,16 @@ import akka.stream.impl.{HeadOptionStage, Stages, Throttle}
 import akka.stream.scaladsl._
 import akka.stream.stage.AbstractStage.PushPullGraphStageWithMaterializedValue
 import akka.stream.stage.GraphStage
-import akka.stream.{FanInShape, FanOutShape}
 import org.apache.gearpump.akkastream.GearAttributes
 import org.apache.gearpump.akkastream.GearpumpMaterializer.Edge
 import org.apache.gearpump.akkastream.module._
 import org.apache.gearpump.akkastream.task._
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.dsl.StreamApp
-import org.apache.gearpump.streaming.dsl.op._
+import org.apache.gearpump.streaming.dsl.plan._
+import org.apache.gearpump.streaming.dsl.plan.functions.FlatMapFunction
+import org.apache.gearpump.streaming.dsl.window.api.CountWindow
+import org.apache.gearpump.streaming.dsl.window.impl.GroupAlsoByWindow
 import org.apache.gearpump.streaming.{ProcessorId, StreamApplication}
 import org.apache.gearpump.util.Graph
 import org.slf4j.LoggerFactory
@@ -96,14 +98,14 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
       vertex.shape.inlets.flatMap { inlet =>
         graph.incomingEdgesOf(vertex).find(
           _._2.to == inlet).map(_._1
-        ).flatMap(processorIds.get(_))
+        ).flatMap(processorIds.get)
       }.toList
     }
     def outProcessors(vertex: Module): List[ProcessorId] = {
       vertex.shape.outlets.flatMap { outlet =>
         graph.outgoingEdgesOf(vertex).find(
           _._2.from == outlet).map(_._3
-        ).flatMap(processorIds.get(_))
+        ).flatMap(processorIds.get)
       }.toList
     }
     processorIds.get(vertex).map(processorId => {
@@ -165,6 +167,8 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
           reduceOp(reduce.f, conf)
         case graphStage: GraphStageModule =>
           translateGraphStageWithMaterializedValue(graphStage, parallelism, conf)
+        case _ =>
+          null
       }
       if (op == null) {
         throw new UnsupportedOperationException(
@@ -174,12 +178,11 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
       op
     }.mapEdge[OpEdge] { (n1, edge, n2) =>
       n2 match {
-        case master: MasterOp =>
-          Shuffle
-        case slave: SlaveOp[_] if n1.isInstanceOf[ProcessorOp[_]] =>
-          Shuffle
-        case slave: SlaveOp[_] =>
+        case chainableOp: ChainableOp[_, _]
+          if !n1.isInstanceOf[ProcessorOp[_]] && !n2.isInstanceOf[ProcessorOp[_]] =>
           Direct
+        case _ =>
+          Shuffle
       }
     }
     (opGraph, matValues.toMap)
@@ -237,7 +240,8 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
           withValue(FoldTask.AGGREGATOR, fold.f)
         ProcessorOp(classOf[FoldTask[_, _]], parallelism, foldConf, "fold")
       case groupBy: GroupBy[_, _] =>
-        GroupByOp(groupBy.keyFor, groupBy.maxSubstreams, "groupBy", conf)
+        GroupByOp(GroupAlsoByWindow(groupBy.keyFor, CountWindow.apply(1).accumulating),
+          groupBy.maxSubstreams, "groupBy", conf)
       case groupedWithin: GroupedWithin[_] =>
         val diConf = conf.withValue[FiniteDuration](GroupedWithinTask.TIME_WINDOW, groupedWithin.d).
           withInt(GroupedWithinTask.BATCH_SIZE, groupedWithin.n)
@@ -318,11 +322,11 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
         // TODO
         null
       case unzip: Unzip[_, _] =>
-        ProcessorOp(classOf[Unzip2Task[_, _, _]],
-          parallelism,
-          conf.withValue(
-            Unzip2Task.UNZIP2_FUNCTION, Unzip2Task.UnZipFunction(unzip.unzipper)
-          ), "unzip")
+//        ProcessorOp(classOf[Unzip2Task[_, _, _]], parallelism,
+//          conf.withValue(
+//            Unzip2Task.UNZIP2_FUNCTION, Unzip2Task.UnZipFunction(unzip.unzipper)), "unzip")
+        // TODO
+        null
       case zip: Zip[_, _] =>
         zipWithOp(zip.zipper, conf)
       case zipWith2: ZipWith2[_, _, _] =>
@@ -474,10 +478,10 @@ object RemoteMaterializerImpl {
 
   def flatMapOp[In, Out](fun: In => TraversableOnce[Out], description: String,
       conf: UserConfig): Op = {
-    FlatMapOp(fun, description, conf)
+    ChainableOp(new FlatMapFunction[In, Out](fun, description), conf)
   }
 
-  def conflatOp[In, Out](seed: In => Out, aggregate: (Out, In) => Out,
+  def conflateOp[In, Out](seed: In => Out, aggregate: (Out, In) => Out,
     conf: UserConfig): Op = {
     var agg = None: Option[Out]
     val flatMap = {elem: In =>
@@ -489,7 +493,7 @@ object RemoteMaterializerImpl {
       }
       List(agg.get)
     }
-    flatMapOp (flatMap, "conflat", conf)
+    flatMapOp (flatMap, "conflate", conf)
   }
 
   def foldOp[In, Out](zero: Out, fold: (Out, In) => Out, conf: UserConfig): Op = {

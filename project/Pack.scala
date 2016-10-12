@@ -69,8 +69,7 @@ object Pack extends sbt.Build {
           "worker" -> "org.apache.gearpump.cluster.main.Worker",
           "services" -> "org.apache.gearpump.services.main.Services",
           "yarnclient" -> "org.apache.gearpump.experiments.yarn.client.Client",
-          "storm" -> "org.apache.gearpump.experiments.storm.StormRunner",
-          "akkastream" -> "org.apache.gearpump.akkastream.example.Test11"
+          "storm" -> "org.apache.gearpump.experiments.storm.StormRunner"
         ),
         packJvmOpts := Map(
           "gear" -> Seq("-Djava.net.preferIPv4Stack=true", "-Dgearpump.home=${PROG_HOME}"),
@@ -110,13 +109,7 @@ object Pack extends sbt.Build {
           "storm" -> Seq(
             "-server",
             "-Djava.net.preferIPv4Stack=true",
-            "-Dgearpump.home=${PROG_HOME}"),
-
-          "akkastream" -> Seq(
-            "-server",
-            "-Djava.net.preferIPv4Stack=true",
-            "-Dgearpump.home=${PROG_HOME}",
-            "-Djava.rmi.server.hostname=localhost")
+            "-Dgearpump.home=${PROG_HOME}")
         ),
         packLibDir := Map(
           "lib" -> new ProjectsToPack(core.id, streaming.id),
@@ -148,14 +141,13 @@ object Pack extends sbt.Build {
           "worker" -> daemonClassPath,
           "services" -> serviceClassPath,
           "yarnclient" -> yarnClassPath,
-          "storm" -> stormClassPath,
-          "akkstream" -> daemonClassPath
+          "storm" -> stormClassPath
         ),
 
         packArchivePrefix := projectName + "-" + scalaBinaryVersion.value,
         packArchiveExcludes := Seq("integrationtest")
 
       )
-  ).dependsOn(core, streaming, services, yarn, storm, akkastream).
+  ).dependsOn(core, streaming, services, yarn, storm).
     disablePlugins(sbtassembly.AssemblyPlugin)
 }

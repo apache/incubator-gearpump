@@ -21,6 +21,7 @@ package org.apache.gearpump.akkastream.example
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.stream.scaladsl.{Sink, Source}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
+import org.apache.gearpump.akkastream.graph.GraphPartitioner
 import org.apache.gearpump.cluster.main.ArgumentsParser
 import org.apache.gearpump.util.AkkaApp
 
@@ -37,7 +38,7 @@ object Test extends AkkaApp with ArgumentsParser {
   // scalastyle:off println
   override def main(akkaConf: Config, args: Array[String]): Unit = {
     implicit val system = ActorSystem("Test", akkaConf)
-    implicit val materializer = GearpumpMaterializer()
+    implicit val materializer = GearpumpMaterializer(GraphPartitioner.AllRemoteStrategy)
 
     val echo = system.actorOf(Props(new Echo()))
     val sink = Sink.actorRef(echo, "COMPLETE")

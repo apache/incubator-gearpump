@@ -35,8 +35,7 @@ object Build extends sbt.Build {
 
   val copySharedSourceFiles = TaskKey[Unit]("copied shared services source code")
 
-  val akkaVersion = "2.4.10"
-  val akkaStreamVersion = "2.4-SNAPSHOT"
+  val akkaVersion = "2.4.11"
   val apacheRepo = "https://repository.apache.org/"
   val hadoopVersion = "2.6.0"
   val hbaseVersion = "1.0.0"
@@ -148,10 +147,8 @@ object Build extends sbt.Build {
       "commons-logging" % "commons-logging" % commonsLoggingVersion,
       "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion
         exclude("com.typesafe.akka", "akka-stream_2.11"),
-      "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion,
       "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided"
-    ),
-    dependencyOverrides += "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion
+    )
   )
 
   val coreDependencies = Seq(
@@ -353,7 +350,6 @@ object Build extends sbt.Build {
       "com.github.scribejava" % "scribejava-apis" % "2.4.0",
       "com.ning" % "async-http-client" % "1.9.33",
       "org.webjars" % "angularjs" % "1.4.9",
-      "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
 
       // angular 1.5 breaks ui-select, but we need ng-touch 1.5
       "org.webjars.npm" % "angular-touch" % "1.5.0",
@@ -417,12 +413,12 @@ object Build extends sbt.Build {
     settings = commonSettings ++ noPublish ++
       Seq(
         libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion,
+          "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+          "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
           "org.json4s" %% "json4s-jackson" % "3.2.11",
           "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
-        ),
-        dependencyOverrides += "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion
-      )) 
+        )
+      ))
       .dependsOn (services % "test->test; compile->compile", daemon % "test->test; compile->compile")
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
@@ -436,7 +432,7 @@ object Build extends sbt.Build {
         ),
         mainClass in(Compile, packageBin) := Some("org.apache.gearpump.example.Test")
       ))
-    .dependsOn(streaming % "test->test; provided", daemon % "test->test; provided")
+      .dependsOn(streaming % "test->test; provided", daemon % "test->test; provided")
 
   lazy val storm = Project(
     id = "gearpump-experiments-storm",

@@ -25,7 +25,8 @@ import org.apache.gearpump.streaming.Processor.DefaultProcessor
 import org.apache.gearpump.streaming.dsl.plan.functions.SingleInputFunction
 import org.apache.gearpump.streaming.{Constants, Processor}
 import org.apache.gearpump.streaming.dsl.task.TransformTask
-import org.apache.gearpump.streaming.dsl.window.api.GroupByFn
+import org.apache.gearpump.streaming.dsl.window.api.{CountWindow, GroupByFn}
+import org.apache.gearpump.streaming.dsl.window.impl.GroupAlsoByWindow
 import org.apache.gearpump.streaming.sink.{DataSink, DataSinkProcessor}
 import org.apache.gearpump.streaming.source.{DataSource, DataSourceTask}
 import org.apache.gearpump.streaming.task.Task
@@ -124,11 +125,11 @@ case class DataSinkOp(
  * to another Op to be used
  */
 case class ChainableOp[IN, OUT](
-    fn: SingleInputFunction[IN, OUT]) extends Op {
+    fn: SingleInputFunction[IN, OUT],
+    userConfig: UserConfig = UserConfig.empty) extends Op {
 
   override def description: String = fn.description
 
-  override def userConfig: UserConfig = UserConfig.empty
 
   override def chain(other: Op)(implicit system: ActorSystem): Op = {
     other match {
@@ -141,7 +142,17 @@ case class ChainableOp[IN, OUT](
   }
 
   override def getProcessor(implicit system: ActorSystem): Processor[_ <: Task] = {
-    throw new UnsupportedOperationException("ChainedOp cannot be translated to Processor")
+    Processor[TransformTask[Any, Any]](1, description,
+      userConfig.withValue(Constants.GEARPUMP_STREAMING_OPERATOR, fn))
+  }
+}
+
+object GroupByOp {
+
+  def apply[IN, GROUP](groupBy: IN => GROUP, parallelism: Int,
+      description: String, userConfig: UserConfig): Op = {
+    GroupByOp(GroupAlsoByWindow(groupBy, CountWindow.apply(1).accumulating), parallelism,
+      description, userConfig)
   }
 }
 

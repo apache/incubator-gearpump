@@ -40,7 +40,7 @@ class Unzip2Task[In, A1, A2](context: TaskContext, userConf : UserConfig)
 }
 
 object Unzip2Task {
-  case class UnZipFunction[In, A1, A2](val unzip: In => (A1, A2)) extends Serializable
+  case class UnZipFunction[In, A1, A2](unzip: In => (A1, A2)) extends Serializable
 
   val UNZIP2_FUNCTION = "org.apache.gearpump.akkastream.task.unzip2.function"
 }
