@@ -21,17 +21,19 @@ package org.apache.gearpump.experiments.storm.main
 import java.io.{File, FileOutputStream, FileWriter}
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, WritableByteChannel}
-import java.util.{HashMap => JHashMap, Map => JMap, UUID}
+import java.util.{List => JList, HashMap => JHashMap, Map => JMap, UUID}
+import org.apache.storm.Config
+import org.apache.storm.generated._
+import org.apache.storm.nimbus.NimbusInfo
+import org.apache.storm.security.auth.{ReqContext, ThriftConnectionType, ThriftServer}
+import org.apache.storm.utils.Utils
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigValueFactory
-import backtype.storm.Config
-import backtype.storm.generated._
-import backtype.storm.security.auth.{ThriftConnectionType, ThriftServer}
-import backtype.storm.utils.Utils
 import org.apache.storm.shade.org.json.simple.JSONValue
 import org.apache.storm.shade.org.yaml.snakeyaml.Yaml
 import org.slf4j.Logger
@@ -231,7 +233,8 @@ class GearpumpNimbus(clientContext: ClientContext, stormConf: JMap[AnyRef, AnyRe
     val topologySummaryList = topologies.map { case (name, _) =>
       new TopologySummary(name, name, 0, 0, 0, 0, "")
     }.toSeq
-    new ClusterSummary(List[SupervisorSummary]().asJava, 0, topologySummaryList.asJava)
+    new ClusterSummary(List[SupervisorSummary]().asJava,
+      topologySummaryList.asJava, List[NimbusSummary]().asJava)
   }
 
   override def beginFileDownload(file: String): String = {
@@ -283,6 +286,94 @@ class GearpumpNimbus(clientContext: ClientContext, stormConf: JMap[AnyRef, AnyRe
     val jar = topologies(name).jar
     new File(jar).delete()
     topologies -= name
+  }
+
+  override def updateBlobReplication(key: String, replication: Int): Int = {
+    throw new UnsupportedOperationException
+  }
+
+  override def setLogConfig(name: String, config: LogConfig): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def downloadBlobChunk(session: String): ByteBuffer = {
+    throw new UnsupportedOperationException
+  }
+
+  override def beginBlobDownload(key: String): BeginDownloadResult = {
+    throw new UnsupportedOperationException
+  }
+
+  override def cancelBlobUpload(session: String): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getTopologyHistory(user: String): TopologyHistoryInfo = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getTopologyPageInfo(id: String, window: String, is_include_sys: Boolean): TopologyPageInfo = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getBlobMeta(key: String): ReadableBlobMeta = {
+    throw new UnsupportedOperationException
+  }
+
+  override def createStateInZookeeper(key: String): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def setBlobMeta(key: String, meta: SettableBlobMeta): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getComponentPendingProfileActions(id: String, component_id: String, action: ProfileAction): JList[ProfileRequest] = {
+    throw new UnsupportedOperationException
+  }
+
+  override def debug(name: String, component: String, enable: Boolean, samplingPercentage: Double): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getComponentPageInfo(topology_id: String, component_id: String, window: String, is_include_sys: Boolean): ComponentPageInfo = {
+    throw new UnsupportedOperationException
+  }
+
+  override def setWorkerProfiler(id: String, profileRequest: ProfileRequest): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def finishBlobUpload(session: String): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def beginCreateBlob(key: String, meta: SettableBlobMeta): String = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getBlobReplication(key: String): Int = {
+    throw new UnsupportedOperationException
+  }
+
+  override def deleteBlob(key: String): Unit = {
+    throw new UnsupportedOperationException
+  }
+
+  override def listBlobs(session: String): ListBlobsResult = {
+    throw new UnsupportedOperationException
+  }
+
+  override def getLogConfig(name: String): LogConfig = {
+    throw new UnsupportedOperationException
+  }
+
+  override def beginUpdateBlob(key: String): String = {
+    throw new UnsupportedOperationException
+  }
+
+  override def uploadBlobChunk(session: String, chunk: ByteBuffer): Unit = {
+    throw new UnsupportedOperationException
   }
 }
 

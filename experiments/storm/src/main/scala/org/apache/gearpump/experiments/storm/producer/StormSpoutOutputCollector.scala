@@ -20,9 +20,9 @@ package org.apache.gearpump.experiments.storm.producer
 
 import java.util.{List => JList}
 
-import backtype.storm.spout.{ISpout, ISpoutOutputCollector}
 import org.apache.gearpump.TimeStamp
 import org.apache.gearpump.experiments.storm.util.StormOutputCollector
+import org.apache.storm.spout.{ISpoutOutputCollector, ISpout}
 
 case class PendingMessage(id: Object, messageTime: TimeStamp, startTime: TimeStamp)
 

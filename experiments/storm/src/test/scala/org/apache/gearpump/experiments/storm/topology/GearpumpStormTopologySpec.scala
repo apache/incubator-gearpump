@@ -20,11 +20,11 @@ package org.apache.gearpump.experiments.storm.topology
 
 import java.util.{HashMap => JHashMap, Map => JMap}
 
-import backtype.storm.Config
 import org.apache.gearpump.experiments.storm.processor.StormProcessor
 import org.apache.gearpump.experiments.storm.producer.StormProducer
 import org.apache.gearpump.experiments.storm.util.TopologyUtil
 import org.apache.gearpump.streaming.MockUtil
+import org.apache.storm.Config
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 

@@ -21,15 +21,15 @@ import java.time.Instant
 import java.util.{Map => JMap}
 
 import akka.actor.ActorRef
-import backtype.storm.spout.{ISpout, SpoutOutputCollector}
-import backtype.storm.task.{GeneralTopologyContext, IBolt, OutputCollector, TopologyContext}
-import backtype.storm.tuple.Tuple
 import org.apache.gearpump.experiments.storm.producer.StormSpoutOutputCollector
 import org.apache.gearpump.experiments.storm.topology.GearpumpStormComponent.{GearpumpBolt, GearpumpSpout}
 import org.apache.gearpump.experiments.storm.util.StormOutputCollector
 import org.apache.gearpump.streaming.task.{TaskContext, TaskId}
 import org.apache.gearpump.streaming.{DAG, MockUtil}
 import org.apache.gearpump.{Message, TimeStamp}
+import org.apache.storm.spout.{SpoutOutputCollector, ISpout}
+import org.apache.storm.task.{OutputCollector, GeneralTopologyContext, IBolt, TopologyContext}
+import org.apache.storm.tuple.Tuple
 import org.mockito.Matchers.{anyObject, eq => mockitoEq}
 import org.mockito.Mockito._
 import org.scalacheck.Gen

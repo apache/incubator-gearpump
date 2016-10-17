@@ -22,9 +22,6 @@ import java.lang.{Iterable => JIterable}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
 
 import akka.actor.ActorSystem
-import backtype.storm.Config
-import backtype.storm.generated._
-import backtype.storm.utils.{ThriftTopologyUtils, Utils}
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.experiments.storm.processor.StormProcessor
 import org.apache.gearpump.experiments.storm.producer.StormProducer
@@ -34,6 +31,9 @@ import org.apache.gearpump.experiments.storm.util.StormUtil._
 import org.apache.gearpump.streaming.Processor
 import org.apache.gearpump.streaming.task.Task
 import org.apache.gearpump.util.LogUtil
+import org.apache.storm.Config
+import org.apache.storm.generated.{ComponentCommon, GlobalStreamId, Grouping, Bolt, SpoutSpec, StormTopology}
+import org.apache.storm.utils.{ThriftTopologyUtils, Utils}
 import org.slf4j.Logger
 
 // TODO: Refactor this file, we should disable using of JavaConversions
@@ -64,7 +64,8 @@ object GearpumpStormTopology {
  * 3. provides interface for Gearpump applications to use Storm topology
  *
  * an implicit ActorSystem is required to create Gearpump processors
- * @param name topology name
+  *
+  * @param name topology name
  * @param topology Storm topology
  * @param sysConfig configs from "defaults.yaml" and custom config file
  * @param appConfig config submitted from user application
@@ -124,7 +125,8 @@ private[storm] class GearpumpStormTopology(
 
   /**
    * creates Gearpump processor from Storm spout
-   * @param spoutId spout id
+    *
+    * @param spoutId spout id
    * @param spoutSpec spout spec
    * @param stormConfig merged storm config
    * @param system actor system
@@ -141,7 +143,8 @@ private[storm] class GearpumpStormTopology(
 
   /**
    * creates Gearpump processor from Storm bolt
-   * @param boltId bolt id
+    *
+    * @param boltId bolt id
    * @param boltSpec bolt spec
    * @param stormConfig merged storm config
    * @param system actor system
@@ -192,7 +195,8 @@ private[storm] class GearpumpStormTopology(
    * 1. use "topology.tasks" if defined; otherwise use parallelism_hint
    * 2. parallelism should not be larger than "topology.max.task.parallelism" if defined
    * 3. component config overrides system config
-   * @param stormConfig System configs without merging "topology.tasks" and
+    *
+    * @param stormConfig System configs without merging "topology.tasks" and
    *                    "topology.max.task.parallelism" of component
    * @return number of task instances for a component
    */
@@ -223,7 +227,8 @@ private[storm] class GearpumpStormTopology(
 
   /**
    * merge component configs "topology.kryo.decorators" and "topology.kryo.register"
-   * @param componentConfigs list of component configs
+    *
+    * @param componentConfigs list of component configs
    * @param allConfig existing configs without merging component configs
    * @return the two configs merged from all the component configs and existing configs
    */

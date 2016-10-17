@@ -18,7 +18,8 @@
 
 package org.apache.gearpump.experiments.storm.util;
 
-import backtype.storm.utils.TimeCacheMap;
+
+import org.apache.storm.utils.TimeCacheMap;
 
 /**
  * Wrapper class to suppress "deprecation" warning, as scala doesn't support the suppression.

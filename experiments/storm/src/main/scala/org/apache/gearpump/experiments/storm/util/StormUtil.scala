@@ -22,8 +22,8 @@ import java.lang.{Boolean => JBoolean}
 import java.util.{HashMap => JHashMap, Map => JMap}
 
 import akka.actor.ActorSystem
-import backtype.storm.Config
-import backtype.storm.generated._
+import org.apache.storm.Config
+import org.apache.storm.generated.StormTopology
 import org.apache.storm.shade.org.json.simple.JSONValue
 
 import org.apache.gearpump.cluster.UserConfig

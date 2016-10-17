@@ -26,13 +26,6 @@ import java.util.{HashMap => JHashMap, List => JList, Map => JMap}
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import backtype.storm.Config
-import backtype.storm.generated.{Bolt, ComponentCommon, SpoutSpec, StormTopology}
-import backtype.storm.metric.api.IMetric
-import backtype.storm.spout.{ISpout, SpoutOutputCollector}
-import backtype.storm.task.{GeneralTopologyContext, IBolt, OutputCollector, TopologyContext}
-import backtype.storm.tuple.{Fields, Tuple, TupleImpl}
-import backtype.storm.utils.Utils
 import clojure.lang.Atom
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.gearpump.experiments.storm.processor.StormBoltOutputCollector
@@ -44,6 +37,13 @@ import org.apache.gearpump.streaming.DAG
 import org.apache.gearpump.streaming.task.{GetDAG, TaskId, TaskContext}
 import org.apache.gearpump.util.{Constants, LogUtil}
 import org.apache.gearpump.{Message, TimeStamp}
+import org.apache.storm.Config
+import org.apache.storm.generated.{Bolt, ComponentCommon, SpoutSpec, StormTopology}
+import org.apache.storm.metric.api.IMetric
+import org.apache.storm.spout.{SpoutOutputCollector, ISpout}
+import org.apache.storm.task.{OutputCollector, IBolt, GeneralTopologyContext, TopologyContext}
+import org.apache.storm.tuple.{Fields, Tuple, TupleImpl}
+import org.apache.storm.utils.Utils
 import org.slf4j.Logger
 
 import scala.collection.JavaConverters._
@@ -56,13 +56,15 @@ import scala.concurrent.{Await, Future}
 trait GearpumpStormComponent {
   /**
    * invoked at Task.onStart
-   * @param startTime task start time
+    *
+    * @param startTime task start time
    */
   def start(startTime: Instant): Unit
 
   /**
    * invoked at Task.onNext
-   * @param message incoming message
+    *
+    * @param message incoming message
    */
   def next(message: Message): Unit
 
@@ -229,7 +231,8 @@ object GearpumpStormComponent {
 
     /**
      * invoked at TICK message when "topology.tick.tuple.freq.secs" is configured
-     * @param freq tick frequency
+      *
+      * @param freq tick frequency
      */
     def tick(freq: Int): Unit = {
       if (null == tickTuple) {
@@ -242,7 +245,8 @@ object GearpumpStormComponent {
   /**
    * normalize general config with per component configs
    * "topology.transactional.id" and "topology.tick.tuple.freq.secs"
-   * @param stormConfig general config for all components
+    *
+    * @param stormConfig general config for all components
    * @param componentCommon common component parts
    */
   private def normalizeConfig(stormConfig: Map[AnyRef, AnyRef],

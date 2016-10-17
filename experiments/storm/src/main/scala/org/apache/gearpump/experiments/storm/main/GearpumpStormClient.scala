@@ -18,11 +18,11 @@
 
 package org.apache.gearpump.experiments.storm.main
 
-import backtype.storm.Config
-import backtype.storm.utils.Utils
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.util.Constants._
 import org.apache.gearpump.util.{AkkaApp, LogUtil, Util}
+import org.apache.storm.Config
+import org.apache.storm.utils.Utils
 
 object GearpumpStormClient extends AkkaApp with ArgumentsParser {
 

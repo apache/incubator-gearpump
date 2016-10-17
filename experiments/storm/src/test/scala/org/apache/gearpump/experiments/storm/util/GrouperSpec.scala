@@ -19,12 +19,13 @@
 package org.apache.gearpump.experiments.storm.util
 
 import java.util.{List => JList}
+import org.apache.storm.generated.GlobalStreamId
+import org.apache.storm.grouping.CustomStreamGrouping
+import org.apache.storm.task.TopologyContext
+import org.apache.storm.tuple.Fields
+
 import scala.collection.JavaConverters._
 
-import backtype.storm.generated.GlobalStreamId
-import backtype.storm.grouping.CustomStreamGrouping
-import backtype.storm.task.TopologyContext
-import backtype.storm.tuple.Fields
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar

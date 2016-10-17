@@ -18,9 +18,10 @@
 package org.apache.gearpump.experiments.storm.util
 
 import java.util.{List => JList, Map => JMap}
+import org.apache.storm.generated.Grouping
+
 import scala.collection.JavaConverters._
 
-import backtype.storm.generated.Grouping
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalacheck.Gen

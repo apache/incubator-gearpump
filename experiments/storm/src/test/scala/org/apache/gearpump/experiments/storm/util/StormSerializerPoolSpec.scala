@@ -18,11 +18,12 @@
 
 package org.apache.gearpump.experiments.storm.util
 
-import java.util.{HashMap => JHashMap, List => JList, Map => JMap}
+import java.util.{List => JList, Map => JMap}
+import org.apache.storm.utils.Utils
+
 import scala.collection.JavaConverters._
 
 import akka.actor.ExtendedActorSystem
-import backtype.storm.utils.Utils
 import com.esotericsoftware.kryo.Kryo
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar

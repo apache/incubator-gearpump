@@ -20,9 +20,9 @@ package org.apache.gearpump.experiments.storm.processor
 
 import java.util.{List => JList}
 
-import backtype.storm.tuple.Tuple
-import backtype.storm.utils.Utils
 import org.apache.gearpump.experiments.storm.util.StormOutputCollector
+import org.apache.storm.tuple.Tuple
+import org.apache.storm.utils.Utils
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar

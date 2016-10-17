@@ -20,10 +20,10 @@ package org.apache.gearpump.experiments.storm.topology
 
 import java.util.{List => JList}
 
-import backtype.storm.task.GeneralTopologyContext
-import backtype.storm.tuple.{Tuple, TupleImpl}
 
 import org.apache.gearpump.TimeStamp
+import org.apache.storm.task.GeneralTopologyContext
+import org.apache.storm.tuple.{TupleImpl, Tuple}
 
 /**
  * this carries Storm tuple values in the Gearpump world
@@ -36,10 +36,11 @@ private[storm] class GearpumpTuple(
     val sourceStreamId: String,
     @transient val targetPartitions: Map[String, Array[Int]]) extends Serializable {
   /**
-   * creates a Storm [[backtype.storm.tuple.Tuple]] to be passed to a Storm component
+   * creates a Storm [[org.apache.storm.tuple.Tuple]] to be passed to a Storm component
    * this is needed for each incoming message
-   * because we cannot get [[backtype.storm.task.GeneralTopologyContext]] at deserialization
-   * @param topologyContext topology context used for all tasks
+   * because we cannot get [[org.apache.storm.task.GeneralTopologyContext]] at deserialization
+    *
+    * @param topologyContext topology context used for all tasks
    * @return a Tuple
    */
   def toTuple(topologyContext: GeneralTopologyContext, timestamp: TimeStamp): Tuple = {

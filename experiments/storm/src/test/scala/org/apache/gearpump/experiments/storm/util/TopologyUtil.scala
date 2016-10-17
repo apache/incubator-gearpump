@@ -18,11 +18,12 @@
 
 package org.apache.gearpump.experiments.storm.util
 
-import backtype.storm.generated.StormTopology
-import backtype.storm.testing.{TestGlobalCount, TestWordCounter, TestWordSpout}
-import backtype.storm.topology.TopologyBuilder
-import backtype.storm.tuple.Fields
-import backtype.storm.utils.Utils
+import org.apache.storm.generated.StormTopology
+import org.apache.storm.testing.{TestGlobalCount, TestWordCounter, TestWordSpout}
+import org.apache.storm.topology.TopologyBuilder
+import org.apache.storm.tuple.Fields
+import org.apache.storm.utils.Utils
+
 
 object TopologyUtil {
   val DEFAULT_STREAM_ID = Utils.DEFAULT_STREAM_ID

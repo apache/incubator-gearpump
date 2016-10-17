@@ -20,9 +20,9 @@ package org.apache.gearpump.experiments.storm.producer
 
 import java.util.{List => JList}
 
-import backtype.storm.spout.ISpout
-import backtype.storm.utils.Utils
 import org.apache.gearpump.experiments.storm.util.StormOutputCollector
+import org.apache.storm.spout.ISpout
+import org.apache.storm.utils.Utils
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar

@@ -22,8 +22,6 @@ import java.lang.{Boolean => JBoolean, Long => JLong}
 import java.util.{HashMap => JHashMap, Map => JMap}
 import scala.collection.JavaConverters._
 
-import backtype.storm.Config
-import backtype.storm.generated.StormTopology
 import org.apache.storm.shade.org.json.simple.JSONValue
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar

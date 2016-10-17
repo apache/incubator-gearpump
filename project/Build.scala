@@ -47,7 +47,7 @@ object Build extends sbt.Build {
   val upickleVersion = "0.3.4"
   val junitVersion = "4.12"
   val kafkaVersion = "0.8.2.1"
-  val stormVersion = "0.10.0"
+  val stormVersion = "1.0.1"
   val slf4jVersion = "1.7.7"
 
   val crossScalaVersionNumbers = Seq("2.11.8")

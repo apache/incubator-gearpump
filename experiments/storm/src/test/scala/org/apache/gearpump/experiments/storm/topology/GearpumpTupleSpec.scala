@@ -19,9 +19,9 @@ package org.apache.gearpump.experiments.storm.topology
 
 import java.util.{List => JList}
 
-import backtype.storm.task.GeneralTopologyContext
-import backtype.storm.tuple.Fields
 import org.apache.gearpump.TimeStamp
+import org.apache.storm.task.GeneralTopologyContext
+import org.apache.storm.tuple.Fields
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar

@@ -21,8 +21,6 @@ import java.lang.{Integer => JInteger}
 import java.util.{Map => JMap}
 
 import akka.actor.ExtendedActorSystem
-import backtype.storm.serialization.SerializationFactory
-import backtype.storm.utils.ListDelegate
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.{Input, Output}
 
@@ -30,6 +28,8 @@ import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.experiments.storm.topology.GearpumpTuple
 import org.apache.gearpump.experiments.storm.util.StormConstants._
 import org.apache.gearpump.serializer.{SerializationFramework, Serializer}
+import org.apache.storm.serialization.SerializationFactory
+import org.apache.storm.utils.ListDelegate
 
 class StormSerializationFramework extends SerializationFramework {
   private var stormConfig: JMap[AnyRef, AnyRef] = null
@@ -54,7 +54,7 @@ class StormSerializationFramework extends SerializationFramework {
 /**
  * serializes / deserializes [[org.apache.gearpump.experiments.storm.topology.GearpumpTuple]]
  *
- * @param kryo created by Storm [[backtype.storm.serialization.SerializationFactory]]
+ * @param kryo created by Storm [[org.apache.storm.serialization.SerializationFactory]]
  */
 class StormSerializer(kryo: Kryo) extends Serializer {
   // -1 means the max buffer size is 2147483647

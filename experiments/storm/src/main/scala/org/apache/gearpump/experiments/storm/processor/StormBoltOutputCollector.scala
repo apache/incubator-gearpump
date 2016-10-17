@@ -20,12 +20,12 @@ package org.apache.gearpump.experiments.storm.processor
 
 import java.util.{Collection => JCollection, List => JList}
 
-import backtype.storm.task.IOutputCollector
-import backtype.storm.tuple.Tuple
 import org.apache.gearpump.experiments.storm.topology.TimedTuple
 import org.apache.gearpump.experiments.storm.util.StormConstants._
 import org.apache.gearpump.experiments.storm.util.StormOutputCollector
 import org.apache.gearpump.streaming.task.UpdateCheckpointClock
+import org.apache.storm.task.IOutputCollector
+import org.apache.storm.tuple.Tuple
 
 /**
  * this is used by Storm bolt to emit messages

@@ -19,12 +19,13 @@
 package org.apache.gearpump.experiments.storm.util
 
 import java.util.{List => JList}
+import org.apache.storm.generated.GlobalStreamId
+import org.apache.storm.grouping.CustomStreamGrouping
+import org.apache.storm.task.TopologyContext
+import org.apache.storm.tuple.Fields
+
 import scala.util.Random
 
-import backtype.storm.generated.GlobalStreamId
-import backtype.storm.grouping.CustomStreamGrouping
-import backtype.storm.task.TopologyContext
-import backtype.storm.tuple.Fields
 
 /**
  * Grouper is identical to that in storm but return gearpump partitions for storm tuple values
@@ -114,7 +115,7 @@ class AllGrouper(numTasks: Int) extends Grouper {
 /**
  * CustomGrouper allows users to specify grouping strategy
  *
- * @param grouping see [[backtype.storm.grouping.CustomStreamGrouping]]
+ * @param grouping see [[org.apache.storm.grouping.CustomStreamGrouping]]
  */
 class CustomGrouper(grouping: CustomStreamGrouping) extends Grouper {
 
