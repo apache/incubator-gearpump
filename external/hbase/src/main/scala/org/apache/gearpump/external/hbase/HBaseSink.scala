@@ -42,8 +42,7 @@ class HBaseSink(userconfig: UserConfig, tableName: String,
   override def open(context: TaskContext): Unit = {}
 
   def this(userconfig: UserConfig, tableName: String, configuration: Configuration) = {
-    this(userconfig, tableName, (userconfig: UserConfig, config: Configuration) =>
-      {HBaseSink.getConnection(userconfig, config)}, configuration)
+    this(userconfig, tableName, HBaseSink.getConnection, configuration)
   }
 
   def this(userconfig: UserConfig, tableName: String) = {

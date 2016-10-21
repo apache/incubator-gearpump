@@ -20,38 +20,40 @@
 
 package org.apache.gearpump.streaming.hbase
 
+import java.time.Instant
+
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.external.hbase.HBaseSink
-import org.apache.gearpump.streaming.sink.DataSink
+import org.apache.gearpump.streaming.source.DataSource
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.hadoop.hbase.util.Bytes
 
-class toHBase(hBaseSink: HBaseSink) extends DataSink {
+class toHBase extends DataSource {
 
 
-  // val hbaseSink = new HBaseSink(userConfig, tableName)
+  lazy val hBaseSink = HBaseSink(UserConfig.empty, "sss")
 
-
-  var x = 1
-  while (x < 100) {
-    hBaseSink.insert(Bytes.toBytes("row5"), Bytes.toBytes("group"),
-      Bytes.toBytes("group:name"), Bytes.toBytes("10000"))
-    x += 1
-    // scalastyle:off
-    println("This is : " + x )
+  override def open(context: TaskContext, startTime: Instant): Unit = {
+    var x = 1
+    while (x < 1000) {
+      hBaseSink.insert(Bytes.toBytes(s"row$x"), Bytes.toBytes("group"),
+        Bytes.toBytes("group:name"), Bytes.toBytes("300000"))
+      x += 1
+      // scalastyle:off
+      // println("This is : " + x )
+    }
   }
 
-  override def open(context: TaskContext): Unit = {
-    hBaseSink.open(context)
+  override def read(): Message = {
+
+    Message("Hello")
+
   }
 
-  override def write(message: Message): Unit = {
-   hBaseSink.write(message)
-  }
+  override def close(): Unit = {}
 
-  override def close(): Unit = {
-    hBaseSink.close()
-  }
+  override def getWatermark: Instant = Instant.now()
+
 }
 
