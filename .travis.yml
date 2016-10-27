@@ -3,10 +3,8 @@ language:
 - scala
 sudo: false
 before_script:
-- rm -rf $HOME/.m2
-- rm -rf $HOME/.ivy2
-- mkdir -p $HOME/.sbt/launchers/0.13.11/
-- curl -L -o $HOME/.sbt/launchers/0.13.11/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.11/sbt-launch.jar
+- mkdir -p $HOME/.sbt/launchers/0.13.12/
+- curl -L -o $HOME/.sbt/launchers/0.13.12/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.12/sbt-launch.jar
 script:
 - echo "TRAVIS_PULL_REQUEST" $TRAVIS_PULL_REQUEST
 - echo "TRAVIS_BRANCH" $TRAVIS_BRANCH
@@ -14,7 +12,7 @@ script:
 - echo "repo" $TRAVIS_REPO_SLUG
 - set -o pipefail; skipLogs="Resolving |Compiling |Done updating|Updating |scoverage|coverage-report";
   if [[ $TRAVIS_PULL_REQUEST != "false" || $TRAVIS_REPO_SLUG != "apache/incubator-gearpump" ]];
-    then sbt -jvm-opts project/travis/jvmopts clean +assembly scalastyle test:scalastyle it:scalastyle unidoc coverage +test | grep -v -E "$skipLogs";
+  then sbt -v -jvm-opts project/travis/jvmopts clean +assembly scalastyle test:scalastyle it:scalastyle unidoc coverage +test | grep -v -E "$skipLogs";
   elif [[ $TRAVIS_BRANCH == "master" ]];
     then sbt -jvm-opts project/travis/jvmopts clean +assembly +publish | grep -v -E "$skipLogs"; sbt -jvm-opts project/travis/jvmopts scalastyle test:scalastyle it:scalastyle unidoc coverage  +test  | grep -v -E "$skipLogs";
   elif [[ $TRAVIS_TAG != "" ]];
@@ -30,8 +28,8 @@ scala:
 - 2.11.8
 cache:
   directories:
-  - $HOME/.m2
-  - $HOME/.ivy2
+  - $HOME/.m2/repository
+  - $HOME/.ivy2/cache
 git:
   depth: 1
 after_success:
