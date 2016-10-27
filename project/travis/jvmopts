@@ -2,9 +2,7 @@
 -Xms2048M
 -Xmx2048M
 -Xss6M
--XX:MaxPermSize=1024M
 -XX:MaxMetaspaceSize=1024m
 -XX:ReservedCodeCacheSize=256M
--XX:+CMSPermGenSweepingEnabled
 -XX:+CMSClassUnloadingEnabled
 -XX:+UseConcMarkSweepGC
