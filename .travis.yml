@@ -2,9 +2,9 @@ language:
 - java
 - scala
 sudo: false
-#before_script:
-#- mkdir -p $HOME/.sbt/launchers/0.13.12/
-#- curl -L -o $HOME/.sbt/launchers/0.13.12/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.12/sbt-launch.jar
+before_script:
+- mkdir -p $HOME/.sbt/launchers/0.13.12/
+- curl -L -o $HOME/.sbt/launchers/0.13.12/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.12/sbt-launch.jar
 script:
 - echo "TRAVIS_PULL_REQUEST" $TRAVIS_PULL_REQUEST
 - echo "TRAVIS_BRANCH" $TRAVIS_BRANCH
