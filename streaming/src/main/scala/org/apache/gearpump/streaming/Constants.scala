@@ -17,11 +17,14 @@
  */
 package org.apache.gearpump.streaming
 
+import org.apache.gearpump.streaming.partitioner._
+
 object Constants {
 
   val GEARPUMP_STREAMING_OPERATOR = "gearpump.streaming.dsl.operator"
   val GEARPUMP_STREAMING_SOURCE = "gearpump.streaming.source"
   val GEARPUMP_STREAMING_GROUPBY_FUNCTION = "gearpump.streaming.dsl.groupby-function"
+  val GEARPUMP_STREAMING_WINDOW_FUNCTION = "gearpump.streaming.dsl.window-function"
 
   val GEARPUMP_STREAMING_LOCALITIES = "gearpump.streaming.localities"
 
@@ -35,4 +38,12 @@ object Constants {
 
   val GEARPUMP_STREAMING_EXECUTOR_RESTART_TIME_WINDOW =
     "gearpump.streaming.executor-restart-time-window"
+
+  // The partitioners provided by Gearpump
+  val BUILTIN_PARTITIONERS = Array(
+    classOf[BroadcastPartitioner],
+    classOf[CoLocationPartitioner],
+    classOf[HashPartitioner],
+    classOf[ShuffleGroupingPartitioner],
+    classOf[ShufflePartitioner])
 }

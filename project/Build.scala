@@ -140,22 +140,6 @@ object Build extends sbt.Build {
     publishArtifact in Test := false
   )
 
-  val daemonDependencies = Seq(
-    libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
-      "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
-      "commons-logging" % "commons-logging" % commonsLoggingVersion,
-      "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion,
-      "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided"
-    )
-  )
-
-  val streamingDependencies = Seq(
-    unmanagedJars in Compile ++= Seq(
-      getShadedJarFile("gs-collections", version.value)
-    )
-  )
-
   val coreDependencies = Seq(
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
@@ -178,6 +162,10 @@ object Build extends sbt.Build {
       "com.typesafe.akka" %% "akka-remote" % akkaVersion
         exclude("io.netty", "netty"),
 
+      "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
+      "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
+      "commons-logging" % "commons-logging" % commonsLoggingVersion,
+      "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-agent" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
@@ -194,9 +182,9 @@ object Build extends sbt.Build {
     ),
 
     unmanagedJars in Compile ++= Seq(
-      getShadedJarFile("metrics-graphite", version.value),
-      getShadedJarFile("guava", version.value),
-      getShadedJarFile("akka-kryo", version.value)
+      getShadedJarFile(shaded_metrics_graphite.id, version.value),
+      getShadedJarFile(shaded_guava.id, version.value),
+      getShadedJarFile(shaded_akka_kryo.id, version.value)
     )
   )
 
@@ -245,41 +233,64 @@ object Build extends sbt.Build {
       .map(_.filterNot(_.getCanonicalPath.contains("akka")))
   }
 
+  private def addShadedDeps(deps: Seq[xml.Node], node: xml.Node): xml.Node = {
+    node match {
+      case elem: xml.Elem =>
+        val child = if (elem.label == "dependencies") {
+          elem.child ++ deps
+        } else {
+          elem.child.map(addShadedDeps(deps, _))
+        }
+        xml.Elem(elem.prefix, elem.label, elem.attributes, elem.scope, false, child: _*)
+      case _ =>
+        node
+    }
+  }
+
   lazy val root = Project(
     id = "gearpump",
     base = file("."),
     settings = commonSettings ++ noPublish ++ gearpumpUnidocSetting)
-      .aggregate(shaded, core, daemon, streaming, services, external_kafka, external_monoid,
-      external_serializer, examples, storm, yarn, external_hbase, packProject,
+      .aggregate(shaded, core, streaming, services, external_kafka, external_monoid,
+      external_serializer, examples, storm, yarn, external_hbase, gearpumpHadoop, packProject,
       external_hadoopfs, integration_test).settings(Defaults.itSettings: _*)
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val core = Project(
     id = "gearpump-core",
     base = file("core"),
-    settings = commonSettings ++ javadocSettings ++ coreDependencies)
-      .disablePlugins(sbtassembly.AssemblyPlugin)
+    settings = commonSettings ++ javadocSettings ++ coreDependencies ++ Seq(
+      pomPostProcess := {
+        (node: xml.Node) => addShadedDeps(List(
+          getShadedDepXML(organization.value, shaded_akka_kryo.id, version.value),
+          getShadedDepXML(organization.value, shaded_guava.id, version.value),
+          getShadedDepXML(organization.value, shaded_metrics_graphite.id, version.value)), node)
+      }
+    )).disablePlugins(sbtassembly.AssemblyPlugin)
 
-  lazy val daemon = Project(
-    id = "gearpump-daemon",
-    base = file("daemon"),
-    settings = commonSettings ++ daemonDependencies)
-      .dependsOn(core % "test->test; compile->compile", cgroup % "test->test; compile->compile")
-      .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val cgroup = Project(
     id = "gearpump-experimental-cgroup",
     base = file("experiments/cgroup"),
-    settings = commonSettings ++ noPublish ++ daemonDependencies)
+    settings = commonSettings ++ noPublish)
       .dependsOn (core % "test->test; compile->compile")
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val streaming = Project(
     id = "gearpump-streaming",
     base = file("streaming"),
-    settings = commonSettings ++ javadocSettings ++ streamingDependencies)
-      .dependsOn(core % "test->test; compile->compile", daemon % "test->test")
-      .disablePlugins(sbtassembly.AssemblyPlugin)
+    settings = commonSettings ++ javadocSettings ++ Seq(
+      unmanagedJars in Compile ++= Seq(
+        getShadedJarFile(shaded_gs_collections.id, version.value)
+      ),
+
+      pomPostProcess := {
+        (node: xml.Node) => addShadedDeps(List(
+          getShadedDepXML(organization.value, shaded_gs_collections.id, version.value)), node)
+      }
+    ))
+    .dependsOn(core % "test->test; compile->compile", shaded_gs_collections)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val external_kafka = Project(
     id = "gearpump-external-kafka",
@@ -389,7 +400,18 @@ object Build extends sbt.Build {
         ),
         mainClass in(Compile, packageBin) := Some("akka.stream.gearpump.example.Test")
       ))
-      .dependsOn(streaming % "test->test; provided", daemon % "test->test; provided")
+      .dependsOn(streaming % "test->test; provided")
+
+  lazy val redis = Project(
+    id = "gearpump-experiments-redis",
+    base = file("experiments/redis"),
+    settings = commonSettings ++ noPublish ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "redis.clients" % "jedis" % "2.9.0"
+        )
+      )
+  ).dependsOn(streaming % "test->test; provided")
 
   lazy val storm = Project(
     id = "gearpump-experiments-storm",
@@ -427,14 +449,24 @@ object Build extends sbt.Build {
       .dependsOn (streaming % "test->test; compile->compile")
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
+  lazy val gearpumpHadoop = Project(
+    id = "gearpump-hadoop",
+    base = file("gearpump-hadoop"),
+    settings = commonSettings ++ noPublish ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion,
+          "org.apache.hadoop" % "hadoop-common" % hadoopVersion
+        )
+      )
+  ).dependsOn(core % "compile->compile").disablePlugins(sbtassembly.AssemblyPlugin)
+
   lazy val yarn = Project(
     id = "gearpump-experiments-yarn",
     base = file("experiments/yarn"),
     settings = commonSettings ++ noPublish ++
       Seq(
         libraryDependencies ++= Seq(
-          "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion,
-          "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
           "org.apache.hadoop" % "hadoop-yarn-api" % hadoopVersion,
           "org.apache.hadoop" % "hadoop-yarn-client" % hadoopVersion,
           "org.apache.hadoop" % "hadoop-yarn-common" % hadoopVersion,
@@ -444,8 +476,8 @@ object Build extends sbt.Build {
           "org.apache.hadoop" % "hadoop-yarn-server-nodemanager" % hadoopVersion % "provided"
         )
       ))
-      .dependsOn(services % "test->test;compile->compile", daemon % "provided", core % "provided")
-      .disablePlugins(sbtassembly.AssemblyPlugin)
+      .dependsOn(services % "test->test;compile->compile",
+        core % "provided", gearpumpHadoop).disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val external_hbase = Project(
     id = "gearpump-external-hbase",
