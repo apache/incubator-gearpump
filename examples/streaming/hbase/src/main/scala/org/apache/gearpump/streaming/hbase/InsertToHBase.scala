@@ -42,7 +42,6 @@ class InsertToHBase extends DataSource {
       x += 1
 
     Message("Hello")
-
   }
 
   override def close(): Unit = {}
