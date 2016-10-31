@@ -23,49 +23,28 @@ import akka.actor.ActorSystem
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption, ParseResult}
-import org.apache.gearpump.external.hbase.HBaseSink
-import org.apache.gearpump.partitioner.HashPartitioner
-import org.apache.gearpump.streaming.sink.DataSinkProcessor
+import org.apache.gearpump.streaming.StreamApplication
 import org.apache.gearpump.streaming.source.DataSourceProcessor
-import org.apache.gearpump.streaming.{Processor, StreamApplication}
 import org.apache.gearpump.util.Graph.Node
 import org.apache.gearpump.util.{AkkaApp, Graph, LogUtil}
 import org.slf4j.Logger
 
-object HbaseConn extends AkkaApp with ArgumentsParser {
+object HBaseConn extends AkkaApp with ArgumentsParser {
   private val LOG: Logger = LogUtil.getLogger(getClass)
   val RUN_FOR_EVER = -1
 
   override val options: Array[(String, CLIOption[Any])] = Array(
-    "tableName" -> CLIOption[String]("<tableName>", required = false, defaultValue = Some("sss")),
-    "sinkNum" -> CLIOption[Int]("<how many sum tasks>", required = false, defaultValue = Some(1)),
-    "splitNum" -> CLIOption[Int]("<how many sum tasks>", required = false, defaultValue = Some(1)),
-    "debug" -> CLIOption[Boolean]("<true|false>", required = false, defaultValue = Some(false)),
-    "sleep" -> CLIOption[Int]("how many seconds to sleep for debug mode", required = false,
-      defaultValue = Some(30))
-
+    "splitNum" -> CLIOption[Int]("<how many sum tasks>", required = false, defaultValue = Some(1))
   )
 
   def application(config: ParseResult, system: ActorSystem): StreamApplication = {
     implicit val actorSystem = system
 
-    val tableName = config.getString("tableName")
     val splitNum = config.getInt("splitNum")
-    val sinkNum = config.getInt("sinkNum")
 
-    // val sinkProcessor = DataSinkProcessor(datasink, sinkNum) // with datasink
-    // val split = Processor[TASk](splitNum) // with task
-    // val split = DataSourceProcessor(datasource, num,"split")  // with datasource
-
-    // val sink = HBaseSink(UserConfig.empty, "sss")  //can't test   dont't insert any data
-    // val sinkProcessor = DataSinkProcessor(sink, sinkNum)
-
-    val split = new toHBase
+    val split = new InsertToHBase
     val sourceProcessor = DataSourceProcessor(split, splitNum, "Split")
-    // val partitioner = new HashPartitioner
-
     val computation = sourceProcessor
-    // val computation = sourceProcessor ~ partitioner ~> sinkProcessor
     val application = StreamApplication("HBase", Graph(computation), UserConfig.empty)
 
     application

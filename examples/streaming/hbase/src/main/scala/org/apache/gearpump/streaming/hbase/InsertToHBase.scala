@@ -29,23 +29,18 @@ import org.apache.gearpump.streaming.source.DataSource
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.hadoop.hbase.util.Bytes
 
-class toHBase extends DataSource {
+class InsertToHBase extends DataSource {
 
-
+  private var x = 1
   lazy val hBaseSink = HBaseSink(UserConfig.empty, "sss")
 
-  override def open(context: TaskContext, startTime: Instant): Unit = {
-    var x = 1
-    while (x < 1000) {
-      hBaseSink.insert(Bytes.toBytes(s"row$x"), Bytes.toBytes("group"),
-        Bytes.toBytes("group:name"), Bytes.toBytes("300000"))
-      x += 1
-      // scalastyle:off
-      // println("This is : " + x )
-    }
-  }
+  override def open(context: TaskContext, startTime: Instant): Unit = {}
 
   override def read(): Message = {
+
+    hBaseSink.insert(Bytes.toBytes(s"row$x"), Bytes.toBytes("group"),
+      Bytes.toBytes("group:name"), Bytes.toBytes("300000"))
+      x += 1
 
     Message("Hello")
 
@@ -56,4 +51,3 @@ class toHBase extends DataSource {
   override def getWatermark: Instant = Instant.now()
 
 }
-
