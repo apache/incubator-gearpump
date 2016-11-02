@@ -19,19 +19,20 @@
 package org.apache.gearpump.akkastream.example
 
 import akka.actor.{Actor, ActorSystem, Props}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape}
 import akka.stream.scaladsl._
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-
+ 
 /**
- * test fanout
+ * Stream example showing Interleave
+ * output should be 1, 2, 4, 5, 3, 6, 7
  */
-object Test5 extends AkkaApp with ArgumentsParser {
+object Test17 extends AkkaApp with ArgumentsParser {
   // scalastyle:off println
   override val options: Array[(String, CLIOption[Any])] = Array(
     "gearpump" -> CLIOption[Boolean]("<boolean>", required = false, defaultValue = Some(false))
@@ -39,7 +40,7 @@ object Test5 extends AkkaApp with ArgumentsParser {
 
   override def main(akkaConf: Config, args: Array[String]): Unit = {
     val config = parse(args)
-    implicit val system = ActorSystem("Test5", akkaConf)
+    implicit val system = ActorSystem("Test17", akkaConf)
     implicit val materializer: ActorMaterializer = config.getBoolean("gearpump") match {
       case true =>
         GearpumpMaterializer()
@@ -48,26 +49,16 @@ object Test5 extends AkkaApp with ArgumentsParser {
           ActorMaterializerSettings(system).withAutoFusing(false)
         )
     }
+    implicit val ec = system.dispatcher
 
-    val echo = system.actorOf(Props(new Echo()))
-    val source = Source(List(("male", "24"), ("female", "23")))
-    val sink = Sink.actorRef(echo, "COMPLETE")
-
-    RunnableGraph.fromGraph(
-      GraphDSL.create() { implicit b =>
-        import GraphDSL.Implicits._
-        val unzip = b.add(Unzip[String, String]())
-        source ~> unzip.in
-        unzip.out0 ~> sink
-        unzip.out1 ~> sink
-        ClosedShape
-      }
-    ).run()
+    val sinkActor = system.actorOf(Props(new SinkActor()))
+    val sink = Sink.actorRef(sinkActor, "COMPLETE")
+    Source(0 to 3).interleave(Source(4 to 6), 2).interleave(Source(7 to 11), 3).runWith(sink)
 
     Await.result(system.whenTerminated, 60.minutes)
   }
 
-  class Echo extends Actor {
+  class SinkActor extends Actor {
     def receive: Receive = {
       case any: AnyRef =>
         println("Confirm received: " + any)

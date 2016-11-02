@@ -51,7 +51,7 @@ import org.reactivestreams.{Publisher, Subscriber, Subscription}
  * @param userConf UserConfig
  */
 class SinkBridgeTask(taskContext : TaskContext, userConf : UserConfig)
-  extends Task(taskContext, userConf) {
+  extends GraphTask(taskContext, userConf) {
   import taskContext.taskId
 
   val queue = new util.LinkedList[Message]()

@@ -12,7 +12,7 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+ * SeG the License for the specific language governing permissions and
  * limitations under the License.
  */
 
@@ -22,19 +22,12 @@ import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.task.TaskContext
 
-class InterleaveTask(context: TaskContext, userConf : UserConfig)
+// TODO Needs to signal completion when upstream is done
+class DetacherTask(context: TaskContext, userConf : UserConfig)
   extends GraphTask(context, userConf) {
 
-  val sizeOfInputs = sizeOfInPorts
-  val segmentSize = userConf.getInt(InterleaveTask.SEGMENT_SIZE)
-
-  // TODO access upstream and pull by segment size. For now a pass through
   override def onNext(msg : Message) : Unit = {
     context.output(msg)
   }
 }
 
-object InterleaveTask {
-  val INPUT_PORTS = "INPUT_PORTS"
-  val SEGMENT_SIZE = "SEGMENT_SIZE"
-}

@@ -18,9 +18,9 @@
 
 package org.apache.gearpump.akkastream.example
 
-import akka.stream.{ClosedShape, UniformFanInShape}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape, UniformFanInShape}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
-import org.apache.gearpump.cluster.main.ArgumentsParser
+import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.{Await, Future}
@@ -30,17 +30,26 @@ import scala.concurrent.{Await, Future}
  */
 object Test12 extends AkkaApp with ArgumentsParser{
   // scalastyle:off println
+  override val options: Array[(String, CLIOption[Any])] = Array(
+    "gearpump" -> CLIOption[Boolean]("<boolean>", required = false, defaultValue = Some(false))
+  )
+
   override def main(akkaConf: Config, args: Array[String]): Unit = {
     import akka.actor.ActorSystem
     import akka.stream.scaladsl._
 
     import scala.concurrent.duration._
-
+    val config = parse(args)
     implicit val system = ActorSystem("Test12", akkaConfig)
-//    implicit val materializer = ActorMaterializer(
-//      ActorMaterializerSettings(system).withAutoFusing(false)
-//    )
-    implicit val materializer = GearpumpMaterializer()
+    implicit val materializer: ActorMaterializer = config.getBoolean("gearpump") match {
+      case true =>
+        GearpumpMaterializer()
+      case false =>
+        ActorMaterializer(
+          ActorMaterializerSettings(system).withAutoFusing(false)
+        )
+    }
+
     implicit val ec = system.dispatcher
 
     val pickMaxOfThree = GraphDSL.create() { implicit b =>

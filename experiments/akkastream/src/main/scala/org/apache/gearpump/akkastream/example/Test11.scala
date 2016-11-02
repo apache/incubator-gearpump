@@ -19,9 +19,9 @@
 package org.apache.gearpump.akkastream.example
 
 import akka.NotUsed
-import akka.stream.ClosedShape
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
-import org.apache.gearpump.cluster.main.ArgumentsParser
+import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await
@@ -32,14 +32,23 @@ import scala.concurrent.duration._
  */
 object Test11 extends AkkaApp with ArgumentsParser {
   // scalastyle:off println
+  override val options: Array[(String, CLIOption[Any])] = Array(
+    "gearpump" -> CLIOption[Boolean]("<boolean>", required = false, defaultValue = Some(false))
+  )
+
   override def main(akkaConf: Config, args: Array[String]): Unit = {
     import akka.actor.ActorSystem
     import akka.stream.scaladsl._
-
+    val config = parse(args)
     implicit val system = ActorSystem("Test11", akkaConfig)
-    implicit val materializer = GearpumpMaterializer()
-//    implicit val materializer =
-//    ActorMaterializer(ActorMaterializerSettings(system).withAutoFusing(false))
+    implicit val materializer: ActorMaterializer = config.getBoolean("gearpump") match {
+      case true =>
+        GearpumpMaterializer()
+      case false =>
+        ActorMaterializer(
+          ActorMaterializerSettings(system).withAutoFusing(false)
+        )
+    }
     implicit val ec = system.dispatcher
 
     val g = RunnableGraph.fromGraph(GraphDSL.create() {

@@ -37,7 +37,7 @@ import scala.concurrent.ExecutionContext
  *
  *
  *
- *      [[SourceBridgeTask]]   --> downstream [[Task]]
+ *      [[SourceBridgeTask]]   --> downstream [[GraphTask]]
  *                 /|                Remote Cluster
  * ---------------/--------------------------------
  *               /                    Local JVM
@@ -48,7 +48,7 @@ import scala.concurrent.ExecutionContext
  * @param userConf UserConfig
  */
 class SourceBridgeTask(taskContext : TaskContext, userConf : UserConfig)
-  extends Task(taskContext, userConf) {
+  extends GraphTask(taskContext, userConf) {
   import taskContext.taskId
 
   override def onStart(startTime : Instant) : Unit = {}

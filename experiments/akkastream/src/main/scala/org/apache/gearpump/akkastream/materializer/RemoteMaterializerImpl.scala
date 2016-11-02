@@ -21,10 +21,10 @@ package org.apache.gearpump.akkastream.materializer
 import akka.actor.ActorSystem
 import akka.stream.impl.StreamLayout.Module
 import akka.stream.impl.Timers._
-import akka.stream.impl.fusing.GraphStages.{MaterializedValueSource, SimpleLinearGraphStage, SingleSource, TickSource}
+import akka.stream.impl.fusing.GraphStages._
 import akka.stream.impl.fusing.{Map => FMap, _}
 import akka.stream.impl.io.IncomingConnectionStage
-import akka.stream.impl.{HeadOptionStage, Stages, Throttle}
+import akka.stream.impl.{ProcessorModule => _, Unzip => _, _}
 import akka.stream.scaladsl._
 import akka.stream.stage.AbstractStage.PushPullGraphStageWithMaterializedValue
 import akka.stream.stage.GraphStage
@@ -231,6 +231,8 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
         val dIConf = conf.withValue[FiniteDuration](
           DelayInitialTask.DELAY_INITIAL, delayInitial.delay)
         ProcessorOp(classOf[DelayInitialTask[_]], parallelism, dIConf, "delayInitial")
+      case detacher: Detacher[_] =>
+        ProcessorOp(classOf[DetacherTask], parallelism, conf, "detacher")
       case dropWhile: DropWhile[_] =>
         dropWhileOp(dropWhile.p, conf)
       case flattenMerge: FlattenMerge[_, _] =>
@@ -259,7 +261,6 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
         val ilConf = conf.withInt(InterleaveTask.INPUT_PORTS, interleave.inputPorts).
           withInt(InterleaveTask.SEGMENT_SIZE, interleave.segmentSize)
         ProcessorOp(classOf[InterleaveTask], parallelism, ilConf, "interleave")
-        null
       case intersperse: Intersperse[_] =>
         // TODO
         null
@@ -322,13 +323,16 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
         // TODO
         null
       case unzip: Unzip[_, _] =>
-//        ProcessorOp(classOf[Unzip2Task[_, _, _]], parallelism,
-//          conf.withValue(
-//            Unzip2Task.UNZIP2_FUNCTION, Unzip2Task.UnZipFunction(unzip.unzipper)), "unzip")
-        // TODO
-        null
+        ProcessorOp(classOf[Unzip2Task[_, _, _]], parallelism,
+          conf.withValue(
+            Unzip2Task.UNZIP2_FUNCTION, Unzip2Task.UnZipFunction(unzip.unzipper)), "unzip")
       case zip: Zip[_, _] =>
-        zipWithOp(zip.zipper, conf)
+        // zipWithOp(zip.zipper, conf)
+        ProcessorOp(classOf[ZipTask[_, _]],
+          parallelism,
+          conf.withValue(
+            ZipTask.ZIP_FUNCTION, ZipTask.ZipFunction(zip.zipper)
+          ), "zip")
       case zipWith2: ZipWith2[_, _, _] =>
         ProcessorOp(classOf[Zip2Task[_, _, _]],
           parallelism,

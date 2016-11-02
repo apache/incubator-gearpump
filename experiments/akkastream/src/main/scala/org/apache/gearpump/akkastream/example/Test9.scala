@@ -30,7 +30,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
  
 /**
- * Stream example showing Broadcast
+ * Stream example showing Broadcast, Merge
  */
 object Test9 extends AkkaApp with ArgumentsParser {
   // scalastyle:off println
@@ -51,8 +51,8 @@ object Test9 extends AkkaApp with ArgumentsParser {
     }
     implicit val ec = system.dispatcher
 
-    val sinkActor = system.actorOf(Props(new SinkActor()))
     val source = Source((1 to 5))
+    val sinkActor = system.actorOf(Props(new SinkActor()))
     val sink = Sink.actorRef(sinkActor, "COMPLETE")
     val flowA: Flow[Int, Int, NotUsed] = Flow[Int].map {
       x => println(s"processing broadcasted element : $x in flowA"); x

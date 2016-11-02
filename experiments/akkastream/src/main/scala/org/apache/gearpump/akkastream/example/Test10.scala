@@ -19,9 +19,9 @@
 package org.apache.gearpump.akkastream.example
 
 import akka.NotUsed
-import akka.stream.{ClosedShape, ThrottleMode}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape, ThrottleMode}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
-import org.apache.gearpump.cluster.main.ArgumentsParser
+import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await
@@ -31,22 +31,32 @@ import scala.concurrent.duration._
  * Stream example showing Conflate, Throttle
  */
 object Test10 extends AkkaApp with ArgumentsParser {
-
   // scalastyle:off println
+  override val options: Array[(String, CLIOption[Any])] = Array(
+    "gearpump" -> CLIOption[Boolean]("<boolean>", required = false, defaultValue = Some(false))
+  )
+
   override def main(akkaConf: Config, args: Array[String]): Unit = {
     import akka.actor.ActorSystem
     import akka.stream.scaladsl._
-
+    val config = parse(args)
     implicit val system = ActorSystem("Test10", akkaConfig)
-    implicit val materializer = GearpumpMaterializer()
+    implicit val materializer: ActorMaterializer = config.getBoolean("gearpump") match {
+      case true =>
+        GearpumpMaterializer()
+      case false =>
+        ActorMaterializer(
+          ActorMaterializerSettings(system).withAutoFusing(false)
+        )
+    }
     implicit val ec = system.dispatcher
+
 
     // Conflate[A] - (2 inputs, 1 output) concatenates two streams
     // (first consumes one, then the second one)
-    def stream(x: String) = Stream.continually(x)
 
-    val sourceA = Source(stream("A"))
-    val sourceB = Source(stream("B"))
+    val sourceA = Source(List("A", "B", "C", "D"))
+    val sourceB = Source(List("E", "F", "G", "H"))
 
     val throttler: Flow[String, String, NotUsed] =
       Flow[String].throttle(1, 1.second, 1, ThrottleMode.Shaping)

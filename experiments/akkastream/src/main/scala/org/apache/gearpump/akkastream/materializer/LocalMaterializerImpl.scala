@@ -32,12 +32,12 @@ import akka.stream.impl.fusing.GraphInterpreter.GraphAssembly
 import akka.stream.impl.fusing.GraphStages.MaterializedValueSource
 import akka.stream.impl.fusing.{Map => _, _}
 import akka.stream.impl.io.{TLSActor, TlsModule}
-import akka.stream.scaladsl.{GraphDSL, Keep, ModuleExtractor, RunnableGraph}
+import akka.stream.scaladsl.ModuleExtractor
 import akka.stream.{ClosedShape, Graph => AkkaGraph, _}
 import org.apache.gearpump.akkastream.GearpumpMaterializer.Edge
 import org.apache.gearpump.akkastream.module.ReduceModule
 import org.apache.gearpump.akkastream.util.MaterializedValueOps
-import org.reactivestreams.{Publisher, Subscriber}
+import org.reactivestreams.{Processor, Publisher, Subscriber}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -62,6 +62,9 @@ case class LocalMaterializerImpl (
   extends ExtendedActorMaterializer {
 
   override def logger: LoggingAdapter = Logging.getLogger(system, this)
+
+  override def makeLogger(logSource: Class[_]): LoggingAdapter =
+    Logging(system, logSource)
 
   override def schedulePeriodically(initialDelay: FiniteDuration, interval: FiniteDuration,
       task: Runnable): Cancellable =
@@ -105,7 +108,7 @@ case class LocalMaterializerImpl (
         effectiveAttributes: Attributes, matVal: ju.Map[Module, Any]): Unit = {
 
       def newMaterializationContext() =
-        new MaterializationContext(LocalMaterializerImpl.this, effectiveAttributes,
+        MaterializationContext(LocalMaterializerImpl.this, effectiveAttributes,
           stageName(effectiveAttributes))
       atomic match {
         case sink: SinkModule[_, _] =>
@@ -117,7 +120,7 @@ case class LocalMaterializerImpl (
           assignPort(source.shape.out, pub.asInstanceOf[Publisher[Any]])
           matVal.put(atomic, mat)
         case stage: ProcessorModule[_, _, _] =>
-          val (processor, mat) = stage.createProcessor()
+          val (processor: Processor[_, _], mat) = stage.createProcessor()
           assignPort(stage.inPort, processor)
           assignPort(stage.outPort, processor.asInstanceOf[Publisher[Any]])
           matVal.put(atomic, mat)
@@ -201,7 +204,13 @@ case class LocalMaterializerImpl (
     })
     graph.edges.foreach(value => {
       val (node1, edge, node2) = value
-      moduleInProgress = moduleInProgress.wire(edge.from, edge.to)
+      val to = moduleInProgress.upstreams.contains(edge.to)
+      val from = moduleInProgress.downstreams.contains(edge.from)
+      !to && !from match {
+        case true =>
+          moduleInProgress = moduleInProgress.wire (edge.from, edge.to)
+        case false =>
+      }
     })
 
     moduleInProgress
@@ -214,26 +223,9 @@ case class LocalMaterializerImpl (
     val session = LocalMaterializerSession(topLevelModule, null, null)
     import scala.collection.JavaConverters._
     val matV = inputMatValues.asJava
-    val materializedGraph = graph.mapVertex { module =>
+    graph.vertices.foreach(module => {
       session.materializeAtomic(module.asInstanceOf[AtomicModule], module.attributes, matV)
-      matV.get(module)
-    }
-    materializedGraph.edges.foreach { nodeEdgeNode =>
-      val (node1, edge, node2) = nodeEdgeNode
-      val from = edge.from
-      val to = edge.to
-      node1 match {
-        case module1: Module =>
-          node2 match {
-            case module2: Module =>
-              val publisher = module1.downstreams(from).asInstanceOf[Publisher[Any]]
-              val subscriber = module2.upstreams(to).asInstanceOf[Subscriber[Any]]
-              publisher.subscribe(subscriber)
-            case _ =>
-          }
-        case _ =>
-      }
-    }
+    })
     val matValSources = graph.vertices.flatMap(module => {
       val rt: Option[MaterializedValueSource[_]] = module match {
         case graphStage: GraphStageModule =>
@@ -255,7 +247,7 @@ case class LocalMaterializerImpl (
   private def publishToMaterializedValueSource(modules: List[MaterializedValueSource[_]],
       matValues: scala.collection.mutable.Map[Module, Any]): Unit = {
     modules.foreach { source =>
-      Option(source.computation).map { attr =>
+      Option(source.computation).foreach { attr =>
         val valueToPublish = MaterializedValueOps(attr).resolve(matValues)
         source.setValue(valueToPublish)
       }

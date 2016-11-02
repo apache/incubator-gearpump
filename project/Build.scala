@@ -35,7 +35,9 @@ object Build extends sbt.Build {
 
   val copySharedSourceFiles = TaskKey[Unit]("copied shared services source code")
 
-  val akkaVersion = "2.4.11"
+  val akkaVersion = "2.4.12"
+  val akkaHttpVersion = "2.4.11"
+  val akkaStreamsVersion = "2.4-SNAPSHOT"
   val apacheRepo = "https://repository.apache.org/"
   val hadoopVersion = "2.6.0"
   val hbaseVersion = "1.0.0"
@@ -177,8 +179,8 @@ object Build extends sbt.Build {
       "com.typesafe.akka" %% "akka-agent" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.akka" %% "akka-kernel" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-experimental" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaHttpVersion,
       "org.scala-lang" % "scala-reflect" % scalaVersionNumber,
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
@@ -340,12 +342,12 @@ object Build extends sbt.Build {
 
   lazy val serviceJvmSettings = commonSettings ++ noPublish ++ Seq(
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion % "test"
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test"
         exclude("com.typesafe.akka", "akka-stream_2.11"),
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "com.softwaremill.akka-http-session" %% "core" % "0.2.5",
-      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion
+      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaHttpVersion
         exclude("com.typesafe.akka", "akka-stream_2.11"),
       "com.github.scribejava" % "scribejava-apis" % "2.4.0",
       "com.ning" % "async-http-client" % "1.9.33",
@@ -413,13 +415,13 @@ object Build extends sbt.Build {
     settings = commonSettings ++ noPublish ++
       Seq(
         libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-stream" % akkaVersion,
           "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
           "org.json4s" %% "json4s-jackson" % "3.2.11",
           "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
-        )
+        ),
+        dependencyOverrides += "com.typesafe.akka" %% "akka-stream" % akkaStreamsVersion
       ))
-      .dependsOn (services % "test->test; compile->compile", daemon % "test->test; compile->compile")
+      .dependsOn(services % "test->test;compile->compile", daemon % "test->test; compile->compile")
       .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val redis = Project(

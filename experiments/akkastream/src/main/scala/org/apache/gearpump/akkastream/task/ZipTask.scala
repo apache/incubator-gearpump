@@ -19,22 +19,39 @@
 package org.apache.gearpump.akkastream.task
 
 import org.apache.gearpump.Message
+import org.apache.gearpump.akkastream.task.ZipTask.ZipFunction
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.task.TaskContext
 
-class InterleaveTask(context: TaskContext, userConf : UserConfig)
+class ZipTask[A1, A2](context: TaskContext, userConf : UserConfig)
   extends GraphTask(context, userConf) {
 
-  val sizeOfInputs = sizeOfInPorts
-  val segmentSize = userConf.getInt(InterleaveTask.SEGMENT_SIZE)
+  val zip = userConf.
+    getValue[ZipFunction[A1, A2]](ZipTask.ZIP_FUNCTION)(context.system).get.zip
+  var a1: Option[A1] = None
+  var a2: Option[A2] = None
 
-  // TODO access upstream and pull by segment size. For now a pass through
   override def onNext(msg : Message) : Unit = {
-    context.output(msg)
+    val message = msg.msg
+    val time = msg.timestamp
+    a1 match {
+      case Some(x) =>
+        a2 = Some(message.asInstanceOf[A2])
+        a1.foreach(v1 => {
+          a2.foreach(v2 => {
+            val (w1, w2) = zip(v1, v2)
+            context.output(Message((w1, w2), time))
+
+          })
+        })
+      case None =>
+        a1 = Some(message.asInstanceOf[A1])
+    }
   }
 }
 
-object InterleaveTask {
-  val INPUT_PORTS = "INPUT_PORTS"
-  val SEGMENT_SIZE = "SEGMENT_SIZE"
+object ZipTask {
+  case class ZipFunction[A1, A2](zip: (A1, A2) => (A1, A2)) extends Serializable
+
+  val ZIP_FUNCTION = "org.apache.gearpump.akkastream.task.zip.function"
 }

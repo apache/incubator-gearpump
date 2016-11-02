@@ -38,7 +38,7 @@ object Test extends AkkaApp with ArgumentsParser {
   // scalastyle:off println
   override def main(akkaConf: Config, args: Array[String]): Unit = {
     implicit val system = ActorSystem("Test", akkaConf)
-    implicit val materializer = GearpumpMaterializer(GraphPartitioner.AllRemoteStrategy)
+    implicit val materializer = GearpumpMaterializer()
 
     val echo = system.actorOf(Props(new Echo()))
     val sink = Sink.actorRef(echo, "COMPLETE")

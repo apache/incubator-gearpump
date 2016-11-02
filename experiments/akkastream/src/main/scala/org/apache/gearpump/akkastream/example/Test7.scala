@@ -19,9 +19,10 @@
 package org.apache.gearpump.akkastream.example
 
 import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.stream.scaladsl.{Broadcast, Merge, Sink, Source}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
-import org.apache.gearpump.cluster.main.ArgumentsParser
+import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await
@@ -36,13 +37,25 @@ import scala.concurrent.duration._
 
 object Test7 extends AkkaApp with ArgumentsParser {
   // scalastyle:off println
+  override val options: Array[(String, CLIOption[Any])] = Array(
+    "gearpump" -> CLIOption[Boolean]("<boolean>", required = false, defaultValue = Some(false))
+  )
+
   override def main(akkaConf: Config, args: Array[String]): Unit = {
+    val config = parse(args)
     implicit val system = ActorSystem("Test7", akkaConf)
-    implicit val materializer = GearpumpMaterializer()
+    implicit val materializer: ActorMaterializer = config.getBoolean("gearpump") match {
+      case true =>
+        GearpumpMaterializer()
+      case false =>
+        ActorMaterializer(
+          ActorMaterializerSettings(system).withAutoFusing(false)
+        )
+    }
     implicit val ec = system.dispatcher
- 
-    val sourceA = Source(List(1))
-    val sourceB = Source(List(2))
+
+    val sourceA = Source(List(1, 2, 3, 4, 5))
+    val sourceB = Source(List(6, 7, 8, 9, 10))
     val mergedSource = Source.combine(sourceA, sourceB)(Merge(_))
 
     val sinkA = Sink.foreach[Int](x => println(s"In SinkA : $x"))

@@ -33,6 +33,7 @@ import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.util.LogUtil
 import org.slf4j.Logger
 
+
 trait WindowRunner {
 
   def process(message: Message): Unit
@@ -66,6 +67,7 @@ class DefaultWindowRunner[IN, GROUP, OUT](
   extends WindowRunner {
   import org.apache.gearpump.streaming.dsl.window.impl.DefaultWindowRunner._
 
+
   private val windowGroups = new TreeSortedMap[WindowGroup[GROUP], FastList[IN]]
   private val groupFns = new UnifiedMap[GROUP, SingleInputFunction[IN, OUT]]
 
@@ -74,12 +76,16 @@ class DefaultWindowRunner[IN, GROUP, OUT](
     val (group, buckets) = groupBy.groupBy(message)
     buckets.foreach { bucket =>
       val wg = WindowGroup(bucket, group)
-      val inputs = windowGroups.getOrDefault(wg, new FastList[IN](1))
+      val inputs = windowGroups.getIfAbsentValue(wg, new FastList[IN](1))
       inputs.add(message.msg.asInstanceOf[IN])
       windowGroups.put(wg, inputs)
     }
-    groupFns.putIfAbsent(group,
-      userConfig.getValue[SingleInputFunction[IN, OUT]](GEARPUMP_STREAMING_OPERATOR).get)
+    groupFns.containsKey(group) match {
+      case false =>
+        groupFns.put(group,
+          userConfig.getValue[SingleInputFunction[IN, OUT]](GEARPUMP_STREAMING_OPERATOR).get)
+      case true =>
+    }
   }
 
   override def trigger(time: Instant): Unit = {
