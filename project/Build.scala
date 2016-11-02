@@ -249,12 +249,22 @@ object Build extends sbt.Build {
 
   lazy val root = Project(
     id = "gearpump",
+    base = file("project"),
+    settings = commonSettings ++ noPublish ++ gearpumpUnidocSetting)
+      .aggregate(shaded_akka_kryo, shaded_gs_collections, shaded_guava, shaded_metrics_graphite,
+        gearpump_root).settings(Defaults.itSettings: _*)
+      .disablePlugins(sbtassembly.AssemblyPlugin)
+
+  lazy val gearpump_root = Project(
+    id = "gearpump_root",
     base = file("."),
     settings = commonSettings ++ noPublish ++ gearpumpUnidocSetting)
-      .aggregate(shaded, core, streaming, services, external_kafka, external_monoid,
+    //.settings(resources in Compile += (assembly in Compile in shaded).value)
+    .aggregate(core, streaming, services, external_kafka, external_monoid,
       external_serializer, examples, storm, yarn, external_hbase, gearpumpHadoop, packProject,
       external_hadoopfs, integration_test).settings(Defaults.itSettings: _*)
-      .disablePlugins(sbtassembly.AssemblyPlugin)
+    .dependsOn(shaded_akka_kryo, shaded_gs_collections, shaded_guava, shaded_metrics_graphite)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val core = Project(
     id = "gearpump-core",
