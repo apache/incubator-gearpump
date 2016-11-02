@@ -18,7 +18,9 @@
 
 import sbt.Keys._
 import sbt._
-import Build._
+import BuildGearpump._
+import BuildDashboard.services
+import BuildExperiments.{cgroup, storm, yarn}
 import xerial.sbt.Pack._
 
 object Pack extends sbt.Build {
@@ -116,11 +118,21 @@ object Pack extends sbt.Build {
           "lib/storm" -> new ProjectsToPack(storm.id).exclude(streaming.id)
         ),
         packExclude := Seq(thisProjectRef.value.project),
+        packExcludeJars := Seq(
+          "akka-kryo-.*\\.jar",
+          "gs-collections-.*\\.jar",
+          "guava-.*\\.jar",
+          "kryo-.*\\.jar",
+          "metrics-.*\\.jar",
+          "objenesis-.*\\.jar"
+        ),
 
         packResourceDir += (baseDirectory.value / ".." / "bin" -> "bin"),
         packResourceDir += (baseDirectory.value / ".." / "conf" -> "conf"),
         packResourceDir += (baseDirectory.value / ".." / "yarnconf" -> "conf/yarnconf"),
-        packResourceDir += (baseDirectory.value / ".." / "shaded" / "target" /
+        packResourceDir += (baseDirectory.value / ".." / "core" / "target" /
+          CrossVersion.binaryScalaVersion(scalaVersion.value) -> "lib"),
+        packResourceDir += (baseDirectory.value / ".." / "streaming" / "target" /
           CrossVersion.binaryScalaVersion(scalaVersion.value) -> "lib"),
         packResourceDir += (baseDirectory.value / ".." / "services" / "dashboard" -> "dashboard"),
         packResourceDir += (baseDirectory.value / ".." / "examples" / "target" /

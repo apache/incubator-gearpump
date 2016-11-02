@@ -18,7 +18,7 @@
 
 package org.apache.gearpump.metrics
 
-import org.apache.gearpump.codahale.metrics.{Histogram => CodaHaleHistogram}
+import com.codahale.metrics.{Histogram => CodaHaleHistogram}
 
 /**
  * @see org.apache.gearpump.codahale.metrics.Histogram

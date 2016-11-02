@@ -18,7 +18,7 @@
 
 package org.apache.gearpump.metrics
 
-import org.apache.gearpump.codahale.metrics.{Counter => CodaHaleCounter}
+import com.codahale.metrics.{Counter => CodaHaleCounter}
 
 /**
  * @see org.apache.gearpump.codahale.metrics.Counter
