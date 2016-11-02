@@ -24,6 +24,8 @@ import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption, ParseResult}
 import org.apache.gearpump.streaming.StreamApplication
+import org.apache.gearpump.streaming.partitioner.HashPartitioner
+import org.apache.gearpump.streaming.sink.DataSinkProcessor
 import org.apache.gearpump.streaming.source.DataSourceProcessor
 import org.apache.gearpump.util.Graph.Node
 import org.apache.gearpump.util.{AkkaApp, Graph, LogUtil}
@@ -34,17 +36,22 @@ object HBaseConn extends AkkaApp with ArgumentsParser {
   val RUN_FOR_EVER = -1
 
   override val options: Array[(String, CLIOption[Any])] = Array(
-    "splitNum" -> CLIOption[Int]("<how many sum tasks>", required = false, defaultValue = Some(1))
+    "splitNum" -> CLIOption[Int]("<how many sum tasks>", required = false, defaultValue = Some(1)),
+    "sinkNum" -> CLIOption[Int]("<how many sum tasks>", required = false, defaultValue = Some(1))
   )
 
   def application(config: ParseResult, system: ActorSystem): StreamApplication = {
     implicit val actorSystem = system
 
     val splitNum = config.getInt("splitNum")
+    val sinkNum = config.getInt("sinkNum")
 
-    val split = new InsertToHBase
+    val split = new Split
     val sourceProcessor = DataSourceProcessor(split, splitNum, "Split")
-    val computation = sourceProcessor
+    val sink = new Sink
+    val sinkProcessor = DataSinkProcessor(sink, sinkNum)
+    val partitioner = new HashPartitioner
+    val computation = sourceProcessor ~ partitioner ~> sinkProcessor
     val application = StreamApplication("HBase", Graph(computation), UserConfig.empty)
 
     application

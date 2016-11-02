@@ -19,32 +19,23 @@
 
 package org.apache.gearpump.streaming.hbase
 
-import java.time.Instant
-
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.external.hbase.HBaseSink
-import org.apache.gearpump.streaming.source.DataSource
+import org.apache.gearpump.streaming.sink.DataSink
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.hadoop.hbase.util.Bytes
 
-class InsertToHBase extends DataSource {
+class Sink extends DataSink {
 
-  private var x = 1
   lazy val hBaseSink = HBaseSink(UserConfig.empty, "sss")
 
-  override def open(context: TaskContext, startTime: Instant): Unit = {}
+  override def open(context: TaskContext): Unit = {}
 
-  override def read(): Message = {
-    hBaseSink.insert(Bytes.toBytes(s"row$x"), Bytes.toBytes("group"),
+  override def write(message: Message): Unit = {
+    hBaseSink.insert(Bytes.toBytes(s"row$message"), Bytes.toBytes("group"),
       Bytes.toBytes("group:name"), Bytes.toBytes("300000"))
-      x += 1
-
-    Message("Hello")
   }
 
   override def close(): Unit = {}
-
-  override def getWatermark: Instant = Instant.now()
-
 }
