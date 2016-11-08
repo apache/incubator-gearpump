@@ -41,16 +41,12 @@ object BuildGearpump extends sbt.Build {
   val commonSettings = Seq(jacoco.settings: _*) ++ sonatypeSettings ++
     Seq(
       resolvers ++= Seq(
-        "patriknw at bintray" at "http://dl.bintray.com/patriknw/maven",
         "apache-repo" at "https://repository.apache.org/content/repositories",
         "maven1-repo" at "http://repo1.maven.org/maven2",
         "maven2-repo" at "http://mvnrepository.com/artifact",
         "sonatype" at "https://oss.sonatype.org/content/repositories/releases",
-        "bintray/non" at "http://dl.bintray.com/non/maven",
-        "clockfly" at "http://dl.bintray.com/clockfly/maven",
         "clojars" at "http://clojars.org/repo"
       )
-      // ,addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
     ) ++
     Seq(
       scalaVersion := scalaVersionNumber,
@@ -101,6 +97,16 @@ object BuildGearpump extends sbt.Build {
               <url>http://gearpump.incubator.apache.org/community.html#who-we-are</url>
             </developer>
           </developers>
+      },
+
+      pomPostProcess := {
+        (node: xml.Node) => changeShadedDeps(
+          Set(
+            "org.scoverage",
+            "org.scala-lang"
+          ),
+          List.empty[xml.Node],
+          node)
       }
     )
 
@@ -110,8 +116,6 @@ object BuildGearpump extends sbt.Build {
     publishArtifact := false,
     publishArtifact in Test := false
   )
-
-
 
   lazy val myAssemblySettings = Seq(
     test in assembly := {},
@@ -174,7 +178,6 @@ object BuildGearpump extends sbt.Build {
             "com.github.romix.akka",
             "com.google.guava",
             "com.codahale.metrics",
-            "org.scala-lang",
             "org.scoverage"
           ), List.empty[xml.Node], node)
       }
@@ -210,7 +213,9 @@ object BuildGearpump extends sbt.Build {
               "org.scala-lang",
               "org.scoverage"
             ),
-            List(getShadedDepXML(organization.value, core.id, version.value, "provided")),
+            List(
+              getShadedDepXML(organization.value, s"${core.id}_${scalaBinaryVersion.value}",
+                version.value, "provided")),
             node)
         }
       )
