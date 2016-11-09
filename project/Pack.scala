@@ -71,9 +71,14 @@ object Pack extends sbt.Build {
           "storm" -> "org.apache.gearpump.experiments.storm.StormRunner"
         ),
         packJvmOpts := Map(
-          "gear" -> Seq("-Djava.net.preferIPv4Stack=true", "-Dgearpump.home=${PROG_HOME}"),
+          "gear" -> Seq(
+            "-noverify",
+            "-Djava.net.preferIPv4Stack=true",
+            "-Dgearpump.home=${PROG_HOME}"),
+
           "local" -> Seq(
             "-server",
+            "-noverify",
             "-Djava.net.preferIPv4Stack=true",
             "-DlogFilename=local",
             "-Dgearpump.home=${PROG_HOME}",
@@ -81,6 +86,7 @@ object Pack extends sbt.Build {
 
           "master" -> Seq(
             "-server",
+            "-noverify",
             "-Djava.net.preferIPv4Stack=true",
             "-DlogFilename=master",
             "-Dgearpump.home=${PROG_HOME}",
@@ -88,6 +94,7 @@ object Pack extends sbt.Build {
 
           "worker" -> Seq(
             "-server",
+            "-noverify",
             "-Djava.net.preferIPv4Stack=true",
             "-DlogFilename=worker",
             "-Dgearpump.home=${PROG_HOME}",
@@ -95,37 +102,31 @@ object Pack extends sbt.Build {
 
           "services" -> Seq(
             "-server",
+            "-noverify",
             "-Djava.net.preferIPv4Stack=true",
             "-Dgearpump.home=${PROG_HOME}",
             "-Djava.rmi.server.hostname=localhost"),
 
           "yarnclient" -> Seq(
             "-server",
+            "-noverify",
             "-Djava.net.preferIPv4Stack=true",
             "-Dgearpump.home=${PROG_HOME}",
             "-Djava.rmi.server.hostname=localhost"),
 
           "storm" -> Seq(
             "-server",
+            "-noverify",
             "-Djava.net.preferIPv4Stack=true",
             "-Dgearpump.home=${PROG_HOME}")
         ),
         packLibDir := Map(
-          "lib" -> new ProjectsToPack(core.id, cgroup.id, streaming.id),
           "lib/yarn" -> new ProjectsToPack(gearpumpHadoop.id, yarn.id).
             exclude(services.id, core.id),
           "lib/services" -> new ProjectsToPack(services.id).exclude(core.id),
           "lib/storm" -> new ProjectsToPack(storm.id).exclude(streaming.id)
         ),
         packExclude := Seq(thisProjectRef.value.project),
-        packExcludeJars := Seq(
-          "akka-kryo-.*\\.jar",
-          "gs-collections-.*\\.jar",
-          "guava-.*\\.jar",
-          "kryo-.*\\.jar",
-          "metrics-.*\\.jar",
-          "objenesis-.*\\.jar"
-        ),
 
         packResourceDir += (baseDirectory.value / ".." / "bin" -> "bin"),
         packResourceDir += (baseDirectory.value / ".." / "conf" -> "conf"),

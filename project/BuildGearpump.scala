@@ -125,6 +125,18 @@ object BuildGearpump extends sbt.Build {
     assemblyJarName in assembly := {
       s"${name.value}_${scalaBinaryVersion.value}-${version.value}.jar"
     },
+    assemblyShadeRules in assembly := Seq(
+      ShadeRule.rename("com.romix.**" -> "org.apache.gearpump.@0").inAll,
+      ShadeRule.rename("com.esotericsoftware.**" ->
+        "org.apache.gearpump.@0").inAll,
+      ShadeRule.rename("org.objenesis.**" -> "org.apache.gearpump.@0").inAll,
+      ShadeRule.rename("com.google.common.**" -> "org.apache.gearpump.@0").inAll,
+      ShadeRule.rename("com.google.thirdparty.**" -> "org.apache.gearpump.@0").inAll,
+      ShadeRule.rename("com.codahale.metrics.**" ->
+        "org.apache.gearpump.@0").inAll,
+      ShadeRule.rename("com.gs.collections.**" ->
+        "org.apache.gearpump.gs.collections.@0").inAll
+    ),
     target in assembly := baseDirectory.value / "target" / scalaBinaryVersion.value
   )
 
@@ -149,28 +161,10 @@ object BuildGearpump extends sbt.Build {
     base = file("core"),
     settings = commonSettings ++ myAssemblySettings ++ javadocSettings ++ coreDependencies ++
       addArtifact(Artifact("gearpump-core"), sbtassembly.AssemblyKeys.assembly) ++ Seq(
-      assemblyShadeRules in assembly := Seq(
-        ShadeRule.zap("akka.**").inAll,
-        ShadeRule.zap("com.google.protobuf.**").inAll,
-        ShadeRule.zap("com.typesafe.**").inAll,
-        ShadeRule.zap("net.jpountz.**").inAll,
-        ShadeRule.zap("org.apache.commons.**").inAll,
-        ShadeRule.zap("org.apache.log4j.**").inAll,
-        ShadeRule.zap("org.jboss.**").inAll,
-        ShadeRule.zap("org.objectweb.**").inAll,
-        ShadeRule.zap("org.reactivestreams.**").inAll,
-        ShadeRule.zap("org.slf4j.**").inAll,
-        ShadeRule.zap("org.uncommons.maths.**").inAll,
-        ShadeRule.zap("scala.**").inAll,
-        ShadeRule.zap("spray.**").inAll,
-        ShadeRule.rename("com.romix.**" -> "org.apache.gearpump.romix.@1").inAll,
-        ShadeRule.rename("com.esotericsoftware.**" ->
-          "org.apache.gearpump.esotericsoftware.@1").inAll,
-        ShadeRule.rename("org.objenesis.**" -> "org.apache.gearpump.objenesis.@1").inAll,
-        ShadeRule.rename("com.google.**" -> "org.apache.gearpump.google.@1").inAll,
-        ShadeRule.rename("com.codahale.metrics.**" ->
-          "org.apache.gearpump.codahale.metrics.@1").inAll
-      ),
+
+      assemblyOption in assembly ~= {
+        _.copy(includeScala = true)
+      },
 
       pomPostProcess := {
         (node: xml.Node) => changeShadedDeps(
@@ -189,11 +183,6 @@ object BuildGearpump extends sbt.Build {
     settings = commonSettings ++ myAssemblySettings ++ javadocSettings ++
       addArtifact(Artifact("gearpump-streaming"), sbtassembly.AssemblyKeys.assembly) ++
       Seq(
-        assemblyShadeRules in assembly := Seq(
-          ShadeRule.rename("com.gs.collections.**" ->
-            "org.apache.gearpump.gs.collections.@1").inAll
-        ),
-
         assemblyMergeStrategy in assembly := {
           case "geardefault.conf" =>
             MergeStrategy.last

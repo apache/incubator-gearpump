@@ -37,7 +37,7 @@ object Dependencies {
   val jsonSimpleVersion = "1.1"
   val storm09Version = "0.9.6"
   val stormVersion = "0.10.0"
-  val slf4jVersion = "1.7.7"
+  val slf4jVersion = "1.7.16"
   val guavaVersion = "16.0.1"
   val codahaleVersion = "3.0.2"
   val kryoVersion = "0.4.1"
@@ -88,8 +88,10 @@ object Dependencies {
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
       "com.github.romix.akka" %% "akka-kryo-serialization" % kryoVersion,
       "com.google.guava" % "guava" % guavaVersion,
-      "com.codahale.metrics" % "metrics-graphite" % codahaleVersion,
-      "com.codahale.metrics" % "metrics-jvm" % codahaleVersion,
+      "com.codahale.metrics" % "metrics-graphite" % codahaleVersion
+        exclude("org.slf4j", "slf4j-api"),
+      "com.codahale.metrics" % "metrics-jvm" % codahaleVersion
+        exclude("org.slf4j", "slf4j-api"),
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",

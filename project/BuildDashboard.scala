@@ -65,11 +65,14 @@ object BuildDashboard extends sbt.Build {
       "org.webjars" % "font-awesome" % "4.5.0",
       "org.webjars" % "jquery" % "2.2.0",
       "org.webjars" % "jquery-cookie" % "1.4.1",
-      "org.webjars.bower" % "angular-loading-bar" % "0.8.0",
-      "org.webjars.bower" % "angular-smart-table" % "2.1.6",
+      "org.webjars.bower" % "angular-loading-bar" % "0.8.0"
+        exclude("org.webjars.bower", "angular"),
+      "org.webjars.bower" % "angular-smart-table" % "2.1.6"
+        exclude("org.webjars.bower", "angular"),
       "org.webjars.bower" % "angular-motion" % "0.4.3",
       "org.webjars.bower" % "bootstrap-additions" % "0.3.1",
-      "org.webjars.bower" % "angular-strap" % "2.3.5",
+      "org.webjars.bower" % "angular-strap" % "2.3.5"
+        exclude("org.webjars.bower", "angular"),
       "org.webjars.npm" % "ui-select" % "0.14.2",
       "org.webjars.bower" % "ng-file-upload" % "5.0.9",
       "org.webjars.bower" % "vis" % "4.7.0",
