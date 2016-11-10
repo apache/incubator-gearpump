@@ -290,6 +290,9 @@ object MasterService {
    */
   private def clusterOptions(systemConfig: Config, userConfigFile: Option[File]): Array[String] = {
     var options = Array(
+      // java.lang.VerifyError will be caused without "-noverify"
+      // TODO: investigate the cause and remove this
+      s"-noverify",
       s"-D${Constants.GEARPUMP_HOME}=${systemConfig.getString(Constants.GEARPUMP_HOME)}",
       s"-D${Constants.GEARPUMP_HOSTNAME}=${systemConfig.getString(Constants.GEARPUMP_HOSTNAME)}",
       s"-D${Constants.PREFER_IPV4}=true"
