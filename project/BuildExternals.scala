@@ -68,7 +68,6 @@ object BuildExternals extends sbt.Build {
             exclude("log4j", "log4j")
             exclude("org.apache.zookeeper", "zookeeper")
             exclude("org.codehaus.jackson", "jackson-mapper-asl"),
-          "org.apache.hbase" % "hbase-client" % hbaseVersion,
           "org.apache.hbase" % "hbase-common" % hbaseVersion
             exclude("com.github.stephenc.findbugs", "findbugs-annotations")
             exclude("com.google.guava", "guava")
