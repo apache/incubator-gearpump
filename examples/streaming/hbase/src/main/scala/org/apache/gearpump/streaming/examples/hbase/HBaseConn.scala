@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.hbase
-
+package org.apache.gearpump.streaming.examples.hbase
 
 import akka.actor.ActorSystem
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption, ParseResult}
+import org.apache.gearpump.external.hbase.HBaseSink
 import org.apache.gearpump.streaming.StreamApplication
 import org.apache.gearpump.streaming.partitioner.HashPartitioner
 import org.apache.gearpump.streaming.sink.DataSinkProcessor
@@ -48,7 +48,7 @@ object HBaseConn extends AkkaApp with ArgumentsParser {
 
     val split = new Split
     val sourceProcessor = DataSourceProcessor(split, splitNum, "Split")
-    val sink = new Sink
+    val sink = HBaseSink(UserConfig.empty, "intel")
     val sinkProcessor = DataSinkProcessor(sink, sinkNum)
     val partitioner = new HashPartitioner
     val computation = sourceProcessor ~ partitioner ~> sinkProcessor
