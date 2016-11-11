@@ -48,7 +48,7 @@ object HBaseConn extends AkkaApp with ArgumentsParser {
 
     val split = new Split
     val sourceProcessor = DataSourceProcessor(split, splitNum, "Split")
-    val sink = HBaseSink(UserConfig.empty, "intel")
+    val sink = HBaseSink(UserConfig.empty, "hbase")
     val sinkProcessor = DataSinkProcessor(sink, sinkNum)
     val partitioner = new HashPartitioner
     val computation = sourceProcessor ~ partitioner ~> sinkProcessor
