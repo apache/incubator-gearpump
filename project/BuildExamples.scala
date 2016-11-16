@@ -59,7 +59,7 @@ object BuildExamples extends sbt.Build {
         target in assembly := baseDirectory.value.getParentFile.getParentFile / "target" /
           CrossVersion.binaryScalaVersion(scalaVersion.value)
       )
-  ) dependsOn(streaming % "test->test; provided", external_hbase)
+  ) dependsOn(streaming % "test->test; provided", core % "provided", external_hbase)
 
   lazy val wordcountJava = Project(
     id = "gearpump-examples-wordcountjava",

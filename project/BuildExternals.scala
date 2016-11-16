@@ -80,7 +80,7 @@ object BuildExternals extends sbt.Build {
             exclude("log4j", "log4j")
         )
       ))
-    .dependsOn (core, streaming % "test->test; provided")
+    .dependsOn (core % "provided", streaming % "test->test; provided")
     .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val external_monoid = Project(
