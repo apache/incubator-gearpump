@@ -175,7 +175,7 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
   private def submitApplication(submitApplication: SubmitApplication): RunningApplication = {
     val result = ActorUtil.askActor[SubmitApplicationResult](master,
       submitApplication, masterClientTimeout)
-    val appId = result.appId match {
+    val application = result.appId match {
       case Success(appId) =>
         // scalastyle:off println
         Console.println(s"Submit application succeed. The application id is $appId")
@@ -183,7 +183,7 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
         new RunningApplication(appId, master, masterClientTimeout)
       case Failure(ex) => throw ex
     }
-    appId
+    application
   }
 }
 
