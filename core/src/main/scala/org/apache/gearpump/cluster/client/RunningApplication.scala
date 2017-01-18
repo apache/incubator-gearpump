@@ -29,7 +29,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class RunningApplication(val appId: Int, master: ActorRef, timeout: Timeout) {
-  lazy val appMaster: ActorRef = resolveAppMaster(appId)
+  lazy val appMaster: Future[ActorRef] = resolveAppMaster(appId)
 
   def shutDown(): Unit = {
     val result = ActorUtil.askActor[ShutdownApplicationResult](master,
@@ -40,16 +40,13 @@ class RunningApplication(val appId: Int, master: ActorRef, timeout: Timeout) {
     }
   }
 
-  def askMaster[T](msg: Any): Future[T] = {
-    appMaster.ask(msg)(timeout).asInstanceOf[Future[T]]
+  def askAppMaster[T](msg: Any): Future[T] = {
+    appMaster.flatMap(_.ask(msg)(timeout).asInstanceOf[Future[T]])
   }
 
-  private def resolveAppMaster(appId: Int): ActorRef = {
-    val result = ActorUtil.askActor[ResolveAppIdResult](master, ResolveAppId(appId), timeout)
-    result.appMaster match {
-      case Success(appMaster) => appMaster
-      case Failure(ex) => throw ex
-    }
+  private def resolveAppMaster(appId: Int): Future[ActorRef] = {
+    master.ask(ResolveAppId(appId))(timeout).
+      asInstanceOf[Future[ResolveAppIdResult]].map(_.appMaster.get)
   }
 }
 

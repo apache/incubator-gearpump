@@ -56,7 +56,6 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
   private val LOG: Logger = LogUtil.getLogger(getClass)
   implicit val system = Option(sys).getOrElse(ActorSystem(s"client${Util.randInt()}", config))
   LOG.info(s"Starting system ${system.name}")
-  private val shouldCleanupSystem = Option(sys).isEmpty
   private val jarStoreClient = new JarStoreClient(config, system)
   private val masterClientTimeout = {
     val timeout = Try(config.getInt(Constants.GEARPUMP_MASTERCLIENT_TIMEOUT)).getOrElse(90)
@@ -137,7 +136,7 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
   }
 
   def close(): Unit = {
-    if (shouldCleanupSystem) {
+    if (sys == null) {
       LOG.info(s"Shutting down system ${system.name}")
       system.terminate()
     }
