@@ -26,9 +26,9 @@ import org.apache.gearpump.util.ActorUtil
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class RunningApplication(val appId: Int, master: ActorRef, timeout: Timeout) {
-  import scala.concurrent.ExecutionContext.Implicits.global
   lazy val appMaster: ActorRef = resolveAppMaster(appId)
 
   def shutDown(): Unit = {
@@ -43,11 +43,6 @@ class RunningApplication(val appId: Int, master: ActorRef, timeout: Timeout) {
   def askMaster[T](msg: Any): Future[T] = {
     appMaster.ask(msg)(timeout).asInstanceOf[Future[T]]
   }
-
-//  Todo
-//  def waitUntilFinish(): ApplicationResult = {
-//    null
-//  }
 
   private def resolveAppMaster(appId: Int): ActorRef = {
     val result = ActorUtil.askActor[ResolveAppIdResult](master, ResolveAppId(appId), timeout)

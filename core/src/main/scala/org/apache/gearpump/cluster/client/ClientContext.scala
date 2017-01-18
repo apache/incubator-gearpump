@@ -33,6 +33,7 @@ import org.apache.gearpump.util.Constants._
 import org.apache.gearpump.util.{ActorUtil, Constants, LogUtil, Util}
 import org.slf4j.Logger
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -44,8 +45,6 @@ import scala.util.{Failure, Success, Try}
  * TODO: add interface to query master here
  */
 class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   def this(system: ActorSystem) = {
     this(system.settings.config, system, null)
   }
@@ -108,7 +107,6 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
     ActorUtil.askActor[AppMastersData](master, AppMastersDataRequest, masterClientTimeout)
   }
 
-  @Deprecated
   def replayFromTimestampWindowTrailingEdge(appId: Int): ReplayApplicationResult = {
     val result = Await.result(
       ActorUtil.askAppMaster[ReplayApplicationResult](master,
@@ -116,12 +114,10 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
     result
   }
 
-  @Deprecated
   def askAppMaster[T](appId: Int, msg: Any): Future[T] = {
     ActorUtil.askAppMaster[T](master, appId, msg)
   }
 
-  @Deprecated
   def shutdown(appId: Int): Unit = {
     val result = ActorUtil.askActor[ShutdownApplicationResult](master,
       ShutdownApplication(appId), masterClientTimeout)
@@ -131,7 +127,6 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
     }
   }
 
-  @Deprecated
   def resolveAppID(appId: Int): ActorRef = {
     val result = ActorUtil.askActor[ResolveAppIdResult](master,
       ResolveAppId(appId), masterClientTimeout)
@@ -188,8 +183,6 @@ class ClientContext(config: Config, sys: ActorSystem, _master: ActorRef) {
 }
 
 object ClientContext {
-  // This magic number is derived from Akka's configuration
-  final val INFINITE_TIMEOUT = Timeout(2147482, TimeUnit.SECONDS)
 
   def apply(): ClientContext = new ClientContext(ClusterConfig.default(), null, null)
 
