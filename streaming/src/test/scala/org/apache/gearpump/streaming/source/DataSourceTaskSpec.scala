@@ -23,6 +23,7 @@ import java.time.Instant
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
+import org.apache.gearpump.streaming.dsl.plan.functions.SingleInputFunction
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar
@@ -38,11 +39,13 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
       val dataSource = mock[DataSource]
       val config = UserConfig.empty
         .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-
-      val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, None)
+      val operator = mock[SingleInputFunction[Any, Any]]
+      val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, Some(operator))
 
       sourceTask.onStart(startTime)
+
       verify(dataSource).open(taskContext, startTime)
+      verify(operator).setup()
     }
   }
 
@@ -69,9 +72,12 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
     val dataSource = mock[DataSource]
     val config = UserConfig.empty
       .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-    val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, None)
+    val operator = mock[SingleInputFunction[Any, Any]]
+    val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, Some(operator))
 
     sourceTask.onStop()
+
     verify(dataSource).close()
+    verify(operator).teardown()
   }
 }

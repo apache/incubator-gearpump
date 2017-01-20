@@ -41,7 +41,7 @@ import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.worker.WorkerSummary
 import org.apache.gearpump.cluster.{ClusterConfig, UserConfig}
 import org.apache.gearpump.jarstore.{JarStoreClient, FileDirective, JarStoreServer}
-import org.apache.gearpump.partitioner.{PartitionerByClassName, PartitionerDescription}
+import org.apache.gearpump.streaming.partitioner.{PartitionerByClassName, PartitionerDescription}
 import org.apache.gearpump.services.MasterService.{BuiltinPartitioners, SubmitApplicationRequest}
 // NOTE: This cannot be removed!!!
 import org.apache.gearpump.services.util.UpickleUtil._
@@ -159,7 +159,7 @@ class MasterService(val master: ActorRef,
         entity(as[String]) { request =>
           val msg = java.net.URLDecoder.decode(request, "UTF-8")
           val submitApplicationRequest = read[SubmitApplicationRequest](msg)
-          import submitApplicationRequest.{appName, dag, processors, userconfig}
+          import submitApplicationRequest.{appName, dag, processors, userConfig}
           val context = ClientContext(system.settings.config, system, master)
 
           val graph = dag.mapVertex { processorId =>
@@ -168,8 +168,8 @@ class MasterService(val master: ActorRef,
             PartitionerDescription(new PartitionerByClassName(edge))
           }
 
-          val effectiveConfig = if (userconfig == null) UserConfig.empty else userconfig
-          val appId = context.submit(new StreamApplication(appName, effectiveConfig, graph))
+          val effectiveConfig = if (userConfig == null) UserConfig.empty else userConfig
+          val appId = context.submit(new StreamApplication(appName, effectiveConfig, graph)).appId
 
           import upickle.default.write
           val submitApplicationResultValue = SubmitApplicationResultValue(appId)
@@ -192,7 +192,8 @@ class MasterService(val master: ActorRef,
     } ~
     path("partitioners") {
       get {
-        complete(write(BuiltinPartitioners(Constants.BUILTIN_PARTITIONERS.map(_.getName))))
+        complete(write(BuiltinPartitioners(org.apache.gearpump.streaming.Constants
+          .BUILTIN_PARTITIONERS.map(_.getName))))
       }
     }
   }
@@ -344,5 +345,5 @@ object MasterService {
       appName: String,
       processors: Map[ProcessorId, ProcessorDescription],
       dag: Graph[Int, String],
-      userconfig: UserConfig)
+      userConfig: UserConfig)
 }

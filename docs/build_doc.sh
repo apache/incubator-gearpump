@@ -1,4 +1,21 @@
 #!/bin/bash
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 CURDIR=`pwd`
 CURDIRNAME=`basename $CURDIR`
 
@@ -47,8 +64,10 @@ export BUILD_API=$2
 # render file templates
 echo "Rendering file templates using mustache..."
 TEMP_DIR="tmp"
-rm -rf $TEMP_DIR
-copy_dir docs $TEMP_DIR
+if [ -d "$TEMP_DIR" ]; then
+	rm -rf "$TEMP_DIR"
+fi
+copy_dir contents $TEMP_DIR
 render_files version.yml "$TEMP_DIR/introduction $TEMP_DIR/dev $TEMP_DIR/deployment $TEMP_DIR/api $TEMP_DIR/index.md"
 
 # generate site documents

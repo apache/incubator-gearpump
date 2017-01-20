@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-resolvers += Resolver.url("fvunicorn",
-  url("http://dl.bintray.com/fvunicorn/sbt-plugins"))(Resolver.ivyStylePatterns)
+resolvers += Resolver.bintrayIvyRepo("fvunicorn", "sbt-plugins")
 
 resolvers += Classpaths.sbtPluginReleases
 
@@ -25,7 +24,7 @@ addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.8")
 
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.3")
 
-addSbtPlugin("io.gearpump.sbt" % "sbt-pack" % "0.7.6")
+addSbtPlugin("io.gearpump.sbt" % "sbt-pack" % "0.7.7")
 
 addSbtPlugin("de.johoop" % "jacoco4sbt" % "2.1.6")
 

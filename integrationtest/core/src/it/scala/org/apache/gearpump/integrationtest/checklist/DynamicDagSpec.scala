@@ -26,14 +26,14 @@ class DynamicDagSpec extends TestSpecBase {
 
   val sourceTaskClass = "org.apache.gearpump.streaming.examples.sol.SOLStreamProducer"
   val sinkTaskClass = "org.apache.gearpump.streaming.examples.sol.SOLStreamProcessor"
-  lazy val solJar = cluster.queryBuiltInExampleJars("sol-").head
+  lazy val solJar = cluster.queryBuiltInExampleJars("sol").head
 
   "dynamic dag" should {
     "can retrieve a list of built-in partitioner classes" in {
       val partitioners = restClient.queryBuiltInPartitioners()
       partitioners.length should be > 0
       partitioners.foreach(clazz =>
-        clazz should startWith("org.apache.gearpump.partitioner.")
+        clazz should startWith("org.apache.gearpump.streaming.partitioner.")
       )
     }
 

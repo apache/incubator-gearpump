@@ -25,7 +25,8 @@ import org.apache.gearpump.cluster.{TestUtil, UserConfig}
 import org.apache.gearpump.streaming.Processor
 import org.apache.gearpump.streaming.Processor.DefaultProcessor
 import org.apache.gearpump.streaming.dsl.plan.OpSpec.{AnySink, AnySource, AnyTask}
-import org.apache.gearpump.streaming.dsl.plan.functions.SingleInputFunction
+import org.apache.gearpump.streaming.dsl.plan.functions.{FlatMapper, SingleInputFunction}
+import org.apache.gearpump.streaming.dsl.scalaapi.functions.FlatMapFunction
 import org.apache.gearpump.streaming.dsl.window.api.GroupByFn
 import org.apache.gearpump.streaming.sink.DataSink
 import org.apache.gearpump.streaming.source.DataSource
@@ -145,7 +146,6 @@ class OpSpec extends WordSpec with Matchers with BeforeAndAfterAll with MockitoS
 
       val chainedOp = chainableOp1.chain(chainableOp2)
 
-      verify(fn1).andThen(fn2)
       chainedOp shouldBe a[ChainableOp[_, _]]
 
       unchainableOps.foreach { op =>
@@ -155,12 +155,14 @@ class OpSpec extends WordSpec with Matchers with BeforeAndAfterAll with MockitoS
       }
     }
 
-    "throw exception on getProcessor" in {
-      val fn1 = mock[SingleInputFunction[Any, Any]]
-      val chainableOp1 = ChainableOp[Any, Any](fn1)
-      intercept[UnsupportedOperationException] {
-        chainableOp1.getProcessor
-      }
+    "get Processor" in {
+      val fn = mock[FlatMapFunction[Any, Any]]
+      val flatMapper = new FlatMapper(fn, "flatMap")
+      val chainableOp = ChainableOp[Any, Any](flatMapper)
+
+      val processor = chainableOp.getProcessor
+      processor shouldBe a[Processor[_]]
+      processor.parallelism shouldBe 1
     }
   }
 
