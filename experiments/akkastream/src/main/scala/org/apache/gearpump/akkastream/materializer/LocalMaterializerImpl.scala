@@ -21,18 +21,16 @@ package org.apache.gearpump.akkastream.materializer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.{util => ju}
 
-import _root_.org.apache.gearpump.util.{Graph => GGraph}
-import akka.NotUsed
+import org.apache.gearpump.util.{Graph => GGraph}
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Deploy, PoisonPill}
 import akka.dispatch.Dispatchers
 import akka.event.{Logging, LoggingAdapter}
 import akka.stream.impl.StreamLayout._
 import akka.stream.impl._
 import akka.stream.impl.fusing.GraphInterpreter.GraphAssembly
+import akka.stream.impl.fusing.{ActorGraphInterpreter, Fold, GraphInterpreterShell, GraphModule, GraphStageModule}
 import akka.stream.impl.fusing.GraphStages.MaterializedValueSource
-import akka.stream.impl.fusing.{Map => _, _}
-import akka.stream.impl.io.{TLSActor, TlsModule}
-import akka.stream.scaladsl.{GraphDSL, Keep, ModuleExtractor, RunnableGraph}
+import akka.stream.scaladsl.ModuleExtractor
 import akka.stream.{ClosedShape, Graph => AkkaGraph, _}
 import org.apache.gearpump.akkastream.GearpumpMaterializer.Edge
 import org.apache.gearpump.akkastream.module.ReduceModule
@@ -121,25 +119,26 @@ case class LocalMaterializerImpl (
           assignPort(stage.inPort, processor)
           assignPort(stage.outPort, processor.asInstanceOf[Publisher[Any]])
           matVal.put(atomic, mat)
-        case tls: TlsModule => // TODO solve this so TlsModule doesn't need special treatment here
-          val es = effectiveSettings(effectiveAttributes)
-          val props =
-            TLSActor.props(es, tls.sslContext, tls.sslConfig,
-              tls.firstSession, tls.role, tls.closing, tls.hostInfo)
-          val impl = actorOf(props, stageName(effectiveAttributes), es.dispatcher)
-          def factory(id: Int) = new ActorPublisher[Any](impl) {
-            override val wakeUpMsg = FanOut.SubstreamSubscribePending(id)
-          }
-          val publishers = Vector.tabulate(2)(factory)
-          impl ! FanOut.ExposedPublishers(publishers)
-
-          assignPort(tls.plainOut, publishers(TLSActor.UserOut))
-          assignPort(tls.cipherOut, publishers(TLSActor.TransportOut))
-
-          assignPort(tls.plainIn, FanIn.SubInput[Any](impl, TLSActor.UserIn))
-          assignPort(tls.cipherIn, FanIn.SubInput[Any](impl, TLSActor.TransportIn))
-
-          matVal.put(atomic, NotUsed)
+          // FIXME
+//        case tls: TlsModule => // TODO solve this so TlsModule doesn't need special treatment here
+//          val es = effectiveSettings(effectiveAttributes)
+//          val props =
+//            TLSActor.props(es, tls.sslContext, tls.sslConfig,
+//              tls.firstSession, tls.role, tls.closing, tls.hostInfo)
+//          val impl = actorOf(props, stageName(effectiveAttributes), es.dispatcher)
+//          def factory(id: Int) = new ActorPublisher[Any](impl) {
+//            override val wakeUpMsg = FanOut.SubstreamSubscribePending(id)
+//          }
+//          val publishers = Vector.tabulate(2)(factory)
+//          impl ! FanOut.ExposedPublishers(publishers)
+//
+//          assignPort(tls.plainOut, publishers(TLSActor.UserOut))
+//          assignPort(tls.cipherOut, publishers(TLSActor.TransportOut))
+//
+//          assignPort(tls.plainIn, FanIn.SubInput[Any](impl, TLSActor.UserIn))
+//          assignPort(tls.cipherIn, FanIn.SubInput[Any](impl, TLSActor.TransportIn))
+//
+//          matVal.put(atomic, NotUsed)
         case graph: GraphModule =>
           matGraph(graph, effectiveAttributes, matVal)
         case stage: GraphStageModule =>
@@ -187,11 +186,25 @@ case class LocalMaterializerImpl (
   }
 
   override def materialize[Mat](runnableGraph: AkkaGraph[ClosedShape, Mat],
+      initialAttributes: Attributes): Mat = {
+    materialize(runnableGraph)
+  }
+
+  override def materialize[Mat](runnableGraph: AkkaGraph[ClosedShape, Mat],
       subflowFuser: GraphInterpreterShell => ActorRef): Mat = {
 
     LocalMaterializerSession(ModuleExtractor.unapply(runnableGraph).get,
       null, null).materialize().asInstanceOf[Mat]
 
+  }
+
+  override def materialize[Mat](runnableGraph: AkkaGraph[ClosedShape, Mat],
+      subflowFuser: (GraphInterpreterShell) => ActorRef, initialAttributes: Attributes): Mat = {
+    materialize(runnableGraph)
+  }
+
+  override def makeLogger(logSource: Class[_]): LoggingAdapter = {
+    logger
   }
 
   def buildToplevelModule(graph: GGraph[Module, Edge]): Module = {

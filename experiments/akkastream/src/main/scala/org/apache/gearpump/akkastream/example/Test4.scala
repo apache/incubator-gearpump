@@ -23,7 +23,7 @@ import akka.stream.scaladsl.Source
 import org.apache.gearpump.akkastream.GearpumpMaterializer
 import org.apache.gearpump.akkastream.scaladsl.GearSink
 import org.apache.gearpump.cluster.main.ArgumentsParser
-import org.apache.gearpump.streaming.dsl.LoggerSink
+import org.apache.gearpump.streaming.dsl.scalaapi.LoggerSink
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await

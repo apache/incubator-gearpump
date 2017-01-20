@@ -24,7 +24,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import org.apache.gearpump.akkastream.GearpumpMaterializer
 import org.apache.gearpump.akkastream.scaladsl.GearSource
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
-import org.apache.gearpump.streaming.dsl.CollectionDataSource
+import org.apache.gearpump.streaming.dsl.scalaapi.CollectionDataSource
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await

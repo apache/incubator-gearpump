@@ -24,11 +24,11 @@ import akka.NotUsed
 import akka.actor.{ActorContext, ActorRef, ActorRefFactory, ActorSystem, Cancellable, ExtendedActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.stream.Attributes.Attribute
-import akka.stream._
 import akka.stream.impl.Stages.SymbolicGraphStage
-import akka.stream.impl.StreamLayout._
-import akka.stream.impl._
+import akka.stream.impl.StreamLayout.{Atomic, Combine, CopiedModule, Ignore, MaterializedValueNode, Module, Transform}
+import akka.stream.{ActorAttributes, ActorMaterializerSettings, Attributes, ClosedShape, Fusing, Graph, InPort, OutPort, SinkShape}
 import akka.stream.impl.fusing.{GraphInterpreterShell, GraphStageModule}
+import akka.stream.impl.{ExtendedActorMaterializer, StreamSupervisor}
 import akka.stream.stage.GraphStage
 import org.apache.gearpump.akkastream.GearpumpMaterializer.Edge
 import org.apache.gearpump.akkastream.graph.GraphPartitioner.Strategy
@@ -43,16 +43,13 @@ import scala.concurrent.duration.FiniteDuration
 
 object GearpumpMaterializer {
 
-  final val Debug = true
-
   final case class Edge(from: OutPort, to: InPort)
 
   final case class MaterializedValueSourceAttribute(mat: MaterializedValueNode) extends Attribute
 
   implicit def boolToAtomic(bool: Boolean): AtomicBoolean = new AtomicBoolean(bool)
 
-  def apply(strategy: Strategy)(implicit context: ActorRefFactory):
-  ExtendedActorMaterializer = {
+  def apply(strategy: Strategy)(implicit context: ActorRefFactory): ExtendedActorMaterializer = {
     val system = actorSystemOf(context)
 
     apply(ActorMaterializerSettings(
@@ -166,19 +163,10 @@ class GearpumpMaterializer(override val system: ActorSystem,
     system.scheduler.scheduleOnce(delay, task)(executionContext)
 
   override def materialize[Mat](runnableGraph: Graph[ClosedShape, Mat]): Mat = {
-    val initialAttributes = Attributes(
-      Attributes.InputBuffer(
-        settings.initialInputBufferSize,
-        settings.maxInputBufferSize
-      ) ::
-      ActorAttributes.Dispatcher(settings.dispatcher) ::
-      ActorAttributes.SupervisionStrategy(settings.supervisionDecider) ::
-      Nil)
-
     val info = Fusing.aggressive(runnableGraph).module.info
     val graph = GGraph.empty[Module, Edge]
 
-    info.allModules.foreach(module => {
+    info.subModules.foreach(module => {
       if (module.isCopied) {
         val original = module.asInstanceOf[CopiedModule].copyOf
         graph.addVertex(original)
@@ -201,9 +189,7 @@ class GearpumpMaterializer(override val system: ActorSystem,
       }
     })
 
-    if(Debug) {
-      printGraph(graph)
-    }
+    printGraph(graph)
 
     val subGraphs = GraphPartitioner(strategy).partition(graph)
     val matValues = subGraphs.foldLeft(mutable.Map.empty[Module, Any]) { (map, subGraph) =>
@@ -226,7 +212,7 @@ class GearpumpMaterializer(override val system: ActorSystem,
       }
     }).toList
     val matModule = subGraphs.last.graph.topologicalOrderIterator.toList.last
-    val mat2 = resolveMaterialized(matModule.materializedValueComputation, matValues)
+    resolveMaterialized(matModule.materializedValueComputation, matValues)
     val rt = Some(mat).flatMap(any => {
       any match {
         case promise: Promise[_] =>
@@ -235,7 +221,7 @@ class GearpumpMaterializer(override val system: ActorSystem,
           Some(other)
       }
     })
-    rt.getOrElse(null).asInstanceOf[Mat]
+    rt.orNull.asInstanceOf[Mat]
   }
 
   private def printGraph(graph: GGraph[Module, Edge]): Unit = {
@@ -269,8 +255,22 @@ class GearpumpMaterializer(override val system: ActorSystem,
   }
 
   override def materialize[Mat](runnableGraph: Graph[ClosedShape, Mat],
-      subflowFuser: GraphInterpreterShell => ActorRef): Mat = {
+      initialAttributes: Attributes): Mat = {
     materialize(runnableGraph)
+  }
+
+  override def materialize[Mat](runnableGraph: Graph[ClosedShape, Mat],
+      subflowFuser: (GraphInterpreterShell) => ActorRef): Mat = {
+    materialize(runnableGraph)
+  }
+
+  override def materialize[Mat](runnableGraph: Graph[ClosedShape, Mat],
+      subflowFuser: (GraphInterpreterShell) => ActorRef, initialAttributes: Attributes): Mat = {
+    materialize(runnableGraph)
+  }
+
+  override def makeLogger(logSource: Class[_]): LoggingAdapter = {
+    logger
   }
 
   def shutdown: Unit = {
@@ -288,5 +288,8 @@ class GearpumpMaterializer(override val system: ActorSystem,
     case Ignore =>
       ()
   }
+
+
+
 }
 

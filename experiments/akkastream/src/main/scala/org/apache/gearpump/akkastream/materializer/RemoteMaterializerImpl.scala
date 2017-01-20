@@ -20,22 +20,24 @@ package org.apache.gearpump.akkastream.materializer
 
 import akka.actor.ActorSystem
 import akka.stream.impl.StreamLayout.Module
-import akka.stream.impl.Timers._
+import akka.stream.impl.Timers.{Completion, DelayInitial, Idle, IdleInject, IdleTimeoutBidi, Initial}
+import akka.stream.impl.fusing.{Batch, Collect, Delay, Drop, DropWhile, DropWithin, Filter, FlattenMerge, Fold, GraphStageModule, GroupBy, GroupedWithin, Intersperse, LimitWeighted, Log, MapAsync, MapAsyncUnordered, PrefixAndTail, Recover, Reduce, Scan, Split, StatefulMapConcat, SubSink, SubSource, Take, TakeWhile, TakeWithin, Map => FMap}
 import akka.stream.impl.fusing.GraphStages.{MaterializedValueSource, SimpleLinearGraphStage, SingleSource, TickSource}
-import akka.stream.impl.fusing.{Map => FMap, _}
 import akka.stream.impl.io.IncomingConnectionStage
-import akka.stream.impl.{HeadOptionStage, Stages, Throttle}
-import akka.stream.scaladsl._
+import akka.stream.impl.{HeadOptionStage, Stages, Throttle, Unfold, UnfoldAsync}
+import akka.stream.scaladsl.{Balance, Broadcast, Concat, Interleave, Merge, MergePreferred, MergeSorted, ModuleExtractor, Unzip, Zip, ZipWith2}
 import akka.stream.stage.AbstractStage.PushPullGraphStageWithMaterializedValue
 import akka.stream.stage.GraphStage
 import org.apache.gearpump.akkastream.GearAttributes
 import org.apache.gearpump.akkastream.GearpumpMaterializer.Edge
-import org.apache.gearpump.akkastream.module._
-import org.apache.gearpump.akkastream.task._
+import org.apache.gearpump.akkastream.module.{GroupByModule, ProcessorModule, ReduceModule, SinkBridgeModule, SinkTaskModule, SourceBridgeModule, SourceTaskModule}
+import org.apache.gearpump.akkastream.task.{BalanceTask, BatchTask, BroadcastTask, ConcatTask, DelayInitialTask, DropWithinTask, FlattenMergeTask, FoldTask, GraphTask, GroupedWithinTask, InterleaveTask, MapAsyncTask, MergeTask, SingleSourceTask, SinkBridgeTask, SourceBridgeTask, StatefulMapConcatTask, TakeWithinTask, ThrottleTask, TickSourceTask, Zip2Task}
+import org.apache.gearpump.akkastream.task.TickSourceTask.{INITIAL_DELAY, INTERVAL, TICK}
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.dsl.StreamApp
-import org.apache.gearpump.streaming.dsl.plan._
-import org.apache.gearpump.streaming.dsl.plan.functions.FlatMapFunction
+import org.apache.gearpump.streaming.dsl.plan.functions.FlatMapper
+import org.apache.gearpump.streaming.dsl.plan.{ChainableOp, DataSinkOp, DataSourceOp, Direct, GroupByOp, MergeOp, Op, OpEdge, ProcessorOp, Shuffle}
+import org.apache.gearpump.streaming.dsl.scalaapi.StreamApp
+import org.apache.gearpump.streaming.dsl.scalaapi.functions.FlatMapFunction
 import org.apache.gearpump.streaming.dsl.window.api.CountWindow
 import org.apache.gearpump.streaming.dsl.window.impl.GroupAlsoByWindow
 import org.apache.gearpump.streaming.{ProcessorId, StreamApplication}
@@ -162,7 +164,8 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
         case sinkBridge: SinkBridgeModule[_, _] =>
           ProcessorOp(classOf[SinkBridgeTask], parallelism, conf, "sink")
         case groupBy: GroupByModule[_, _] =>
-          GroupByOp(groupBy.groupBy, parallelism, "groupBy", conf)
+          GroupByOp(GroupAlsoByWindow(groupBy.groupBy, CountWindow.apply(1).accumulating),
+            parallelism, "groupBy", conf)
         case reduce: ReduceModule[_] =>
           reduceOp(reduce.f, conf)
         case graphStage: GraphStageModule =>
@@ -192,7 +195,6 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
       parallelism: Int, conf: UserConfig): Op = {
     module.stage match {
       case tickSource: TickSource[_] =>
-        import TickSourceTask._
         val tick: AnyRef = tickSource.tick.asInstanceOf[AnyRef]
         val tiConf = conf.withValue[FiniteDuration](INITIAL_DELAY, tickSource.initialDelay).
           withValue[FiniteDuration](INTERVAL, tickSource.interval).
@@ -388,9 +390,9 @@ class RemoteMaterializerImpl(graph: Graph[Module, Edge], system: ActorSystem) {
   private def translateSymbolic(stage: PushPullGraphStageWithMaterializedValue[_, _, _, _],
       conf: UserConfig): Op = {
     stage match {
-      case symbolicGraphStage: Stages.SymbolicGraphStage[_, _, _] =>
-        symbolicGraphStage.symbolicStage match {
-          case buffer: Stages.Buffer[_] =>
+      case symbolicGraphStage: Stages.SymbolicGraphStage[_, _, _]
+        if symbolicGraphStage.symbolicStage.attributes.equals(
+          Stages.DefaultAttributes.buffer) => {
             // ignore the buffering operation
             identity("buffer", conf)
         }
@@ -478,7 +480,7 @@ object RemoteMaterializerImpl {
 
   def flatMapOp[In, Out](fun: In => TraversableOnce[Out], description: String,
       conf: UserConfig): Op = {
-    ChainableOp(new FlatMapFunction[In, Out](fun, description), conf)
+    ChainableOp(new FlatMapper(FlatMapFunction[In, Out](fun), description), conf)
   }
 
   def conflateOp[In, Out](seed: In => Out, aggregate: (Out, In) => Out,

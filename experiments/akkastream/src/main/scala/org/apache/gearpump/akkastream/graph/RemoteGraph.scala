@@ -79,7 +79,7 @@ object RemoteGraph {
       val materializer = new RemoteMaterializerImpl(graph, system)
       val (app, matValues) = materializer.materialize
 
-      val appId = context.submit(app)
+      val appId = context.submit(app).appId
       // scalastyle:off println
       println("sleep 5 second until the application is ready on cluster")
       // scalastyle:on println

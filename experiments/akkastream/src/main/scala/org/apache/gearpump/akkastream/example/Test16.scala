@@ -18,12 +18,11 @@
 
 package org.apache.gearpump.akkastream.example
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.ActorSystem
 import org.apache.gearpump.akkastream.GearpumpMaterializer
 import org.apache.gearpump.akkastream.scaladsl.{GearSink, GearSource}
-import akka.stream.scaladsl.Sink
 import org.apache.gearpump.cluster.main.ArgumentsParser
-import org.apache.gearpump.streaming.dsl.{CollectionDataSource, LoggerSink}
+import org.apache.gearpump.streaming.dsl.scalaapi.{CollectionDataSource, LoggerSink}
 import org.apache.gearpump.util.AkkaApp
 
 import scala.concurrent.Await
