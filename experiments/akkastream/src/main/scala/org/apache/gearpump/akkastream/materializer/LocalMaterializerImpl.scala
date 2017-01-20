@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -119,26 +119,27 @@ case class LocalMaterializerImpl (
           assignPort(stage.inPort, processor)
           assignPort(stage.outPort, processor.asInstanceOf[Publisher[Any]])
           matVal.put(atomic, mat)
-          // FIXME
-//        case tls: TlsModule => // TODO solve this so TlsModule doesn't need special treatment here
-//          val es = effectiveSettings(effectiveAttributes)
-//          val props =
-//            TLSActor.props(es, tls.sslContext, tls.sslConfig,
-//              tls.firstSession, tls.role, tls.closing, tls.hostInfo)
-//          val impl = actorOf(props, stageName(effectiveAttributes), es.dispatcher)
-//          def factory(id: Int) = new ActorPublisher[Any](impl) {
-//            override val wakeUpMsg = FanOut.SubstreamSubscribePending(id)
-//          }
-//          val publishers = Vector.tabulate(2)(factory)
-//          impl ! FanOut.ExposedPublishers(publishers)
-//
-//          assignPort(tls.plainOut, publishers(TLSActor.UserOut))
-//          assignPort(tls.cipherOut, publishers(TLSActor.TransportOut))
-//
-//          assignPort(tls.plainIn, FanIn.SubInput[Any](impl, TLSActor.UserIn))
-//          assignPort(tls.cipherIn, FanIn.SubInput[Any](impl, TLSActor.TransportIn))
-//
-//          matVal.put(atomic, NotUsed)
+        // FIXME
+        //        case tls: TlsModule =>
+        // TODO solve this so TlsModule doesn't need special treatment here
+        //          val es = effectiveSettings(effectiveAttributes)
+        //          val props =
+        //            TLSActor.props(es, tls.sslContext, tls.sslConfig,
+        //              tls.firstSession, tls.role, tls.closing, tls.hostInfo)
+        //          val impl = actorOf(props, stageName(effectiveAttributes), es.dispatcher)
+        //          def factory(id: Int) = new ActorPublisher[Any](impl) {
+        //            override val wakeUpMsg = FanOut.SubstreamSubscribePending(id)
+        //          }
+        //          val publishers = Vector.tabulate(2)(factory)
+        //          impl ! FanOut.ExposedPublishers(publishers)
+        //
+        //          assignPort(tls.plainOut, publishers(TLSActor.UserOut))
+        //          assignPort(tls.cipherOut, publishers(TLSActor.TransportOut))
+        //
+        //          assignPort(tls.plainIn, FanIn.SubInput[Any](impl, TLSActor.UserIn))
+        //          assignPort(tls.cipherIn, FanIn.SubInput[Any](impl, TLSActor.TransportIn))
+        //
+        //          matVal.put(atomic, NotUsed)
         case graph: GraphModule =>
           matGraph(graph, effectiveAttributes, matVal)
         case stage: GraphStageModule =>
