@@ -25,8 +25,9 @@ package org.apache.gearpump
  * message's timestamp.
  * @param msg Accept any type except Null, Nothing and Unit
  */
-case class Message(msg: Any, timestamp: TimeStamp = Message.noTimeStamp)
+case class Message(msg: Any, timestamp: TimeStamp = Message.currentTimeStamp)
 
 object Message {
   val noTimeStamp: TimeStamp = 0L
+  val currentTimeStamp: TimeStamp = System.currentTimeMillis()
 }
