@@ -26,7 +26,7 @@ import org.apache.gearpump.streaming.dsl.plan.functions.FunctionRunner
 import org.apache.gearpump.streaming.task.{Task, TaskContext}
 
 class TransformTask[IN, OUT](operator: Option[FunctionRunner[IN, OUT]],
-                             taskContext: TaskContext, userConf: UserConfig) extends Task(taskContext, userConf) {
+    taskContext: TaskContext, userConf: UserConfig) extends Task(taskContext, userConf) {
 
   def this(taskContext: TaskContext, userConf: UserConfig) = {
     this(userConf.getValue[FunctionRunner[IN, OUT]](

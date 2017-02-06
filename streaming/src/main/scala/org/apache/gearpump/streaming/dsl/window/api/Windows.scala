@@ -26,9 +26,9 @@ import java.time.Duration
  * @param accumulationMode
  */
 case class Windows[T](
-                       windowFn: WindowFunction[T],
-                       trigger: Trigger = EventTimeTrigger,
-                       accumulationMode: AccumulationMode = Discarding) {
+    windowFn: WindowFunction[T],
+    trigger: Trigger = EventTimeTrigger,
+    accumulationMode: AccumulationMode = Discarding) {
 
   def triggering(trigger: Trigger): Windows[T] = {
     Windows(windowFn, trigger)

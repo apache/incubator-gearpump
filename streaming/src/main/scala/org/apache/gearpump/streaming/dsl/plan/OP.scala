@@ -124,8 +124,8 @@ case class DataSinkOp(
  * to another Op to be used
  */
 case class ChainableOp[IN, OUT](
-                                 fn: FunctionRunner[IN, OUT],
-                                 userConfig: UserConfig = UserConfig.empty) extends Op {
+    fn: FunctionRunner[IN, OUT],
+    userConfig: UserConfig = UserConfig.empty) extends Op {
 
   override def description: String = fn.description
 
