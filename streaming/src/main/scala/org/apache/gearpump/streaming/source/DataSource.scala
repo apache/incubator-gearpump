@@ -71,7 +71,7 @@ trait DataSource extends java.io.Serializable {
 
   /**
    * Returns a watermark such that no timestamp earlier than the watermark should enter the system
-   * [[Watermark.MAX]] mark the end of source data
+   * [[org.apache.gearpump.streaming.source.Watermark.MAX]] mark the end of source data
    */
   def getWatermark: Instant
 }
