@@ -163,5 +163,11 @@ object Constants {
 
   val APPLICATION_EXECUTOR_NUMBER = "gearpump.application.executor-num"
 
+  val APPLICATION_TOTAL_RETRIES = "gearpump.application.ha.total-retries"
+
+  val APPLICATION_MAX_RETRIES_IN_WINDOW = "gearpump.application.ha.maximum-retries-in-window"
+
+  val APPLICATION_RETRY_TIME_WINDOW = "gearpump.application.ha.retry-time-window"
+
   val AKKA_SCHEDULER_TICK_DURATION = "akka.scheduler.tick-duration"
 }

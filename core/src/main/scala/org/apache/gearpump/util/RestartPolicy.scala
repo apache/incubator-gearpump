@@ -26,16 +26,24 @@ import akka.actor.ChildRestartStats
  * When one executor or task fails, Gearpump will try to start. However, if it fails after
  * multiple retries, then we abort.
  *
- * @param maxNrOfRetries The number of times is allowed to be restarted, negative value means no
- *                       limit, if the limit is exceeded the policy will not allow to restart
+ * @param totalNrOfRetries The total number of times is allowed to be restarted, negative value
+ *                         means no limit, if the limit is exceeded the policy will not allow
+ *                         to restart
+ * @param maxNrOfRetriesInRange The maximum retry times in the specified time window.
  * @param withinTimeRange Duration of the time window for maxNrOfRetries.
  *                        Duration.Inf means no window
  */
-class RestartPolicy(maxNrOfRetries: Int, withinTimeRange: Duration) {
+class RestartPolicy(totalNrOfRetries: Int, maxNrOfRetriesInRange: Int, withinTimeRange: Duration) {
+  private var historicalRetries: Int = 0
   private val status = new ChildRestartStats(null, 0, 0L)
-  private val retriesWindow = (Some(maxNrOfRetries), Some(withinTimeRange.toMillis.toInt))
+  private val retriesWindow = (Some(maxNrOfRetriesInRange), Some(withinTimeRange.toMillis.toInt))
 
   def allowRestart: Boolean = {
-    status.requestRestartPermission(retriesWindow)
+    historicalRetries += 1
+    if (totalNrOfRetries > 0 && historicalRetries > totalNrOfRetries) {
+      false
+    } else {
+      status.requestRestartPermission(retriesWindow)
+    }
   }
 }
