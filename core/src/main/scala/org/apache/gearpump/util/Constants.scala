@@ -163,7 +163,7 @@ object Constants {
 
   val APPLICATION_EXECUTOR_NUMBER = "gearpump.application.executor-num"
 
-  val APPLICATION_TOTAL_RETRIES = "gearpump.application.ha.total-retries"
+  val APPLICATION_TOTAL_RETRIES = "gearpump.application.total-retries"
 
   val AKKA_SCHEDULER_TICK_DURATION = "akka.scheduler.tick-duration"
 }
