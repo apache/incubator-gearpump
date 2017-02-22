@@ -103,8 +103,7 @@ private[cluster] class AppManager(kvService: ActorRef, launcher: AppMasterLaunch
       } else {
         context.actorOf(launcher.props(nextAppId, APPMASTER_DEFAULT_EXECUTOR_ID, app, jar, username,
           context.parent, Some(client)), s"launcher${nextAppId}_${Util.randInt()}")
-        appMasterRestartPolicies += nextAppId ->
-          new RestartPolicy(appTotalRetries, appMaxRetriesInRange, appMasterRetryTimeRange)
+        appMasterRestartPolicies += nextAppId -> new RestartPolicy(appTotalRetries)
 
         val appRuntimeInfo = ApplicationRuntimeInfo(nextAppId, app.name,
           user = username,

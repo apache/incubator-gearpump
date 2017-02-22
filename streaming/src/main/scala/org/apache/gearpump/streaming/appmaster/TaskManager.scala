@@ -76,7 +76,7 @@ private[appmaster] class TaskManager(
   private val ids = new SessionIdFactory()
 
   private val appTotalRetries: Int = systemConfig.getInt(Constants.APPLICATION_TOTAL_RETRIES)
-  private val appRestartPolicy = new RestartPolicy(appTotalRetries, 5, 20.seconds)
+  private val appRestartPolicy = new RestartPolicy(appTotalRetries)
 
   private implicit val timeout = Constants.FUTURE_TIMEOUT
   private implicit val actorSystem = context.system

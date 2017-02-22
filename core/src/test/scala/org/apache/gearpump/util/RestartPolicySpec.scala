@@ -25,25 +25,15 @@ import scala.concurrent.duration._
 class RestartPolicySpec extends FlatSpec with Matchers {
 
   "RestartPolicy" should "forbid too many restarts" in {
-    val policy = new RestartPolicy(3, 10, 60.seconds)
-    assert(policy.allowRestart)
+    val policy = new RestartPolicy(2)
     assert(policy.allowRestart)
     assert(policy.allowRestart)
     assert(!policy.allowRestart)
   }
 
   "RestartPolicy" should "forbid too many restarts in a window duration" in {
-    val policy = new RestartPolicy(20, 3, 60.seconds)
+    val policy = new RestartPolicy(-1)
     assert(policy.allowRestart)
     assert(policy.allowRestart)
-    assert(policy.allowRestart)
-    assert(!policy.allowRestart)
-
-    val policy2 = new RestartPolicy(20, 3, 3.seconds)
-    assert(policy2.allowRestart)
-    assert(policy2.allowRestart)
-    assert(policy2.allowRestart)
-    Thread.sleep(4000)
-    assert(policy2.allowRestart)
   }
 }
