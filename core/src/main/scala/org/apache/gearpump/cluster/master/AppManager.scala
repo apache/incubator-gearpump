@@ -50,8 +50,6 @@ private[cluster] class AppManager(kvService: ActorRef, launcher: AppMasterLaunch
   private val LOG: Logger = LogUtil.getLogger(getClass)
 
   private val appTotalRetries: Int = 5
-  private val appMaxRetriesInRange: Int = 5
-  private val appMasterRetryTimeRange: Duration = 20.seconds
 
   implicit val timeout = FUTURE_TIMEOUT
   implicit val executionContext = context.dispatcher
