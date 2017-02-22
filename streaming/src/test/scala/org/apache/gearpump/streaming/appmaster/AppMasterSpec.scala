@@ -47,10 +47,7 @@ import org.scalatest._
 import scala.concurrent.duration._
 
 class AppMasterSpec extends WordSpec with Matchers with BeforeAndAfterEach with MasterHarness {
-  protected override def config = {
-    ConfigFactory.parseString(s"${Constants.APPLICATION_RETRY_TIME_WINDOW} = 60")
-      .withFallback(TestUtil.DEFAULT_CONFIG)
-  }
+  protected override def config = TestUtil.DEFAULT_CONFIG
 
   var appMaster: ActorRef = null
 
