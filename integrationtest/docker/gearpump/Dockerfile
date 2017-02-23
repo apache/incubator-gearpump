@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # The base image contains JRE8
-FROM errordeveloper/oracle-jre
+FROM grubykarol/jre:8u121b13_server
 
 # Add Python Support
 RUN opkg-install python
