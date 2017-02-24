@@ -48,8 +48,12 @@ class RunningApplication(val appId: Int, master: ActorRef, timeout: Timeout) {
    * If failed, an exception will be thrown out
    */
   def waitUntilFinish(): Unit = {
+    this.waitUntilFinish(INF_TIMEOUT)
+  }
+
+  def waitUntilFinish(timeout: Timeout): Unit = {
     val result = ActorUtil.askActor[ApplicationResult](master,
-      RegisterAppResultListener(appId), INF_TIMEOUT)
+      RegisterAppResultListener(appId), timeout)
     result match {
       case failed: ApplicationFailed =>
         throw failed.error
