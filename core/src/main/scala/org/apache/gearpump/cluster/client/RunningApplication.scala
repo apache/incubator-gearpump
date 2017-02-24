@@ -77,6 +77,6 @@ class RunningApplication(val appId: Int, master: ActorRef, timeout: Timeout) {
 object RunningApplication {
   private val LOG: Logger = LogUtil.getLogger(getClass)
   // This magic number is derived from Akka's configuration, which is the maximum delay
-  private val INF_DURATION = new Duration(2147482 seconds)
+  private val INF_DURATION = Duration.ofSeconds(2147482)
 }
 
