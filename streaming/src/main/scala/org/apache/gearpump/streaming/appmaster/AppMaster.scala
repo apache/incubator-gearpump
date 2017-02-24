@@ -160,8 +160,8 @@ class AppMaster(appContext: AppMasterContext, app: AppDescription) extends Appli
       } else {
         LOG.error(s"replay for invalid appId ${replay.appId}")
       }
-    case messageLoss: MessageLoss =>
-      lastFailure = LastFailure(System.currentTimeMillis(), messageLoss.cause)
+    case messageLoss@MessageLoss(_, _, cause, ex) =>
+      lastFailure = LastFailure(System.currentTimeMillis(), cause, ex)
       taskManager.foreach(_ forward messageLoss)
     case lookupTask: LookupTaskActorRef =>
       taskManager.foreach(_ forward lookupTask)
@@ -307,7 +307,7 @@ class AppMaster(appContext: AppMasterContext, app: AppDescription) extends Appli
       if (context.children.toList.contains(sender())) {
         LOG.error(errorMsg)
         val failed = ApplicationStatusChanged(appId, ApplicationStatus.FAILED, lastFailure.time,
-          new Exception(lastFailure.error))
+          lastFailure.ex.getOrElse(new Exception(lastFailure.error)))
         masterProxy ! failed
       }
     case AllocateResourceTimeOut =>

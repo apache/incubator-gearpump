@@ -157,7 +157,7 @@ object MasterToClient {
   case class HistoryMetrics(path: String, metrics: List[HistoryMetricsItem])
 
   /** Return the last error of this streaming application job */
-  case class LastFailure(time: TimeStamp, error: String)
+  case class LastFailure(time: TimeStamp, error: String, ex: Option[Throwable] = None)
 
   sealed trait ApplicationResult
 
