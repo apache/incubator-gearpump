@@ -19,5 +19,5 @@ Gearpump Cluster Launcher  helps developer to setup/test a local Gearpump cluste
 The image is based on a minimal JRE8 environment with Python support.
 
 We used to base Gearpump Cluster Launcher on errordeveloper/oracle-jre image but it stuck on version 8u66-b17 and doesn't support tagging.
-We also probably hit a Java bug (http://bugs.java.com/bugdatabase/view_bug.do?bug_id=8133205) that requires never version of JRE.
+We also probably hit a Java bug (http://bugs.java.com/bugdatabase/view_bug.do?bug_id=8133205) that requires newer version of JRE.
 This is experimental version of Java image that we will use until we switch to some "official" image.
