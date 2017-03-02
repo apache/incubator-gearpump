@@ -65,7 +65,7 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
 
       sourceTask.onNext(Message("next"))
       sourceTask.onWatermarkProgress(Watermark.MAX)
-      verify(taskContext).output(msg)
+      verify(taskContext).output(Message(str, Watermark.MAX))
     }
   }
 

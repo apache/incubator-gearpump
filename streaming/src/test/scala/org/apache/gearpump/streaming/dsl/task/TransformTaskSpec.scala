@@ -58,11 +58,12 @@ class TransformTaskSpec extends PropSpec with PropertyChecks with Matchers with 
       val task = new TransformTask[Any, Any](transform, taskContext, config)
       val msg = Message(str)
       when(operator.process(str)).thenReturn(Some(str))
+      when(operator.finish()).thenReturn(None)
 
       task.onNext(msg)
       task.onWatermarkProgress(Watermark.MAX)
 
-      verify(taskContext).output(msg)
+      verify(taskContext).output(Message(str, Watermark.MAX))
     }
   }
 
