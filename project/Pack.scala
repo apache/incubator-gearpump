@@ -122,6 +122,12 @@ object Pack extends sbt.Build {
             "-server",
             "-noverify",
             "-Djava.net.preferIPv4Stack=true",
+            "-Dgearpump.home=${PROG_HOME}"),
+
+          "akkastream" -> Seq(
+            "-server",
+            "-noverify",
+            "-Djava.net.preferIPv4Stack=true",
             "-Dgearpump.home=${PROG_HOME}")
         ),
         packLibDir := Map(
