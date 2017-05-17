@@ -35,7 +35,7 @@ class StandaloneModeSuite extends Suites(
   new StormCompatibilitySpec,
   new StabilitySpec,
   new ConnectorKafkaSpec,
-  new MessageDeliverySpec
+  new DefaultMessageDeliverySpec
 ) with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {

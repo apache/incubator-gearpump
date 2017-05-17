@@ -28,7 +28,7 @@ import org.apache.gearpump.integrationtest.{TestSpecBase, Util}
 /**
  * Checks message delivery consistency, like at-least-once, and exactly-once.
  */
-class MessageDeliverySpec extends TestSpecBase {
+class DefaultMessageDeliverySpec extends TestSpecBase {
 
   private val LOG = Logger.getLogger(getClass)
 

@@ -23,7 +23,7 @@ import org.scalatest.{Matchers, WordSpec}
 import org.apache.gearpump.streaming.task._
 import org.apache.gearpump.transport.netty.WrappedChannelBuffer
 
-class MessageSerializerSpec extends WordSpec with Matchers {
+class DefaultMessageSerializerSpec extends WordSpec with Matchers {
 
   def testSerializer[T](obj: T, taskMessageSerializer: TaskMessageSerializer[T]): T = {
     val length = taskMessageSerializer.getLength(obj)
