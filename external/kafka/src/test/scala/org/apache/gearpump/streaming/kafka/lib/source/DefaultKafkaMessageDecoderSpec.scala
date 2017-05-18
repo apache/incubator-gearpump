@@ -25,7 +25,7 @@ import org.scalacheck.Gen
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{Matchers, PropSpec}
 
-class DefaultKafkaDefaultMessageDecoderSpec extends PropSpec with PropertyChecks with Matchers {
+class DefaultKafkaMessageDecoderSpec extends PropSpec with PropertyChecks with Matchers {
   property("DefaultMessageDecoder should keep the original bytes data in Message") {
     val decoder = new DefaultKafkaMessageDecoder()
     forAll(Gen.chooseNum[Int](0, 100), Gen.alphaStr) { (k: Int, v: String) =>
@@ -34,7 +34,7 @@ class DefaultKafkaDefaultMessageDecoderSpec extends PropSpec with PropertyChecks
       val msgAndWmk = decoder.fromBytes(kbytes, vbytes)
       val message = msgAndWmk.message
       val watermark = msgAndWmk.watermark
-      message.value shouldBe vbytes
+      message.msg shouldBe vbytes
       // processing time as message timestamp and watermark
       message.timestamp shouldBe watermark
     }
