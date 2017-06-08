@@ -22,14 +22,14 @@ import java.util
 
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, ConventionTraitDef, RelTrait, RelTraitDef}
-import org.apache.calcite.rel.RelCollationTraitDef
 import org.apache.calcite.rel.`type`.RelDataTypeSystem
+import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.parser.SqlParser
-import org.apache.calcite.tools.{Frameworks, RuleSets}
+import org.apache.calcite.tools._
 
-class Query {
+object Query {
 
-  def executeQuery(query: String): Unit = {
+  def getLogicalPlan(query: String): RelNode = {
 
     val traitDefs: util.List[RelTraitDef[_ <: RelTrait]] = new util.ArrayList[RelTraitDef[_ <: RelTrait]]
 
@@ -44,11 +44,12 @@ class Query {
       .costFactory(null)
       .typeSystem(RelDataTypeSystem.DEFAULT)
       .build();
-    val planner = Frameworks.getPlanner(config)
 
-    val sqlNode = planner.parse(query)
-    planner.validate(sqlNode)
+    val queryPlanner = Frameworks.getPlanner(config)
+    val sqlNode = queryPlanner.parse(query)
+    val validatedSqlNode = queryPlanner.validate(sqlNode)
 
+    queryPlanner.rel(validatedSqlNode).project()
   }
 
 }
