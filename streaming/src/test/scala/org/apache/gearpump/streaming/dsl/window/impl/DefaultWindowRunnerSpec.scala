@@ -49,12 +49,12 @@ class DefaultWindowRunnerSpec extends PropSpec with PropertyChecks
     val windowRunner = new DefaultWindowRunner[KV, Option[KV]](windows,
       new FoldRunner[KV, Option[KV]](reduce, "reduce"))
 
-    data.foreach(m => windowRunner.process(m.value.asInstanceOf[KV], m.timestamp))
+    data.foreach(m => windowRunner.process(TimestampedValue(m.value.asInstanceOf[KV], m.timestamp)))
     windowRunner.trigger(Watermark.MAX).toList shouldBe
       List(
-        Some(("foo", 1)) -> Instant.ofEpochMilli(4),
-        Some(("foo", 1)) -> Instant.ofEpochMilli(18),
-        Some(("foo", 2)) -> Instant.ofEpochMilli(29)
+        TimestampedValue(Some(("foo", 1)), Instant.ofEpochMilli(4)),
+        TimestampedValue(Some(("foo", 1)), Instant.ofEpochMilli(18)),
+        TimestampedValue(Some(("foo", 2)), Instant.ofEpochMilli(29))
       )
   }
 

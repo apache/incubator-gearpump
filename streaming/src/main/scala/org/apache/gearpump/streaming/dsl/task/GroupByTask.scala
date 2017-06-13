@@ -25,7 +25,7 @@ import com.gs.collections.impl.map.mutable.UnifiedMap
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants.{GEARPUMP_STREAMING_GROUPBY_FUNCTION, GEARPUMP_STREAMING_OPERATOR}
-import org.apache.gearpump.streaming.dsl.window.impl.WindowRunner
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, WindowRunner}
 import org.apache.gearpump.streaming.task.{Task, TaskContext}
 
 /**
@@ -56,7 +56,8 @@ class GroupByTask[IN, GROUP, OUT](
           GEARPUMP_STREAMING_OPERATOR)(taskContext.system).get)
     }
 
-    groups.get(group).process(input, message.timestamp)
+    groups.get(group).process(TimestampedValue(message.value.asInstanceOf[IN],
+      message.timestamp))
   }
 
   override def onWatermarkProgress(watermark: Instant): Unit = {
@@ -64,7 +65,7 @@ class GroupByTask[IN, GROUP, OUT](
       override def accept(runner: WindowRunner[IN, OUT]): Unit = {
         runner.trigger(watermark).foreach {
           result =>
-            taskContext.output(Message(result._1, result._2))
+            taskContext.output(Message(result.value, result.timestamp))
         }
       }
     })

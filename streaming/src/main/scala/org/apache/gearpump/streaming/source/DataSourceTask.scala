@@ -23,7 +23,7 @@ import java.time.Instant
 import org.apache.gearpump._
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants._
-import org.apache.gearpump.streaming.dsl.window.impl.WindowRunner
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, WindowRunner}
 import org.apache.gearpump.streaming.task.{Task, TaskContext}
 
 /**
@@ -65,7 +65,8 @@ class DataSourceTask[IN, OUT] private[source](
   override def onNext(m: Message): Unit = {
     0.until(batchSize).foreach { _ =>
       Option(source.read()).foreach(
-        msg => windowRunner.process(msg.value.asInstanceOf[IN], msg.timestamp))
+        msg => windowRunner.process(
+          TimestampedValue(msg.value.asInstanceOf[IN], msg.timestamp)))
     }
 
     self ! Watermark(source.getWatermark)
@@ -74,7 +75,7 @@ class DataSourceTask[IN, OUT] private[source](
   override def onWatermarkProgress(watermark: Instant): Unit = {
     windowRunner.trigger(watermark).foreach {
       result =>
-        context.output(Message(result._1, result._2))
+        context.output(Message(result.value, result.timestamp))
     }
   }
 

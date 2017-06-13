@@ -29,22 +29,24 @@ import org.apache.gearpump.streaming.dsl.window.api.{Discarding, Windows}
 
 import scala.collection.mutable.ArrayBuffer
 
+case class TimestampedValue[T](value: T, timestamp: Instant)
+
 trait WindowRunner[IN, OUT] extends java.io.Serializable {
 
-  def process(in: IN, time: Instant): Unit
+  def process(timestampedValue: TimestampedValue[IN]): Unit
 
-  def trigger(time: Instant): TraversableOnce[(OUT, Instant)]
+  def trigger(time: Instant): TraversableOnce[TimestampedValue[OUT]]
 }
 
 case class AndThen[IN, MIDDLE, OUT](left: WindowRunner[IN, MIDDLE],
     right: WindowRunner[MIDDLE, OUT]) extends WindowRunner[IN, OUT] {
 
-  def process(in: IN, time: Instant): Unit = {
-    left.process(in, time)
+  def process(timestampedValue: TimestampedValue[IN]): Unit = {
+    left.process(timestampedValue)
   }
 
-  def trigger(time: Instant): TraversableOnce[(OUT, Instant)] = {
-    left.trigger(time).foreach(result => right.process(result._1, result._2))
+  def trigger(time: Instant): TraversableOnce[TimestampedValue[OUT]] = {
+    left.trigger(time).foreach(right.process)
     right.trigger(time)
   }
 }
@@ -55,37 +57,37 @@ class DefaultWindowRunner[IN, OUT](
   extends WindowRunner[IN, OUT] {
 
   private val windowFn = windows.windowFn
-  private val windowInputs = new TreeSortedMap[Window, FastList[(IN, Instant)]]
+  private val windowInputs = new TreeSortedMap[Window, FastList[TimestampedValue[IN]]]
   private var setup = false
 
-  override def process(in: IN, time: Instant): Unit = {
+  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
     val wins = windowFn(new Context[IN] {
-      override def element: IN = in
+      override def element: IN = timestampedValue.value
 
-      override def timestamp: Instant = time
+      override def timestamp: Instant = timestampedValue.timestamp
     })
     wins.foreach { win =>
       if (windowFn.isNonMerging) {
         if (!windowInputs.containsKey(win)) {
-          val inputs = new FastList[(IN, Instant)]
+          val inputs = new FastList[TimestampedValue[IN]]
           windowInputs.put(win, inputs)
         }
-        windowInputs.get(win).add(in -> time)
+        windowInputs.get(win).add(timestampedValue)
       } else {
-        merge(windowInputs, win, in, time)
+        merge(windowInputs, win, timestampedValue)
       }
     }
 
     def merge(
-        winIns: TreeSortedMap[Window, FastList[(IN, Instant)]],
-        win: Window, in: IN, time: Instant): Unit = {
+        winIns: TreeSortedMap[Window, FastList[TimestampedValue[IN]]],
+        win: Window, tv: TimestampedValue[IN]): Unit = {
       val intersected = winIns.keySet.select(new Predicate[Window] {
         override def accept(each: Window): Boolean = {
           win.intersects(each)
         }
       })
       var mergedWin = win
-      val mergedInputs = FastList.newListWith(in -> time)
+      val mergedInputs = FastList.newListWith(tv)
       intersected.forEach(new Procedure[Window] {
         override def value(each: Window): Unit = {
           mergedWin = mergedWin.span(each)
@@ -96,9 +98,10 @@ class DefaultWindowRunner[IN, OUT](
     }
   }
 
-  override def trigger(time: Instant): TraversableOnce[(OUT, Instant)] = {
+  override def trigger(time: Instant): TraversableOnce[TimestampedValue[OUT]] = {
     @annotation.tailrec
-    def onTrigger(outputs: ArrayBuffer[(OUT, Instant)]): TraversableOnce[(OUT, Instant)] = {
+    def onTrigger(
+        outputs: ArrayBuffer[TimestampedValue[OUT]]): TraversableOnce[TimestampedValue[OUT]] = {
       if (windowInputs.notEmpty()) {
         val firstWin = windowInputs.firstKey
         if (!time.isBefore(firstWin.endTime)) {
@@ -107,15 +110,15 @@ class DefaultWindowRunner[IN, OUT](
             fnRunner.setup()
             setup = true
           }
-          inputs.forEach(new Procedure[(IN, Instant)] {
-            override def value(v: (IN, Instant)): Unit = {
-              fnRunner.process(v._1).foreach {
-                out: OUT => outputs += (out -> v._2)
+          inputs.forEach(new Procedure[TimestampedValue[IN]] {
+            override def value(tv: TimestampedValue[IN]): Unit = {
+              fnRunner.process(tv.value).foreach {
+                out: OUT => outputs += TimestampedValue(out, tv.timestamp)
               }
             }
           })
           fnRunner.finish().foreach {
-            out: OUT => outputs += (out -> firstWin.endTime.minusMillis(1))
+            out: OUT => outputs += TimestampedValue(out, firstWin.endTime.minusMillis(1))
           }
           if (windows.accumulationMode == Discarding) {
             fnRunner.teardown()
@@ -134,6 +137,6 @@ class DefaultWindowRunner[IN, OUT](
       }
     }
 
-    onTrigger(ArrayBuffer.empty[(OUT, Instant)])
+    onTrigger(ArrayBuffer.empty[TimestampedValue[OUT]])
   }
 }
