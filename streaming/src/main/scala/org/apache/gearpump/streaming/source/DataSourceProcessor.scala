@@ -20,6 +20,9 @@ package org.apache.gearpump.streaming.source
 
 import akka.actor.ActorSystem
 import org.apache.gearpump.cluster.UserConfig
+import org.apache.gearpump.streaming.dsl.plan.functions.DummyRunner
+import org.apache.gearpump.streaming.dsl.window.api.GlobalWindows
+import org.apache.gearpump.streaming.dsl.window.impl.{DefaultWindowRunner, WindowRunner}
 import org.apache.gearpump.streaming.{Constants, Processor}
 
 /**
@@ -43,6 +46,9 @@ object DataSourceProcessor {
       taskConf: UserConfig = UserConfig.empty)(implicit system: ActorSystem)
     : Processor[DataSourceTask[Any, Any]] = {
     Processor[DataSourceTask[Any, Any]](parallelism, description,
-      taskConf.withValue[DataSource](Constants.GEARPUMP_STREAMING_SOURCE, dataSource))
+      taskConf
+        .withValue[DataSource](Constants.GEARPUMP_STREAMING_SOURCE, dataSource)
+        .withValue[WindowRunner[Any, Any]](Constants.GEARPUMP_STREAMING_OPERATOR,
+        new DefaultWindowRunner[Any, Any](GlobalWindows(), new DummyRunner[Any])))
   }
 }
