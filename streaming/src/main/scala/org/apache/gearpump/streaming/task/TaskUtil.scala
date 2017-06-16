@@ -46,7 +46,7 @@ object TaskUtil {
   }
 
   /**
-   * @return t1 if t1 <= t2 and t2 otherwise
+   * @return t1 if t1 is not larger than t2 and t2 otherwise
    */
   def min(t1: Instant, t2: Instant): Instant = {
     if (t1.isAfter(t2)) t2
@@ -54,7 +54,7 @@ object TaskUtil {
   }
 
   /**
-   * @return t1 if t1 >= t2 and t2 otherwise
+   * @return t1 if t1 is not smaller than t2 and t2 otherwise
    */
   def max(t1: Instant, t2: Instant): Instant = {
     if (t2.isBefore(t1)) t1
