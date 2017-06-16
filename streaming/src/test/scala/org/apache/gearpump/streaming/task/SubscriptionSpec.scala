@@ -27,6 +27,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.apache.gearpump.{MIN_TIME_MILLIS, Message}
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.partitioner.{HashPartitioner, Partitioner}
+import org.apache.gearpump.streaming.source.Watermark
 import org.apache.gearpump.streaming.task.SubscriptionSpec.NextTask
 import org.apache.gearpump.streaming.{LifeTime, ProcessorDescription}
 
@@ -112,9 +113,10 @@ class SubscriptionSpec extends FlatSpec with Matchers with MockitoSugar {
   }
 
   it should "disallow more message sending if there is no ack back" in {
-    val (subscription, _) = prepare
+    val (subscription, sender) = prepare
     // send 100 messages
     0 until (Subscription.MAX_PENDING_MESSAGE_COUNT * 2 + 1) foreach { clock =>
+      when(sender.getProcessingWatermark).thenReturn(Watermark.MAX)
       subscription.sendMessage(Message(randomMessage, clock))
     }
 
