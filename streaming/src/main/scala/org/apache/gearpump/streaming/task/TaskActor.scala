@@ -358,9 +358,6 @@ class TaskActor(
     Instant.ofEpochMilli(subs.foldLeft(Watermark.MAX.toEpochMilli) {
       case (min, (_, sub)) =>
         val subWmk = sub.watermark
-        if (taskId.processorId == 7) {
-          LOG.info(s"sub $sub, wmk $subWmk")
-        }
         if (subWmk == wmk.toEpochMilli) {
           sub.onStallingTime(subWmk)
         }
