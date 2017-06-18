@@ -21,8 +21,8 @@ package org.apache.gearpump.streaming.source
 import akka.actor.ActorSystem
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.dsl.plan.functions.DummyRunner
-import org.apache.gearpump.streaming.dsl.window.api.GlobalWindows
-import org.apache.gearpump.streaming.dsl.window.impl.{DefaultWindowRunner, WindowRunner}
+import org.apache.gearpump.streaming.dsl.window.api.{WindowFunction, Windows}
+import org.apache.gearpump.streaming.dsl.window.impl.{DefaultWindowRunner, Window, WindowRunner}
 import org.apache.gearpump.streaming.{Constants, Processor}
 
 /**
@@ -49,6 +49,18 @@ object DataSourceProcessor {
       taskConf
         .withValue[DataSource](Constants.GEARPUMP_STREAMING_SOURCE, dataSource)
         .withValue[WindowRunner[Any, Any]](Constants.GEARPUMP_STREAMING_OPERATOR,
-        new DefaultWindowRunner[Any, Any](GlobalWindows(), new DummyRunner[Any])))
+        new DefaultWindowRunner[Any, Any](
+          Windows(PerElementWindowFunction, description = "perElementWindows"),
+          new DummyRunner[Any])))
+  }
+
+
+  case object PerElementWindowFunction extends WindowFunction {
+    override def apply[T](
+        context: WindowFunction.Context[T]): Array[Window] = {
+      Array(Window(context.timestamp, context.timestamp.plusMillis(1)))
+    }
+
+    override def isNonMerging: Boolean = true
   }
 }
