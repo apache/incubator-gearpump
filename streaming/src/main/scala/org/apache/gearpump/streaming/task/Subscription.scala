@@ -29,7 +29,7 @@ import org.apache.gearpump.util.LogUtil
 import org.apache.gearpump.{MIN_TIME_MILLIS, Message, TimeStamp}
 
 /**
- * Manges the output and message clock for single downstream processor
+ * Manages the output and message clock for single downstream processor
  *
  * @param subscriber downstream processor
  * @param maxPendingMessageCount trigger flow control. Should be bigger than
@@ -40,8 +40,9 @@ class Subscription(
     appId: Int,
     executorId: Int,
     taskId: TaskId,
-    subscriber: Subscriber, sessionId: Int,
-    sender: TaskActor,
+    subscriber: Subscriber,
+    sessionId: Int,
+    publisher: TaskActor,
     maxPendingMessageCount: Int = MAX_PENDING_MESSAGE_COUNT,
     ackOnceEveryMessageCount: Int = ONE_ACKREQUEST_EVERY_MESSAGE_COUNT) {
 
@@ -87,7 +88,7 @@ class Subscription(
 
   def start(): Unit = {
     val ackRequest = InitialAckRequest(taskId, sessionId)
-    sender.transport(ackRequest, allTasks: _*)
+    publisher.transport(ackRequest, allTasks: _*)
   }
 
   def sendMessage(msg: Message): Int = {
@@ -109,9 +110,9 @@ class Subscription(
       msg.timestamp.toEpochMilli)) {
 
       val targetTask = TaskId(processorId, partition)
-      sender.transport(msg, targetTask)
+      publisher.transport(msg, targetTask)
 
-      this.processingWatermark(partition) = sender.getProcessingWatermark.toEpochMilli
+      this.processingWatermark(partition) = publisher.getProcessingWatermark.toEpochMilli
 
       incrementMessageCount(partition, 1)
 
@@ -195,7 +196,7 @@ class Subscription(
         allowSendingMoreMessages) {
         sendAckRequest(i)
         sendLatencyProbe(i)
-      } else if (sender.getProcessingWatermark == Watermark.MAX &&
+      } else if (publisher.getProcessingWatermark == Watermark.MAX &&
         pendingMessageCount(i) == 0) {
         outputWatermark(i) = Watermark.MAX.toEpochMilli
       }
@@ -208,7 +209,7 @@ class Subscription(
     incrementMessageCount(partition, ackOnceEveryMessageCount)
     val targetTask = TaskId(processorId, partition)
     val ackRequest = AckRequest(taskId, messageCount(partition), sessionId)
-    sender.transport(ackRequest, targetTask)
+    publisher.transport(ackRequest, targetTask)
   }
 
   private def incrementMessageCount(partition: Int, count: Int): Unit = {
@@ -224,7 +225,7 @@ class Subscription(
   private def sendLatencyProbe(partition: Int): Unit = {
     val probeLatency = LatencyProbe(System.currentTimeMillis())
     val targetTask = TaskId(processorId, partition)
-    sender.transport(probeLatency, targetTask)
+    publisher.transport(probeLatency, targetTask)
   }
 }
 

@@ -132,13 +132,10 @@ class DefaultWindowRunner[IN, OUT](
           val newWmk = TaskUtil.max(wmk, firstWin.endTime)
           if (windows.accumulationMode == Discarding) {
             fnRunner.teardown()
-            setup = false
             // discarding, setup need to be called for each window
-            onTrigger(outputs, newWmk)
-          } else {
-            // accumulating, setup is only called for the first window
-            onTrigger(outputs, newWmk)
+            setup = false
           }
+          onTrigger(outputs, newWmk)
         } else {
           // minimum of end of last triggered window and start of first un-triggered window
           TriggeredOutputs(outputs, TaskUtil.min(wmk, firstWin.startTime))
