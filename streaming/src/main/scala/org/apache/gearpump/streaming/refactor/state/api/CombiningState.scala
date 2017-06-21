@@ -1,0 +1,51 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.gearpump.streaming.refactor.state.api
+
+/**
+ * A {@link ReadableState} cell defined by a {@link CombineFn}, accepting multiple input values,
+ * combining them as specified into accumulators, and producing a single output value.
+ *
+ * <p>Implementations of this form of state are expected to implement {@link #add} efficiently, not
+ * via a sequence of read-modify-write.
+ *
+ * @tparam InputT the type of values added to the state
+ * @tparam AccumT the type of accumulator
+ * @tparam OutputT the type of value extracted from the state
+ */
+trait CombiningState[InputT, AccumT, OutputT] extends GroupingState[InputT, OutputT] {
+
+  /**
+   * Read the merged accumulator for this state cell. It is implied that reading the state involves
+   * reading the accumulator, so {@link #readLater} is sufficient to prefetch for this.
+   */
+  def getAccum: AccumT
+
+  /**
+   * Add an accumulator to this state cell. Depending on implementation this may immediately merge
+   * it with the previous accumulator, or may buffer this accumulator for a future merge.
+   */
+  def addAccum(accumT: AccumT)
+
+  /** Merge the given accumulators according to the underlying {@link CombineFn}. */
+  def mergeAccumulators(accumulators: Iterable[AccumT]): AccumT
+
+  def readLater: CombiningState[InputT, AccumT, OutputT]
+
+}
