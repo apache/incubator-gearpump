@@ -16,28 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.planner;
+package org.apache.gearpump.sql.rel;
 
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.tools.Planner;
-import org.apache.calcite.tools.RelConversionException;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rex.RexNode;
 
-public class LogicalPlan {
 
-    public static RelNode getLogicalPlan(String query, Planner planner) throws ValidationException,
-            RelConversionException {
-        SqlNode sqlNode;
+public class GearFilterRel extends Filter implements GearRelNode {
 
-        try {
-            sqlNode = planner.parse(query);
-        } catch (SqlParseException e) {
-            throw new RuntimeException("SQL query parsing error", e);
-        }
-        SqlNode validatedSqlNode = planner.validate(sqlNode);
-
-        return planner.rel(validatedSqlNode).project();
+    public GearFilterRel(RelOptCluster cluster, RelTraitSet traits, RelNode child,
+                         RexNode condition) {
+        super(cluster, traits, child, condition);
     }
+
+    @Override
+    public Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
+        return new GearFilterRel(getCluster(), traitSet, input, condition);
+    }
+
 }
