@@ -13,13 +13,11 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Util;
-import org.junit.ComparisonFailure;
+import junit.framework.ComparisonFailure;
 
 import java.util.regex.Pattern;
 
-/**
- * Created by Buddhi on 6/8/2017.
- */
+
 public class SQLNode {
 
     private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\r\n|\r|\n");
