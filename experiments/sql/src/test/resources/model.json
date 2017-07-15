@@ -27,7 +27,7 @@
         {
           "name": "Transactions",
           "type": "custom",
-          "factory": "org.apache.calcite.table.TransactionsTableFactory",
+          "factory": "org.apache.gearpump.sql.table.TransactionsTableFactory",
           "operand": {
             "file": "resources/sales/Transactions.csv",
             "flavor": "scannable"
