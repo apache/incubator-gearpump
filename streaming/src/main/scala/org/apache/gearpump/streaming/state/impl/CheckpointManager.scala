@@ -20,10 +20,13 @@ package org.apache.gearpump.streaming.state.impl
 
 import org.apache.gearpump.TimeStamp
 import org.apache.gearpump.streaming.transaction.api.CheckpointStore
+import org.apache.gearpump.util.LogUtil
 
 /** Manage physical checkpoints to persitent storage like HDFS */
 class CheckpointManager(checkpointInterval: Long,
     checkpointStore: CheckpointStore) {
+
+  private val LOG = LogUtil.getLogger(getClass)
 
   private var maxMessageTime: Long = 0L
   private var checkpointTime: Option[Long] = None
@@ -62,3 +65,5 @@ class CheckpointManager(checkpointInterval: Long,
 
   private[impl] def getMaxMessageTime: TimeStamp = maxMessageTime
 }
+
+

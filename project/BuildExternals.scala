@@ -28,7 +28,8 @@ object BuildExternals extends sbt.Build {
     external_hbase,
     external_kafka,
     external_monoid,
-    external_hadoopfs
+    external_hadoopfs,
+    external_rabbitmq
   )
 
   lazy val external_kafka = Project(
@@ -117,6 +118,18 @@ object BuildExternals extends sbt.Build {
         libraryDependencies ++= Seq(
           "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided",
           "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion % "provided"
+        )
+      ))
+    .dependsOn(core % "provided", streaming % "test->test; provided")
+    .disablePlugins(sbtassembly.AssemblyPlugin)
+
+  lazy val external_rabbitmq = Project(
+    id = "gearpump-external-rabbitmq",
+    base = file("external/rabbitmq"),
+    settings = commonSettings ++ javadocSettings ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "com.rabbitmq" % "amqp-client" % rabbitmqVersion
         )
       ))
     .dependsOn(core % "provided", streaming % "test->test; provided")
