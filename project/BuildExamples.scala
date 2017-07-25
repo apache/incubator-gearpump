@@ -62,14 +62,42 @@ object BuildExamples extends sbt.Build {
   lazy val wordcountJava = Project(
     id = "gearpump-examples-wordcountjava",
     base = file("examples/streaming/wordcount-java"),
-    settings = exampleSettings("org.apache.gearpump.streaming.examples.wordcountjava.WordCount")
-  ).dependsOn(core % "provided", streaming % "test->test; provided")
+    settings = exampleSettings("org.apache.gearpump.streaming.examples.wordcountjava.WordCount") ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "org.apache.hadoop" % "hadoop-common" % hadoopVersion
+            exclude("org.mortbay.jetty", "jetty-util")
+            exclude("org.mortbay.jetty", "jetty")
+            exclude("org.fusesource.leveldbjni", "leveldbjni-all")
+            exclude("tomcat", "jasper-runtime")
+            exclude("commons-beanutils", "commons-beanutils-core")
+            exclude("commons-beanutils", "commons-beanutils")
+            exclude("asm", "asm")
+            exclude("org.ow2.asm", "asm"),
+          "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion
+        )
+      )
+  ).dependsOn(core % "provided", streaming % "test->test; provided", external_hadoopfs)
 
   lazy val wordcount = Project(
     id = "gearpump-examples-wordcount",
     base = file("examples/streaming/wordcount"),
-    settings = exampleSettings("org.apache.gearpump.streaming.examples.wordcount.WordCount")
-  ).dependsOn(core % "provided", streaming % "test->test; provided")
+    settings = exampleSettings("org.apache.gearpump.streaming.examples.wordcount.WordCount") ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "org.apache.hadoop" % "hadoop-common" % hadoopVersion
+            exclude("org.mortbay.jetty", "jetty-util")
+            exclude("org.mortbay.jetty", "jetty")
+            exclude("org.fusesource.leveldbjni", "leveldbjni-all")
+            exclude("tomcat", "jasper-runtime")
+            exclude("commons-beanutils", "commons-beanutils-core")
+            exclude("commons-beanutils", "commons-beanutils")
+            exclude("asm", "asm")
+            exclude("org.ow2.asm", "asm"),
+          "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion
+        )
+      )
+  ).dependsOn(core % "provided", streaming % "test->test; provided", external_hadoopfs)
 
   lazy val sol = Project(
     id = "gearpump-examples-sol",
