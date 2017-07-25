@@ -64,7 +64,7 @@ object BuildExamples extends sbt.Build {
   lazy val wordcount = Project(
     id = "gearpump-examples-wordcount",
     base = file("examples/streaming/wordcount"),
-    settings = exampleSettings("org.apache.gearpump.streaming.examples.wordcount.WordCount") ++
+    settings = exampleSettings("org.apache.gearpump.streaming.examples.wordcount.dsl.WordCount") ++
       include("examples/streaming/wordcount")
   ).dependsOn(core, streaming % "compile; test->test")
 
