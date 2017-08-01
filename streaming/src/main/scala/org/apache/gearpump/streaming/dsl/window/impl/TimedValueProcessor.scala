@@ -32,23 +32,17 @@ import org.apache.gearpump.streaming.task.TaskUtil
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * Inputs for [[WindowRunner]].
+ * Inputs for [[TimedValueProcessor]].
  */
 case class TimestampedValue[T](value: T, timestamp: Instant)
 
 /**
- * Outputs triggered by [[WindowRunner]]
+ * Outputs triggered by [[TimedValueProcessor]]
  */
 case class TriggeredOutputs[T](outputs: TraversableOnce[TimestampedValue[T]],
     watermark: Instant)
 
-/**
- * This is responsible for executing window calculation.
- *   1. Groups elements into windows as defined by window function
- *   2. Applies window calculation to each group
- *   3. Emits results on triggering
- */
-trait WindowRunner[IN, OUT] extends java.io.Serializable {
+trait TimedValueProcessor[IN, OUT] extends java.io.Serializable {
 
   def process(timestampedValue: TimestampedValue[IN]): Unit
 
@@ -59,8 +53,8 @@ trait WindowRunner[IN, OUT] extends java.io.Serializable {
  * A composite WindowRunner that first executes its left child and feeds results
  * into result child.
  */
-case class AndThen[IN, MIDDLE, OUT](left: WindowRunner[IN, MIDDLE],
-    right: WindowRunner[MIDDLE, OUT]) extends WindowRunner[IN, OUT] {
+case class AndThen[IN, MIDDLE, OUT](left: TimedValueProcessor[IN, MIDDLE],
+    right: TimedValueProcessor[MIDDLE, OUT]) extends TimedValueProcessor[IN, OUT] {
 
   override def process(timestampedValue: TimestampedValue[IN]): Unit = {
     left.process(timestampedValue)
@@ -73,13 +67,35 @@ case class AndThen[IN, MIDDLE, OUT](left: WindowRunner[IN, MIDDLE],
   }
 }
 
+class DirectProcessor[IN, OUT](fnRunner: FunctionRunner[IN, OUT])
+  extends TimedValueProcessor[IN, OUT] {
+
+  private val buffer = ArrayBuffer.empty[TimestampedValue[OUT]]
+
+  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
+    fnRunner.setup()
+    fnRunner.process(timestampedValue.value)
+      .map(TimestampedValue(_, timestampedValue.timestamp))
+      .foreach(tv => buffer.append(tv))
+    fnRunner.finish()
+    fnRunner.teardown()
+  }
+
+  override def trigger(time: Instant): TriggeredOutputs[OUT] = {
+    TriggeredOutputs(buffer, time)
+  }
+}
+
 /**
- * Default implementation for [[WindowRunner]].
+ * This is responsible for executing window calculation.
+ *   1. Groups elements into windows as defined by window function
+ *   2. Applies window calculation to each group
+ *   3. Emits results on triggering
  */
-class DefaultWindowRunner[IN, OUT](
+class WindowProcessor[IN, OUT](
     windows: Windows,
     fnRunner: FunctionRunner[IN, OUT])
-  extends WindowRunner[IN, OUT] {
+  extends TimedValueProcessor[IN, OUT] {
 
   private val windowFn = windows.windowFn
   private val windowInputs = new TreeSortedMap[Window, FastList[TimestampedValue[IN]]]

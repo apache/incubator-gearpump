@@ -22,7 +22,7 @@ import java.time.Instant
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
-import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TriggeredOutputs, WindowRunner}
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TriggeredOutputs, TimedValueProcessor}
 import org.mockito.Mockito.{verify, when}
 import org.scalacheck.Gen
 import org.scalatest.{Matchers, PropSpec}
@@ -36,7 +36,7 @@ class TransformTaskSpec extends PropSpec with PropertyChecks with Matchers with 
     val watermarkGen = longGen.map(Instant.ofEpochMilli)
 
     forAll(watermarkGen) { (watermark: Instant) =>
-      val windowRunner = mock[WindowRunner[Any, Any]]
+      val windowRunner = mock[TimedValueProcessor[Any, Any]]
       val context = MockUtil.mockTaskContext
       val config = UserConfig.empty
       val task = new TransformTask[Any, Any](windowRunner, context, config)

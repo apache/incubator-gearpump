@@ -21,12 +21,11 @@ package org.apache.gearpump.streaming.dsl.plan
 import akka.actor.ActorSystem
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Processor.DefaultProcessor
-import org.apache.gearpump.streaming.dsl.plan.functions.{AndThen, DummyRunner, FunctionRunner}
-import org.apache.gearpump.streaming.dsl.window.impl.{AndThen => WindowRunnerAT}
+import org.apache.gearpump.streaming.dsl.plan.functions.{AndThen, DummyRunner, FoldRunner, FunctionRunner}
+import org.apache.gearpump.streaming.dsl.window.impl.{WindowProcessor, DirectProcessor, TimedValueProcessor, AndThen => WindowRunnerAT}
 import org.apache.gearpump.streaming.{Constants, Processor}
 import org.apache.gearpump.streaming.dsl.task.{GroupByTask, TransformTask}
 import org.apache.gearpump.streaming.dsl.window.api.{GlobalWindows, Windows}
-import org.apache.gearpump.streaming.dsl.window.impl.{DefaultWindowRunner, WindowRunner}
 import org.apache.gearpump.streaming.sink.{DataSink, DataSinkProcessor}
 import org.apache.gearpump.streaming.source.{DataSource, DataSourceTask}
 import org.apache.gearpump.streaming.task.Task
@@ -134,39 +133,61 @@ case class DataSourceOp(
     dataSource: DataSource,
     parallelism: Int = 1,
     description: String = "source",
-    userConfig: UserConfig = UserConfig.empty)
+    userConfig: UserConfig = UserConfig.empty,
+    windowRunner: Option[TimedValueProcessor[Any, Any]] = None)
   extends Op {
 
   override def chain(other: Op)(implicit system: ActorSystem): Op = {
     other match {
-      case op: WindowTransformOp[_, _] =>
+      case op: WindowTransformOp[Any, Any] =>
+        val chainedRunner =
+          windowRunner.map(WindowRunnerAT(_, op.windowRunner)).getOrElse(op.windowRunner)
         DataSourceOp(
           dataSource,
           parallelism,
           Op.concatenate(description, op.description),
           Op.concatenate(userConfig.withValue(Constants.GEARPUMP_STREAMING_OPERATOR,
-            op.windowRunner),
-            op.userConfig))
-      case op: TransformOp[_, _] =>
-        chain(
-          WindowOp(GlobalWindows()).chain(op))
+            chainedRunner),
+            op.userConfig),
+        Some(chainedRunner))
+      case op: TransformOp[Any, Any] =>
+        val fn = op.fn
+        // WindowProcessor is required for FoldRunner
+        // AndThen could be composite FoldRunners
+        if (!fn.isInstanceOf[FoldRunner[Any, Any]] && !fn.isInstanceOf[AndThen[Any, Any, Any]]) {
+          val runner = new DirectProcessor(op.fn)
+          val chainedRunner =
+            windowRunner.map(WindowRunnerAT(_, runner)).getOrElse(runner)
+          DataSourceOp(
+            dataSource,
+            parallelism,
+            Op.concatenate(description, op.description),
+            Op.concatenate(userConfig.withValue(Constants.GEARPUMP_STREAMING_OPERATOR,
+              chainedRunner),
+              op.userConfig),
+            Some(chainedRunner)
+          )
+        } else {
+          chain(
+            WindowOp(GlobalWindows()).chain(op))
+        }
       case op: WindowOp =>
         chain(
           op.chain(TransformOp(new DummyRunner[Any]())))
       case op: TransformWindowTransformOp[_, _, _] =>
-        chain(
-          WindowOp(GlobalWindows()).chain(op.transformOp)
-            .chain(op.windowTransformOp))
+        chain(op.transformOp).chain(op.windowTransformOp)
       case _ =>
         throw new OpChainException(this, other)
     }
   }
 
   override def toProcessor(implicit system: ActorSystem): Processor[_ <: Task] = {
-    Op.withGlobalWindowsDummyRunner(this, userConfig,
+    if (userConfig.getValue(Constants.GEARPUMP_STREAMING_OPERATOR).isEmpty) {
+      chain(TransformOp(new DummyRunner[Any])).toProcessor
+    } else {
       Processor[DataSourceTask[Any, Any]](parallelism, description,
         userConfig.withValue(Constants.GEARPUMP_STREAMING_SOURCE, dataSource))
-    )
+    }
   }
 }
 
@@ -212,7 +233,7 @@ case class TransformOp[IN, OUT](
           Op.concatenate(userConfig, op.userConfig))
       case op: WindowOp =>
         TransformWindowTransformOp(this,
-          WindowTransformOp(new DefaultWindowRunner[OUT, OUT](
+          WindowTransformOp(new WindowProcessor[OUT, OUT](
             op.windows, new DummyRunner[OUT]
           ), op.description, op.userConfig))
       case op: TransformWindowTransformOp[OUT, _, _] =>
@@ -244,13 +265,13 @@ case class WindowOp(
   override def chain(other: Op)(implicit system: ActorSystem): Op = {
     other match {
       case op: TransformOp[_, _] =>
-        WindowTransformOp(new DefaultWindowRunner(windows, op.fn),
+        WindowTransformOp(new WindowProcessor(windows, op.fn),
           Op.concatenate(description, op.description),
           Op.concatenate(userConfig, op.userConfig))
       case op: WindowOp =>
         chain(TransformOp(new DummyRunner[Any])).chain(op.chain(TransformOp(new DummyRunner[Any])))
       case op: TransformWindowTransformOp[_, _, _] =>
-        WindowTransformOp(new DefaultWindowRunner(windows, op.transformOp.fn),
+        WindowTransformOp(new WindowProcessor(windows, op.transformOp.fn),
           Op.concatenate(description, op.transformOp.description),
           Op.concatenate(userConfig, op.transformOp.userConfig)).chain(op.windowTransformOp)
       case _ =>
@@ -352,7 +373,7 @@ case class MergeOp(
  * it will be translated to a [[org.apache.gearpump.streaming.dsl.task.TransformTask]].
  */
 private case class WindowTransformOp[IN, OUT](
-    windowRunner: WindowRunner[IN, OUT],
+    windowRunner: TimedValueProcessor[IN, OUT],
     description: String,
     userConfig: UserConfig) extends Op {
 

@@ -46,7 +46,7 @@ class DefaultWindowRunnerSpec extends PropSpec with PropertyChecks
     implicit val system = MockUtil.system
     val reduce = ReduceFunction[KV]((kv1, kv2) => (kv1._1, kv1._2 + kv2._2))
     val windows = SessionWindows.apply(Duration.ofMillis(4L))
-    val windowRunner = new DefaultWindowRunner[KV, Option[KV]](windows,
+    val windowRunner = new WindowProcessor[KV, Option[KV]](windows,
       new FoldRunner[KV, Option[KV]](reduce, "reduce"))
 
     data.foreach(m => windowRunner.process(TimestampedValue(m.value.asInstanceOf[KV], m.timestamp)))

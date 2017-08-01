@@ -23,7 +23,7 @@ import java.time.Instant
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
-import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TriggeredOutputs, WindowRunner}
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TriggeredOutputs, TimedValueProcessor}
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar
@@ -40,7 +40,7 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
       val dataSource = mock[DataSource]
       val config = UserConfig.empty
         .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-        val runner = mock[WindowRunner[Any, Any]]
+        val runner = mock[TimedValueProcessor[Any, Any]]
       val sourceTask = new DataSourceTask[Any, Any](dataSource, runner, taskContext, config)
 
       sourceTask.onStart(startTime)
@@ -57,7 +57,7 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
         val dataSource = mock[DataSource]
         val config = UserConfig.empty
           .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-        val runner = mock[WindowRunner[Any, Any]]
+        val runner = mock[TimedValueProcessor[Any, Any]]
         val sourceTask = new DataSourceTask[Any, Any](dataSource, runner, taskContext, config)
         val msg = Message(str, timestamp)
         when(dataSource.read()).thenReturn(msg)
@@ -79,7 +79,7 @@ class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with
     val dataSource = mock[DataSource]
     val config = UserConfig.empty
       .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-    val runner = mock[WindowRunner[Any, Any]]
+    val runner = mock[TimedValueProcessor[Any, Any]]
     val sourceTask = new DataSourceTask[Any, Any](dataSource, runner, taskContext, config)
 
     sourceTask.onStop()

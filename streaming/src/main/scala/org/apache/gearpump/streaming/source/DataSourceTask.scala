@@ -23,7 +23,7 @@ import java.time.Instant
 import org.apache.gearpump._
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants._
-import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, WindowRunner}
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TimedValueProcessor}
 import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
 
 /**
@@ -40,7 +40,7 @@ import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
  */
 class DataSourceTask[IN, OUT] private[source](
     source: DataSource,
-    windowRunner: WindowRunner[IN, OUT],
+    windowRunner: TimedValueProcessor[IN, OUT],
     context: TaskContext,
     conf: UserConfig)
   extends Task(context, conf) {
@@ -48,7 +48,7 @@ class DataSourceTask[IN, OUT] private[source](
   def this(context: TaskContext, conf: UserConfig) = {
     this(
       conf.getValue[DataSource](GEARPUMP_STREAMING_SOURCE)(context.system).get,
-      conf.getValue[WindowRunner[IN, OUT]](GEARPUMP_STREAMING_OPERATOR)(context.system).get,
+      conf.getValue[TimedValueProcessor[IN, OUT]](GEARPUMP_STREAMING_OPERATOR)(context.system).get,
       context, conf
     )
   }

@@ -25,7 +25,7 @@ import com.gs.collections.impl.map.mutable.UnifiedMap
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants.{GEARPUMP_STREAMING_GROUPBY_FUNCTION, GEARPUMP_STREAMING_OPERATOR}
-import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, WindowRunner}
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TimedValueProcessor}
 import org.apache.gearpump.streaming.source.Watermark
 import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
 
@@ -44,8 +44,8 @@ class GroupByTask[IN, GROUP, OUT](
     )
   }
 
-  private val groups: UnifiedMap[GROUP, WindowRunner[IN, OUT]] =
-    new UnifiedMap[GROUP, WindowRunner[IN, OUT]]
+  private val groups: UnifiedMap[GROUP, TimedValueProcessor[IN, OUT]] =
+    new UnifiedMap[GROUP, TimedValueProcessor[IN, OUT]]
 
   override def onNext(message: Message): Unit = {
     val input = message.value.asInstanceOf[IN]
@@ -53,7 +53,7 @@ class GroupByTask[IN, GROUP, OUT](
 
     if (!groups.containsKey(group)) {
       groups.put(group,
-        userConfig.getValue[WindowRunner[IN, OUT]](
+        userConfig.getValue[TimedValueProcessor[IN, OUT]](
           GEARPUMP_STREAMING_OPERATOR)(taskContext.system).get)
     }
 
@@ -65,8 +65,8 @@ class GroupByTask[IN, GROUP, OUT](
     if (groups.isEmpty && watermark == Watermark.MAX) {
       taskContext.updateWatermark(Watermark.MAX)
     } else {
-      groups.values.forEach(new Consumer[WindowRunner[IN, OUT]] {
-        override def accept(runner: WindowRunner[IN, OUT]): Unit = {
+      groups.values.forEach(new Consumer[TimedValueProcessor[IN, OUT]] {
+        override def accept(runner: TimedValueProcessor[IN, OUT]): Unit = {
           TaskUtil.trigger(watermark, runner, taskContext)
         }
       })

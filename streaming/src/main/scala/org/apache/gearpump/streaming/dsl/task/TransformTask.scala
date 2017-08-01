@@ -22,16 +22,16 @@ import java.time.Instant
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants._
-import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, WindowRunner}
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TimedValueProcessor}
 import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
 
 class TransformTask[IN, OUT](
-    runner: WindowRunner[IN, OUT],
+    runner: TimedValueProcessor[IN, OUT],
     taskContext: TaskContext, userConf: UserConfig) extends Task(taskContext, userConf) {
 
   def this(context: TaskContext, conf: UserConfig) = {
     this(
-      conf.getValue[WindowRunner[IN, OUT]](GEARPUMP_STREAMING_OPERATOR)(context.system).get,
+      conf.getValue[TimedValueProcessor[IN, OUT]](GEARPUMP_STREAMING_OPERATOR)(context.system).get,
       context, conf
     )
   }
