@@ -145,16 +145,8 @@ object BuildExamples extends sbt.Build {
     settings = exampleSettings("org.apache.gearpump.streaming.examples.state.MessageCountApp") ++
       Seq(
         libraryDependencies ++= Seq(
-          "org.apache.hadoop" % "hadoop-common" % hadoopVersion
-            exclude("org.mortbay.jetty", "jetty-util")
-            exclude("org.mortbay.jetty", "jetty")
-            exclude("org.fusesource.leveldbjni", "leveldbjni-all")
-            exclude("tomcat", "jasper-runtime")
-            exclude("commons-beanutils", "commons-beanutils-core")
-            exclude("commons-beanutils", "commons-beanutils")
-            exclude("asm", "asm")
-            exclude("org.ow2.asm", "asm"),
-          "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion
+          "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided",
+          "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion % "provided"
         )
       )
   ).dependsOn(core % "provided", streaming % "provided; test->test",
@@ -171,8 +163,8 @@ object BuildExamples extends sbt.Build {
   private def include(files: String*): Seq[Def.Setting[_]] = Seq(
     assemblyExcludedJars in assembly := {
       val cp = (fullClasspath in assembly).value
-      cp.filterNot{p =>
-        files.exists(p.data.getAbsolutePath.contains)}
+      cp.filterNot(p =>
+        files.exists(p.data.getAbsolutePath.contains))
     }
   )
 }
