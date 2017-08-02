@@ -21,12 +21,11 @@ package org.apache.gearpump.cluster.embedded
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.typesafe.config.{Config, ConfigValueFactory}
-
 import org.apache.gearpump.cluster.ClusterConfig
 import org.apache.gearpump.cluster.client.ClientContext
+import org.apache.gearpump.cluster.embedded.EmbeddedRuntimeEnvironemnt.EmbeddedClientContext
 import org.apache.gearpump.cluster.master.{Master => MasterActor}
 import org.apache.gearpump.cluster.worker.{Worker => WorkerActor}
 import org.apache.gearpump.util.Constants.{GEARPUMP_CLUSTER_EXECUTOR_WORKER_SHARE_SAME_PROCESS, GEARPUMP_CLUSTER_MASTERS, GEARPUMP_METRIC_ENABLED, MASTER}
@@ -36,33 +35,21 @@ import org.apache.gearpump.util.{LogUtil, Util}
  * Create a in-process cluster with single worker
  */
 class EmbeddedCluster(inputConfig: Config) {
-
-  private val workerCount: Int = 1
-  private var _master: ActorRef = null
-  private var _system: ActorSystem = null
-  private var _config: Config = null
-
   private val LOG = LogUtil.getLogger(getClass)
+  private val workerCount: Int = 1
+  private val port = Util.findFreePort().get
+  private[embedded] val config: Config = getConfig(inputConfig, port)
+  private[embedded] val system: ActorSystem = ActorSystem(MASTER, config)
+  private[embedded] val master: ActorRef = system.actorOf(Props[MasterActor], MASTER)
 
-  def start(): Unit = {
-    val port = Util.findFreePort().get
-    val akkaConf = getConfig(inputConfig, port)
-    _config = akkaConf
-    val system = ActorSystem(MASTER, akkaConf)
-
-    val master = system.actorOf(Props[MasterActor], MASTER)
-
-    0.until(workerCount).foreach { id =>
-      system.actorOf(Props(classOf[WorkerActor], master), classOf[WorkerActor].getSimpleName + id)
-    }
-    this._master = master
-    this._system = system
-
-    LOG.info("=================================")
-    LOG.info("Local Cluster is started at: ")
-    LOG.info(s"                 127.0.0.1:$port")
-    LOG.info(s"To see UI, run command: services -master 127.0.0.1:$port")
+  0.until(workerCount).foreach { id =>
+    system.actorOf(Props(classOf[WorkerActor], master), classOf[WorkerActor].getSimpleName + id)
   }
+
+  LOG.info("=================================")
+  LOG.info("Local Cluster is started at: ")
+  LOG.info(s"                 127.0.0.1:$port")
+  LOG.info(s"To see UI, run command: services -master 127.0.0.1:$port")
 
   private def getConfig(inputConfig: Config, port: Int): Config = {
     val config = inputConfig.
@@ -77,14 +64,10 @@ class EmbeddedCluster(inputConfig: Config) {
     config
   }
 
-  def newClientContext: ClientContext = {
-    ClientContext(_config, _system, _master)
-  }
-
   def stop(): Unit = {
-    _system.stop(_master)
-    _system.terminate()
-    Await.result(_system.whenTerminated, Duration.Inf)
+    system.stop(master)
+    system.terminate()
+    Await.result(system.whenTerminated, Duration.Inf)
   }
 }
 
