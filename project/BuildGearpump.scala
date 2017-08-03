@@ -55,14 +55,16 @@ object BuildGearpump extends sbt.Build {
       pgpSecretRing := file("./secring.asc"),
       pgpPublicRing := file("./pubring.asc"),
       scalacOptions ++= Seq(
-        "-deprecation",
-        "-encoding", "UTF-8",
-        "-feature",
-        "-language:existentials",
-        "-language:implicitConversions",
-        "-Yclosure-elim",
-        "-Yinline",
-        "-Ywarn-unused-import"),
+        "-deprecation", // Emit warning and location for usages of deprecated APIs
+        "-encoding", "UTF-8", // Specify character encoding used by source files
+        "-feature", // Emit warning and location for usages of features
+                    // that should be imported explicitly
+        "-language:existentials", // Enable existential types
+        "-language:implicitConversions", // Enable implicit conversions
+        "-Yclosure-elim", // Perform closure elimination
+        "-Yinline", // Perform inlining when possible
+        "-Ywarn-unused-import" // Warn on unused imports
+      ),
       publishMavenStyle := true,
 
       pgpPassphrase := Option(System.getenv().get("PASSPHRASE")).map(_.toArray),
