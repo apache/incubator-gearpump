@@ -54,7 +54,15 @@ object BuildGearpump extends sbt.Build {
       useGpg := false,
       pgpSecretRing := file("./secring.asc"),
       pgpPublicRing := file("./pubring.asc"),
-      scalacOptions ++= Seq("-Yclosure-elim", "-Yinline"),
+      scalacOptions ++= Seq(
+        "-deprecation",
+        "-encoding", "UTF-8",
+        "-feature",
+        "-language:existentials",
+        "-language:implicitConversions",
+        "-Yclosure-elim",
+        "-Yinline",
+        "-Ywarn-unused-import"),
       publishMavenStyle := true,
 
       pgpPassphrase := Option(System.getenv().get("PASSPHRASE")).map(_.toArray),
@@ -74,29 +82,31 @@ object BuildGearpump extends sbt.Build {
         }
       },
 
-      publishArtifact in Test := true,
-
       pomExtra := {
+        // scalastyle:off line.size.limit
         <url>https://github.com/apache/incubator-gearpump</url>
-          <licenses>
-            <license>
-              <name>Apache 2</name>
-              <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            </license>
-          </licenses>
-          <scm>
-            <connection>scm:git://git.apache.org/incubator-gearpump.git</connection>
-            <developerConnection>scm:git:git@github.com:apache/incubator-gearpump</developerConnection>
-            <url>github.com/apache/incubator-gearpump</url>
-          </scm>
-          <developers>
-            <developer>
-              <id>gearpump</id>
-              <name>Gearpump Team</name>
-              <url>http://gearpump.incubator.apache.org/community.html#who-we-are</url>
-            </developer>
-          </developers>
+        <licenses>
+          <license>
+            <name>Apache 2</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          </license>
+        </licenses>
+        <scm>
+          <connection>scm:git://git.apache.org/incubator-gearpump.git</connection>
+          <developerConnection>scm:git:git@github.com:apache/incubator-gearpump</developerConnection>
+          <url>github.com/apache/incubator-gearpump</url>
+        </scm>
+        <developers>
+          <developer>
+            <id>gearpump</id>
+            <name>Gearpump Team</name>
+            <url>http://gearpump.incubator.apache.org/community.html#who-we-are</url>
+          </developer>
+        </developers>
+        // scalastyle:on line.size.limit
       },
+
+      publishArtifact in Test := true,
 
       pomPostProcess := {
         (node: xml.Node) => changeShadedDeps(
@@ -194,7 +204,7 @@ object BuildGearpump extends sbt.Build {
 
         libraryDependencies ++= Seq(
           "com.goldmansachs" % "gs-collections" % gsCollectionsVersion
-        ),
+        ) ++ annotationDependencies,
 
         pomPostProcess := {
           (node: xml.Node) => changeShadedDeps(

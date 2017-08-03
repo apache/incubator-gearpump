@@ -160,11 +160,12 @@ object BuildExamples extends sbt.Build {
         CrossVersion.binaryScalaVersion(scalaVersion.value)
     )
 
-  private def include(files: String*): Seq[Def.Setting[_]] = Seq(
-    assemblyExcludedJars in assembly := {
-      val cp = (fullClasspath in assembly).value
-      cp.filterNot(p =>
-        files.exists(p.data.getAbsolutePath.contains))
-    }
-  )
+  private def include(files: String*): Seq[Def.Setting[_]] =
+    Seq(
+      assemblyExcludedJars in assembly := {
+        val cp = (fullClasspath in assembly).value
+        cp.filterNot(p =>
+          files.exists(p.data.getAbsolutePath.contains))
+      }
+    )
 }
