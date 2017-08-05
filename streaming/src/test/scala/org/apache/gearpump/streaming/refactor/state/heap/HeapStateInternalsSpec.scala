@@ -22,7 +22,7 @@ import java.util
 import java.util.{Iterator, Map}
 
 import com.google.common.collect.Table
-import org.apache.gearpump.streaming.refactor.coder.StringUtf8Coder
+import org.apache.gearpump.streaming.coder.StringUtf8Coder
 import org.apache.gearpump.streaming.refactor.state.api.{BagState, SetState, ValueState}
 import org.apache.gearpump.streaming.refactor.state.{StateNamespaces, StateTags}
 import org.scalatest.mock.MockitoSugar

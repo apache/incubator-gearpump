@@ -25,7 +25,7 @@ import java.util.Map
 
 import com.google.common.collect.Table
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.refactor.coder._
+import org.apache.gearpump.streaming.coder._
 import org.apache.gearpump.streaming.refactor.state.api.StateInternals
 import org.apache.gearpump.streaming.refactor.state.heap.HeapStateInternalsFactory
 import org.apache.gearpump.streaming.state.impl.{CheckpointManager, PersistentStateConfig}

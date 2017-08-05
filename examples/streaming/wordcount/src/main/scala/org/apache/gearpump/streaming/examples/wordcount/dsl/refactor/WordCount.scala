@@ -19,7 +19,7 @@
 package org.apache.gearpump.streaming.examples.wordcount.dsl.refactor
 
 import org.apache.commons.logging.{Log, LogFactory}
-import org.apache.gearpump.streaming.refactor.coder.{StringUtf8Coder, VarLongCoder}
+import org.apache.gearpump.streaming.coder.{StringUtf8Coder, VarLongCoder}
 import org.apache.gearpump.streaming.refactor.dsl.api.functions.MapWithStateFunction
 import org.apache.gearpump.streaming.refactor.dsl.scalaapi.StreamApp
 import org.apache.gearpump.streaming.refactor.dsl.scalaapi.functions.FlatMapWithStateFunction

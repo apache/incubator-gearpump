@@ -16,26 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.util.List;
 
-public class IterableCoder<T> extends IterableLikeCoder<T, Iterable<T>> {
+public class ListCoder<T> extends IterableLikeCoder<T, List<T>> {
 
-    public static <T> IterableCoder<T> of(Coder<T> elemCoder) {
-        return new IterableCoder<>(elemCoder);
+    public static <T> ListCoder<T> of(Coder<T> elemCoder) {
+        return new ListCoder<>(elemCoder);
     }
 
     /////////////////////////////////////////////////////////////////////////////
     // Internal operations below here.
 
     @Override
-    protected final Iterable<T> decodeToIterable(List<T> decodedElements) {
+    protected final List<T> decodeToIterable(List<T> decodedElements) {
         return decodedElements;
     }
 
-    protected IterableCoder(Coder<T> elemCoder) {
-        super(elemCoder, "Iterable");
+    protected ListCoder(Coder<T> elemCoder) {
+        super(elemCoder, "List");
+    }
+
+    @Override
+    public void verifyDeterministic() throws NonDeterministicException {
+        verifyDeterministic(this, "ListCoder.elemCoder must be deterministic",
+                (Iterable<Coder<?>>)getElemCoder());
     }
 
 }

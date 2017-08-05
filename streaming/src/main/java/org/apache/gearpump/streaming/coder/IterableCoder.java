@@ -16,15 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
-import java.util.Iterator;
-import java.util.Observable;
+import java.util.List;
 
-public abstract class ElementByteSizeObservableIterator<V>
-        extends Observable implements Iterator<V> {
-    protected final void notifyValueReturned(long byteSize) {
-        setChanged();
-        notifyObservers(byteSize);
+public class IterableCoder<T> extends IterableLikeCoder<T, Iterable<T>> {
+
+    public static <T> IterableCoder<T> of(Coder<T> elemCoder) {
+        return new IterableCoder<>(elemCoder);
     }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // Internal operations below here.
+
+    @Override
+    protected final Iterable<T> decodeToIterable(List<T> decodedElements) {
+        return decodedElements;
+    }
+
+    protected IterableCoder(Coder<T> elemCoder) {
+        super(elemCoder, "Iterable");
+    }
+
 }

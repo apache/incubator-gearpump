@@ -24,7 +24,7 @@ import java.util.{ArrayList, HashSet, List, Set}
 import java.lang.Iterable
 
 import com.google.common.collect.{HashBasedTable, Table}
-import org.apache.gearpump.streaming.refactor.coder.Coder
+import org.apache.gearpump.streaming.coder.Coder
 import org.apache.gearpump.streaming.refactor.state.InMemoryGlobalStateInternals.InMemoryStateBinder
 import org.apache.gearpump.streaming.refactor.state.api._
 

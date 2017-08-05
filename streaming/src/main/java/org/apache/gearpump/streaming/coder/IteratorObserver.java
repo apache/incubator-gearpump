@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.util.Observable;
 import java.util.Observer;

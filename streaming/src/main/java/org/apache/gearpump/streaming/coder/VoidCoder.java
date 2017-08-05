@@ -16,44 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+public class VoidCoder extends AtomicCoder<Void> {
 
-public class BigIntegerCoder extends AtomicCoder<BigInteger> {
-
-    public static BigIntegerCoder of() {
+    public static VoidCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final BigIntegerCoder INSTANCE = new BigIntegerCoder();
-    private static final ByteArrayCoder BYTE_ARRAY_CODER = ByteArrayCoder.of();
+    private static final VoidCoder INSTANCE = new VoidCoder();
 
-    private BigIntegerCoder() {
+    private VoidCoder() {
     }
 
     @Override
-    public void encode(BigInteger value, OutputStream outStream)
-            throws CoderException {
-        checkNotNull(value, String.format("cannot encode a null %s", BigInteger.class.getSimpleName()));
-        BYTE_ARRAY_CODER.encode(value.toByteArray(), outStream);
+    public void encode(Void value, OutputStream outStream) {
+        // Nothing to write!
     }
 
     @Override
-    public BigInteger decode(InputStream inStream)
-            throws CoderException {
-        return new BigInteger(BYTE_ARRAY_CODER.decode(inStream));
+    public Void decode(InputStream inStream) {
+        // Nothing to read!
+        return null;
     }
 
     @Override
     public void verifyDeterministic() {
-        BYTE_ARRAY_CODER.verifyDeterministic();
     }
 
     @Override
@@ -62,13 +55,12 @@ public class BigIntegerCoder extends AtomicCoder<BigInteger> {
     }
 
     @Override
-    public boolean isRegisterByteSizeObserverCheap(BigInteger value) {
+    public boolean isRegisterByteSizeObserverCheap(Void value) {
         return true;
     }
 
     @Override
-    protected long getEncodedElementByteSize(BigInteger value) {
-        checkNotNull(value, String.format("cannot encode a null %s", BigInteger.class.getSimpleName()));
-        return BYTE_ARRAY_CODER.getEncodedElementByteSize(value.toByteArray());
+    protected long getEncodedElementByteSize(Void value) {
+        return 0;
     }
 }

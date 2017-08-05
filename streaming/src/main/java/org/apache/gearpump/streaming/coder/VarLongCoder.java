@@ -16,48 +16,53 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.io.*;
+import java.util.Collections;
+import java.util.List;
 
-public class BigEndianIntegerCoder extends AtomicCoder<Integer> {
-
-    public static BigEndianIntegerCoder of() {
+public class VarLongCoder extends StructuredCoder<Long> {
+    public static VarLongCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final BigEndianIntegerCoder INSTANCE = new BigEndianIntegerCoder();
+    private static final VarLongCoder INSTANCE = new VarLongCoder();
 
-    private BigEndianIntegerCoder() {}
+    private VarLongCoder() {}
 
     @Override
-    public void encode(Integer value, OutputStream outStream)
+    public void encode(Long value, OutputStream outStream)
             throws CoderException {
         if (value == null) {
-            throw new CoderException("cannot encode a null Integer");
+            throw new CoderException("cannot encode a null Long");
         }
-
         try {
-            new DataOutputStream(outStream).writeInt(value);
+            VarInt.encode(value.longValue(), outStream);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new CoderException(e);
         }
     }
 
     @Override
-    public Integer decode(InputStream inStream)
+    public Long decode(InputStream inStream)
             throws CoderException {
         try {
-            return new DataInputStream(inStream).readInt();
+            return VarInt.decodeLong(inStream);
         } catch (EOFException | UTFDataFormatException exn) {
             // These exceptions correspond to decoding problems, so change
             // what kind of exception they're branded as.
             throw new CoderException(exn);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new CoderException(e);
         }
+    }
+
+    @Override
+    public List<? extends Coder<?>> getCoderArguments() {
+        return Collections.emptyList();
     }
 
     @Override
@@ -69,15 +74,15 @@ public class BigEndianIntegerCoder extends AtomicCoder<Integer> {
     }
 
     @Override
-    public boolean isRegisterByteSizeObserverCheap(Integer value) {
+    public boolean isRegisterByteSizeObserverCheap(Long value) {
         return true;
     }
 
     @Override
-    protected long getEncodedElementByteSize(Integer value) {
+    public long getEncodedElementByteSize(Long value) {
         if (value == null) {
-            throw new CoderException("cannot encode a null Integer");
+            throw new CoderException("cannot encode a null Long");
         }
-        return 4;
+        return VarInt.getLength(value.longValue());
     }
 }

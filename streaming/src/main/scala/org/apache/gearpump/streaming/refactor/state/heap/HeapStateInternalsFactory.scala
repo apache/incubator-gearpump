@@ -18,7 +18,7 @@
 
 package org.apache.gearpump.streaming.refactor.state.heap
 
-import org.apache.gearpump.streaming.refactor.coder.{Coder, CoderException, CoderUtils}
+import org.apache.gearpump.streaming.coder.{Coder, CoderException, CoderUtils}
 import org.apache.gearpump.streaming.refactor.state.api.{StateInternals, StateInternalsFactory}
 import java.util._
 

@@ -16,41 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.io.*;
 
-public class DoubleCoder extends AtomicCoder<Double> {
+public class BigEndianLongCoder extends AtomicCoder<Long> {
 
-    public static DoubleCoder of() {
+    public static BigEndianLongCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final DoubleCoder INSTANCE = new DoubleCoder();
+    private static final BigEndianLongCoder INSTANCE = new BigEndianLongCoder();
 
-    private DoubleCoder() {
-    }
+    private BigEndianLongCoder() {}
 
     @Override
-    public void encode(Double value, OutputStream outStream)
+    public void encode(Long value, OutputStream outStream)
             throws CoderException {
         if (value == null) {
-            throw new CoderException("cannot encode a null Double");
+            throw new CoderException("cannot encode a null Long");
         }
         try {
-            new DataOutputStream(outStream).writeDouble(value);
+            new DataOutputStream(outStream).writeLong(value);
         } catch (IOException e) {
             throw new CoderException(e);
         }
     }
 
     @Override
-    public Double decode(InputStream inStream)
+    public Long decode(InputStream inStream)
             throws CoderException {
         try {
-            return new DataInputStream(inStream).readDouble();
+            return new DataInputStream(inStream).readLong();
         } catch (EOFException | UTFDataFormatException exn) {
             // These exceptions correspond to decoding problems, so change
             // what kind of exception they're branded as.
@@ -62,8 +61,6 @@ public class DoubleCoder extends AtomicCoder<Double> {
 
     @Override
     public void verifyDeterministic() {
-        throw new NonDeterministicException(this,
-                "Floating point encodings are not guaranteed to be deterministic.");
     }
 
     @Override
@@ -72,14 +69,14 @@ public class DoubleCoder extends AtomicCoder<Double> {
     }
 
     @Override
-    public boolean isRegisterByteSizeObserverCheap(Double value) {
+    public boolean isRegisterByteSizeObserverCheap(Long value) {
         return true;
     }
 
     @Override
-    protected long getEncodedElementByteSize(Double value) {
+    protected long getEncodedElementByteSize(Long value) {
         if (value == null) {
-            throw new CoderException("cannot encode a null Double");
+            throw new CoderException("cannot encode a null Long");
         }
         return 8;
     }

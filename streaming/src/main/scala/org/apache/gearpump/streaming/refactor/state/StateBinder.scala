@@ -18,7 +18,7 @@
 
 package org.apache.gearpump.streaming.refactor.state
 
-import org.apache.gearpump.streaming.refactor.coder.Coder
+import org.apache.gearpump.streaming.coder.Coder
 import org.apache.gearpump.streaming.refactor.state.api.{BagState, MapState, SetState, ValueState}
 
 trait StateBinder {

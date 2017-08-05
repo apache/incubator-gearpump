@@ -16,40 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
-import com.google.common.io.BaseEncoding;
+import java.util.Iterator;
+import java.util.Observable;
 
-import java.util.Arrays;
-
-public class StructuralByteArray {
-    byte[] value;
-
-    public StructuralByteArray(byte[] value) {
-        this.value = value;
-    }
-
-    public byte[] getValue() {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof StructuralByteArray) {
-            StructuralByteArray that = (StructuralByteArray) o;
-            return Arrays.equals(this.value, that.value);
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(value);
-    }
-
-    @Override
-    public String toString() {
-        return "base64:" + BaseEncoding.base64().encode(value);
+public abstract class ElementByteSizeObservableIterator<V>
+        extends Observable implements Iterator<V> {
+    protected final void notifyValueReturned(long byteSize) {
+        setChanged();
+        notifyObservers(byteSize);
     }
 }

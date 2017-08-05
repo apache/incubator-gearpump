@@ -26,7 +26,7 @@ import java.util._
 import java.util.Objects
 
 import com.google.common.collect.Table
-import org.apache.gearpump.streaming.refactor.coder.{Coder, ListCoder, MapCoder, SetCoder}
+import org.apache.gearpump.streaming.coder.{Coder, ListCoder, MapCoder, SetCoder}
 import org.apache.gearpump.streaming.refactor.state.{StateBinder, StateNamespace, StateSpec, StateTag}
 import org.apache.gearpump.streaming.refactor.state.api._
 import org.apache.gearpump.util.LogUtil

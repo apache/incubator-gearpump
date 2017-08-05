@@ -18,7 +18,7 @@
 
 package org.apache.gearpump.streaming.refactor.state
 
-import org.apache.gearpump.streaming.refactor.coder.Coder
+import org.apache.gearpump.streaming.coder.Coder
 import org.apache.gearpump.streaming.refactor.state.api.State
 
 trait StateSpec[StateT <: State] extends Serializable {

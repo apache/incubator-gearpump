@@ -16,40 +16,45 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.io.*;
 
-public class BigEndianLongCoder extends AtomicCoder<Long> {
+public class ByteCoder extends AtomicCoder<Byte> {
 
-    public static BigEndianLongCoder of() {
+    public static ByteCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final BigEndianLongCoder INSTANCE = new BigEndianLongCoder();
+    private static final ByteCoder INSTANCE = new ByteCoder();
 
-    private BigEndianLongCoder() {}
+    private ByteCoder() {
+    }
 
     @Override
-    public void encode(Long value, OutputStream outStream)
+    public void encode(Byte value, OutputStream outStream)
             throws CoderException {
         if (value == null) {
-            throw new CoderException("cannot encode a null Long");
+            throw new CoderException("cannot encode a null Byte");
         }
         try {
-            new DataOutputStream(outStream).writeLong(value);
+            outStream.write(value.byteValue());
         } catch (IOException e) {
             throw new CoderException(e);
         }
     }
 
     @Override
-    public Long decode(InputStream inStream)
-            throws CoderException {
+    public Byte decode(InputStream inStream) throws CoderException {
         try {
-            return new DataInputStream(inStream).readLong();
+            // value will be between 0-255, -1 for EOF
+            int value = inStream.read();
+            if (value == -1) {
+                throw new EOFException("EOF encountered decoding 1 byte from input stream");
+            }
+            return (byte) value;
         } catch (EOFException | UTFDataFormatException exn) {
             // These exceptions correspond to decoding problems, so change
             // what kind of exception they're branded as.
@@ -69,15 +74,15 @@ public class BigEndianLongCoder extends AtomicCoder<Long> {
     }
 
     @Override
-    public boolean isRegisterByteSizeObserverCheap(Long value) {
+    public boolean isRegisterByteSizeObserverCheap(Byte value) {
         return true;
     }
 
     @Override
-    protected long getEncodedElementByteSize(Long value) {
+    protected long getEncodedElementByteSize(Byte value) {
         if (value == null) {
-            throw new CoderException("cannot encode a null Long");
+            throw new CoderException("cannot estimate size for unsupported null value");
         }
-        return 8;
+        return 1;
     }
 }

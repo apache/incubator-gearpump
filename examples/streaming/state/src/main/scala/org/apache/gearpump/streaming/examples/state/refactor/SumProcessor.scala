@@ -20,7 +20,7 @@ package org.apache.gearpump.streaming.examples.state.refactor
 
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.refactor.coder._
+import org.apache.gearpump.streaming.coder._
 import org.apache.gearpump.streaming.refactor.state.api.{StateInternals, ValueState}
 import org.apache.gearpump.streaming.refactor.state.{RuntimeContext, StateNamespaces, StateTags, StatefulTask}
 import org.apache.gearpump.streaming.task.TaskContext

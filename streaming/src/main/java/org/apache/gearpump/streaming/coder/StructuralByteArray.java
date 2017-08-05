@@ -16,33 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
-import java.util.Collections;
-import java.util.List;
+import com.google.common.io.BaseEncoding;
 
-public abstract class AtomicCoder<T> extends StructuredCoder<T>  {
+import java.util.Arrays;
 
-    @Override
-    public void verifyDeterministic() {}
+public class StructuralByteArray {
+    byte[] value;
 
-    @Override
-    public List<? extends Coder<?>> getCoderArguments() {
-        return Collections.emptyList();
+    public StructuralByteArray(byte[] value) {
+        this.value = value;
+    }
+
+    public byte[] getValue() {
+        return value;
     }
 
     @Override
-    public final List<? extends Coder<?>> getComponents() {
-        return Collections.emptyList();
+    public boolean equals(Object o) {
+        if (o instanceof StructuralByteArray) {
+            StructuralByteArray that = (StructuralByteArray) o;
+            return Arrays.equals(this.value, that.value);
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public final boolean equals(Object other) {
-        return other != null && this.getClass().equals(other.getClass());
+    public int hashCode() {
+        return Arrays.hashCode(value);
     }
 
     @Override
-    public final int hashCode() {
-        return this.getClass().hashCode();
+    public String toString() {
+        return "base64:" + BaseEncoding.base64().encode(value);
     }
 }

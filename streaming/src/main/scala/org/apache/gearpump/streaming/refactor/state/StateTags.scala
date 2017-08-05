@@ -20,7 +20,7 @@ package org.apache.gearpump.streaming.refactor.state
 
 import java.util.Objects
 
-import org.apache.gearpump.streaming.refactor.coder.Coder
+import org.apache.gearpump.streaming.coder.Coder
 import org.apache.gearpump.streaming.refactor.state.StateTags.StateKind.StateKind
 import org.apache.gearpump.streaming.refactor.state.api._
 

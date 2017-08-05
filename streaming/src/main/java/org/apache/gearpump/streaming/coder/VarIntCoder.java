@@ -16,41 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.io.*;
-import java.util.Collections;
-import java.util.List;
 
-public class VarLongCoder extends StructuredCoder<Long> {
-    public static VarLongCoder of() {
+public class VarIntCoder extends AtomicCoder<Integer> {
+
+    public static VarIntCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final VarLongCoder INSTANCE = new VarLongCoder();
+    private static final VarIntCoder INSTANCE = new VarIntCoder();
 
-    private VarLongCoder() {}
+    private VarIntCoder() {}
 
     @Override
-    public void encode(Long value, OutputStream outStream)
+    public void encode(Integer value, OutputStream outStream)
             throws CoderException {
         if (value == null) {
-            throw new CoderException("cannot encode a null Long");
+            throw new CoderException("cannot encode a null Integer");
         }
         try {
-            VarInt.encode(value.longValue(), outStream);
+            VarInt.encode(value.intValue(), outStream);
         } catch (IOException e) {
             throw new CoderException(e);
         }
     }
 
     @Override
-    public Long decode(InputStream inStream)
+    public Integer decode(InputStream inStream)
             throws CoderException {
         try {
-            return VarInt.decodeLong(inStream);
+            return VarInt.decodeInt(inStream);
         } catch (EOFException | UTFDataFormatException exn) {
             // These exceptions correspond to decoding problems, so change
             // what kind of exception they're branded as.
@@ -58,11 +57,6 @@ public class VarLongCoder extends StructuredCoder<Long> {
         } catch (Exception e) {
             throw new CoderException(e);
         }
-    }
-
-    @Override
-    public List<? extends Coder<?>> getCoderArguments() {
-        return Collections.emptyList();
     }
 
     @Override
@@ -74,14 +68,14 @@ public class VarLongCoder extends StructuredCoder<Long> {
     }
 
     @Override
-    public boolean isRegisterByteSizeObserverCheap(Long value) {
+    public boolean isRegisterByteSizeObserverCheap(Integer value) {
         return true;
     }
 
     @Override
-    public long getEncodedElementByteSize(Long value) {
+    public long getEncodedElementByteSize(Integer value) {
         if (value == null) {
-            throw new CoderException("cannot encode a null Long");
+            throw new CoderException("cannot encode a null Integer");
         }
         return VarInt.getLength(value.longValue());
     }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import com.google.common.base.Utf8;
 

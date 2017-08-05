@@ -16,34 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Observer;
 
-public class SetCoder<T> extends IterableLikeCoder<T, Set<T>> {
+public abstract class ElementByteSizeObservableIterable<
+        V, InputT extends ElementByteSizeObservableIterator<V>>
+        implements Iterable<V> {
+    private List<Observer> observers = new ArrayList<>();
 
-    public static <T> SetCoder<T> of(Coder<T> elementCoder) {
-        return new SetCoder<>(elementCoder);
+    protected abstract InputT createIterator();
+
+    public void addObserver(Observer observer) {
+        observers.add(observer);
     }
 
     @Override
-    public void verifyDeterministic() throws NonDeterministicException {
-        throw new NonDeterministicException(this,
-                "Ordering of elements in a set may be non-deterministic.");
+    public InputT iterator() {
+        InputT iterator = createIterator();
+        for (Observer observer : observers) {
+            iterator.addObserver(observer);
+        }
+        observers.clear();
+        return iterator;
     }
-
-    /////////////////////////////////////////////////////////////////////////////
-    // Internal operations below here.
-
-    @Override
-    protected final Set<T> decodeToIterable(List<T> decodedElements) {
-        return new HashSet<>(decodedElements);
-    }
-
-    protected SetCoder(Coder<T> elemCoder) {
-        super(elemCoder, "Set");
-    }
-
 }

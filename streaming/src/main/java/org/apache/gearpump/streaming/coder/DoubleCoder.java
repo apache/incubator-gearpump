@@ -16,79 +16,71 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
-import com.google.common.io.ByteStreams;
+import java.io.*;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+public class DoubleCoder extends AtomicCoder<Double> {
 
-public class ByteArrayCoder extends AtomicCoder<byte[]> {
-
-    public static ByteArrayCoder of() {
+    public static DoubleCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final ByteArrayCoder INSTANCE = new ByteArrayCoder();
+    private static final DoubleCoder INSTANCE = new DoubleCoder();
 
-    private ByteArrayCoder() {
+    private DoubleCoder() {
     }
 
     @Override
-    public void encode(byte[] value, OutputStream outStream)
+    public void encode(Double value, OutputStream outStream)
             throws CoderException {
         if (value == null) {
-            throw new CoderException("cannot encode a null byte[]");
+            throw new CoderException("cannot encode a null Double");
         }
-
         try {
-            VarInt.encode(value.length, outStream);
-            outStream.write(value);
+            new DataOutputStream(outStream).writeDouble(value);
         } catch (IOException e) {
             throw new CoderException(e);
         }
     }
 
     @Override
-    public byte[] decode(InputStream inStream)
+    public Double decode(InputStream inStream)
             throws CoderException {
-        byte[] value = null;
         try {
-            int length = VarInt.decodeInt(inStream);
-            if (length < 0) {
-                throw new CoderException("invalid length " + length);
-            }
-            value = new byte[length];
-
-            ByteStreams.readFully(inStream, value);
+            return new DataInputStream(inStream).readDouble();
+        } catch (EOFException | UTFDataFormatException exn) {
+            // These exceptions correspond to decoding problems, so change
+            // what kind of exception they're branded as.
+            throw new CoderException(exn);
         } catch (IOException e) {
             throw new CoderException(e);
         }
-        return value;
     }
 
     @Override
     public void verifyDeterministic() {
+        throw new NonDeterministicException(this,
+                "Floating point encodings are not guaranteed to be deterministic.");
     }
 
     @Override
-    public Object structuralValue(byte[] value) {
-        return new StructuralByteArray(value);
-    }
-
-    @Override
-    public boolean isRegisterByteSizeObserverCheap(byte[] value) {
+    public boolean consistentWithEquals() {
         return true;
     }
 
     @Override
-    protected long getEncodedElementByteSize(byte[] value) {
+    public boolean isRegisterByteSizeObserverCheap(Double value) {
+        return true;
+    }
+
+    @Override
+    protected long getEncodedElementByteSize(Double value) {
         if (value == null) {
-            throw new CoderException("cannot encode a null byte[]");
+            throw new CoderException("cannot encode a null Double");
         }
-        return VarInt.getLength(value.length) + value.length;
+        return 8;
     }
 }

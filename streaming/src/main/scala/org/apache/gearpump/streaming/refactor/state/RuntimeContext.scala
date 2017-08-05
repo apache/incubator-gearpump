@@ -20,7 +20,7 @@ package org.apache.gearpump.streaming.refactor.state
 
 import java.time.Instant
 
-import org.apache.gearpump.streaming.refactor.coder.Coder
+import org.apache.gearpump.streaming.coder.Coder
 import org.apache.gearpump.streaming.refactor.state.api.StateInternals
 
 trait RuntimeContext {

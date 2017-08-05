@@ -16,52 +16,58 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
-import java.io.*;
+import com.google.common.io.ByteStreams;
 
-public class ByteCoder extends AtomicCoder<Byte> {
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-    public static ByteCoder of() {
+public class ByteArrayCoder extends AtomicCoder<byte[]> {
+
+    public static ByteArrayCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final ByteCoder INSTANCE = new ByteCoder();
+    private static final ByteArrayCoder INSTANCE = new ByteArrayCoder();
 
-    private ByteCoder() {
+    private ByteArrayCoder() {
     }
 
     @Override
-    public void encode(Byte value, OutputStream outStream)
+    public void encode(byte[] value, OutputStream outStream)
             throws CoderException {
         if (value == null) {
-            throw new CoderException("cannot encode a null Byte");
+            throw new CoderException("cannot encode a null byte[]");
         }
+
         try {
-            outStream.write(value.byteValue());
+            VarInt.encode(value.length, outStream);
+            outStream.write(value);
         } catch (IOException e) {
             throw new CoderException(e);
         }
     }
 
     @Override
-    public Byte decode(InputStream inStream) throws CoderException {
+    public byte[] decode(InputStream inStream)
+            throws CoderException {
+        byte[] value = null;
         try {
-            // value will be between 0-255, -1 for EOF
-            int value = inStream.read();
-            if (value == -1) {
-                throw new EOFException("EOF encountered decoding 1 byte from input stream");
+            int length = VarInt.decodeInt(inStream);
+            if (length < 0) {
+                throw new CoderException("invalid length " + length);
             }
-            return (byte) value;
-        } catch (EOFException | UTFDataFormatException exn) {
-            // These exceptions correspond to decoding problems, so change
-            // what kind of exception they're branded as.
-            throw new CoderException(exn);
+            value = new byte[length];
+
+            ByteStreams.readFully(inStream, value);
         } catch (IOException e) {
             throw new CoderException(e);
         }
+        return value;
     }
 
     @Override
@@ -69,20 +75,20 @@ public class ByteCoder extends AtomicCoder<Byte> {
     }
 
     @Override
-    public boolean consistentWithEquals() {
+    public Object structuralValue(byte[] value) {
+        return new StructuralByteArray(value);
+    }
+
+    @Override
+    public boolean isRegisterByteSizeObserverCheap(byte[] value) {
         return true;
     }
 
     @Override
-    public boolean isRegisterByteSizeObserverCheap(Byte value) {
-        return true;
-    }
-
-    @Override
-    protected long getEncodedElementByteSize(Byte value) {
+    protected long getEncodedElementByteSize(byte[] value) {
         if (value == null) {
-            throw new CoderException("cannot estimate size for unsupported null value");
+            throw new CoderException("cannot encode a null byte[]");
         }
-        return 1;
+        return VarInt.getLength(value.length) + value.length;
     }
 }

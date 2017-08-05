@@ -16,21 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.gearpump.streaming.refactor.coder;
+package org.apache.gearpump.streaming.coder;
 
 import java.io.*;
 
-public class VarIntCoder extends AtomicCoder<Integer> {
+public class BigEndianIntegerCoder extends AtomicCoder<Integer> {
 
-    public static VarIntCoder of() {
+    public static BigEndianIntegerCoder of() {
         return INSTANCE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
 
-    private static final VarIntCoder INSTANCE = new VarIntCoder();
+    private static final BigEndianIntegerCoder INSTANCE = new BigEndianIntegerCoder();
 
-    private VarIntCoder() {}
+    private BigEndianIntegerCoder() {}
 
     @Override
     public void encode(Integer value, OutputStream outStream)
@@ -38,10 +38,11 @@ public class VarIntCoder extends AtomicCoder<Integer> {
         if (value == null) {
             throw new CoderException("cannot encode a null Integer");
         }
+
         try {
-            VarInt.encode(value.intValue(), outStream);
+            new DataOutputStream(outStream).writeInt(value);
         } catch (IOException e) {
-            throw new CoderException(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -49,12 +50,12 @@ public class VarIntCoder extends AtomicCoder<Integer> {
     public Integer decode(InputStream inStream)
             throws CoderException {
         try {
-            return VarInt.decodeInt(inStream);
+            return new DataInputStream(inStream).readInt();
         } catch (EOFException | UTFDataFormatException exn) {
             // These exceptions correspond to decoding problems, so change
             // what kind of exception they're branded as.
             throw new CoderException(exn);
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new CoderException(e);
         }
     }
@@ -73,10 +74,10 @@ public class VarIntCoder extends AtomicCoder<Integer> {
     }
 
     @Override
-    public long getEncodedElementByteSize(Integer value) {
+    protected long getEncodedElementByteSize(Integer value) {
         if (value == null) {
             throw new CoderException("cannot encode a null Integer");
         }
-        return VarInt.getLength(value.longValue());
+        return 4;
     }
 }
