@@ -24,8 +24,8 @@ import org.apache.gearpump.Message;
 import org.apache.gearpump.cluster.ClusterConfig;
 import org.apache.gearpump.cluster.UserConfig;
 import org.apache.gearpump.cluster.client.ClientContext;
-import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
-import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import org.apache.gearpump.streaming.dsl.javaapi.Stream;
+import org.apache.gearpump.streaming.dsl.javaapi.StreamApp;
 import org.apache.gearpump.streaming.dsl.api.functions.MapFunction;
 import org.apache.gearpump.streaming.dsl.api.functions.ReduceFunction;
 import org.apache.gearpump.streaming.dsl.javaapi.functions.FlatMapFunction;
@@ -47,24 +47,22 @@ public class WordCount {
   }
 
   public static void main(Config akkaConf, String[] args) throws InterruptedException {
-    ClientContext context = ClientContext.apply(akkaConf);
-    JavaStreamApp app = new JavaStreamApp("JavaDSL", context, UserConfig.empty());
+    StreamApp app = new StreamApp("JavaDSL", akkaConf);
 
-    JavaStream<String> sentence = app.source(new StringSource("This is a good start, bingo!! bingo!!"),
+    Stream<String> sentence = app.source(new StringSource("This is a good start, bingo!! bingo!!"),
         1, UserConfig.empty(), "source");
 
-    JavaStream<String> words = sentence.flatMap(new Split(), "flatMap");
+    Stream<String> words = sentence.flatMap(new Split(), "flatMap");
 
-    JavaStream<Tuple2<String, Integer>> ones = words.map(new Ones(), "map");
+    Stream<Tuple2<String, Integer>> ones = words.map(new Ones(), "map");
 
-    JavaStream<Tuple2<String, Integer>> groupedOnes = ones.groupBy(new TupleKey(), 1, "groupBy");
+    Stream<Tuple2<String, Integer>> groupedOnes = ones.groupBy(new TupleKey(), 1, "groupBy");
 
-    JavaStream<Tuple2<String, Integer>> wordcount = groupedOnes.reduce(new Count(), "reduce");
+    Stream<Tuple2<String, Integer>> wordcount = groupedOnes.reduce(new Count(), "reduce");
 
     wordcount.log();
 
-    app.submit().waitUntilFinish();
-    context.close();
+    app.run().waitUntilFinish();
   }
 
   private static class StringSource implements DataSource {

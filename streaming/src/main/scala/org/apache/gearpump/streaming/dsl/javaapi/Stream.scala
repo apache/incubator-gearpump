@@ -21,37 +21,37 @@ import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.dsl.api.functions.{FilterFunction, FoldFunction, MapFunction, ReduceFunction}
 import org.apache.gearpump.streaming.dsl.javaapi.functions.{GroupByFunction, FlatMapFunction => JFlatMapFunction}
 import org.apache.gearpump.streaming.dsl.scalaapi.functions.FlatMapFunction
-import org.apache.gearpump.streaming.dsl.scalaapi.Stream
+import org.apache.gearpump.streaming.dsl.scalaapi
 import org.apache.gearpump.streaming.dsl.window.api.Windows
 import org.apache.gearpump.streaming.task.Task
 
 /**
  * Java DSL
  */
-class JavaStream[T](val stream: Stream[T]) {
+class Stream[T](val stream: scalaapi.Stream[T]) {
 
   /** FlatMap on stream */
-  def flatMap[R](fn: JFlatMapFunction[T, R], description: String): JavaStream[R] = {
-    new JavaStream[R](stream.flatMap(FlatMapFunction(fn), "flatMap"))
+  def flatMap[R](fn: JFlatMapFunction[T, R], description: String): Stream[R] = {
+    new Stream[R](stream.flatMap(FlatMapFunction(fn), "flatMap"))
   }
 
   /** Map on stream */
-  def map[R](fn: MapFunction[T, R], description: String): JavaStream[R] = {
-    new JavaStream[R](stream.flatMap(FlatMapFunction(fn), description))
+  def map[R](fn: MapFunction[T, R], description: String): Stream[R] = {
+    new Stream[R](stream.flatMap(FlatMapFunction(fn), description))
   }
 
   /** Only keep the messages that FilterFunction returns true.  */
-  def filter(fn: FilterFunction[T], description: String): JavaStream[T] = {
-    new JavaStream[T](stream.flatMap(FlatMapFunction(fn), description))
+  def filter(fn: FilterFunction[T], description: String): Stream[T] = {
+    new Stream[T](stream.flatMap(FlatMapFunction(fn), description))
   }
 
-  def fold[A](fn: FoldFunction[T, A], description: String): JavaStream[A] = {
-    new JavaStream[A](stream.fold(fn, description))
+  def fold[A](fn: FoldFunction[T, A], description: String): Stream[A] = {
+    new Stream[A](stream.fold(fn, description))
   }
 
   /** Does aggregation on the stream */
-  def reduce(fn: ReduceFunction[T], description: String): JavaStream[T] = {
-    new JavaStream[T](stream.reduce(fn, description))
+  def reduce(fn: ReduceFunction[T], description: String): Stream[T] = {
+    new Stream[T](stream.reduce(fn, description))
   }
 
   def log(): Unit = {
@@ -59,8 +59,8 @@ class JavaStream[T](val stream: Stream[T]) {
   }
 
   /** Merges streams of same type together */
-  def merge(other: JavaStream[T], parallelism: Int, description: String): JavaStream[T] = {
-    new JavaStream[T](stream.merge(other.stream, parallelism, description))
+  def merge(other: Stream[T], parallelism: Int, description: String): Stream[T] = {
+    new Stream[T](stream.merge(other.stream, parallelism, description))
   }
 
   /**
@@ -68,19 +68,19 @@ class JavaStream[T](val stream: Stream[T]) {
    * groupBy applies to sub-streams.
    */
   def groupBy[GROUP](fn: GroupByFunction[T, GROUP],
-      parallelism: Int, description: String): JavaStream[T] = {
-    new JavaStream[T](stream.groupBy(fn.groupBy, parallelism, description))
+      parallelism: Int, description: String): Stream[T] = {
+    new Stream[T](stream.groupBy(fn.groupBy, parallelism, description))
   }
 
-  def window(win: Windows): JavaStream[T] = {
-    new JavaStream[T](stream.window(win))
+  def window(win: Windows): Stream[T] = {
+    new Stream[T](stream.window(win))
   }
 
   /** Add a low level Processor to process messages */
   def process[R](
       processor: Class[_ <: Task], parallelism: Int, conf: UserConfig, description: String)
-    : JavaStream[R] = {
-    new JavaStream[R](stream.process(processor, parallelism, conf, description))
+    : Stream[R] = {
+    new Stream[R](stream.process(processor, parallelism, conf, description))
   }
 }
 

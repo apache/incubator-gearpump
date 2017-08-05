@@ -20,7 +20,6 @@ package org.apache.gearpump.streaming.examples.wordcount.dsl
 import java.time.{Duration, Instant}
 
 import org.apache.gearpump.Message
-import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.streaming.dsl.scalaapi.{LoggerSink, StreamApp}
 import org.apache.gearpump.streaming.dsl.window.api.{EventTimeTrigger, FixedWindows}
@@ -33,8 +32,7 @@ object WindowedWordCount extends AkkaApp with ArgumentsParser {
   override val options: Array[(String, CLIOption[Any])] = Array.empty
 
   override def main(akkaConf: Config, args: Array[String]): Unit = {
-    val context = ClientContext(akkaConf)
-    val app = StreamApp("dsl", context)
+    val app = StreamApp("dsl", akkaConf)
     app.source[String](new TimedDataSource).
       // word => (word, count)
       flatMap(line => line.split("[\\s]+")).map((_, 1)).
@@ -45,8 +43,7 @@ object WindowedWordCount extends AkkaApp with ArgumentsParser {
       groupBy(_._1).
       sum.sink(new LoggerSink)
 
-    context.submit(app)
-    context.close()
+    app.run()
   }
 
   private class TimedDataSource extends DataSource {

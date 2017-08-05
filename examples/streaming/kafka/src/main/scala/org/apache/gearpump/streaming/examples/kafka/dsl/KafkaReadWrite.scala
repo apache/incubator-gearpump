@@ -20,7 +20,6 @@ package org.apache.gearpump.streaming.examples.kafka.dsl
 
 import java.util.Properties
 
-import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
 import org.apache.gearpump.streaming.dsl.scalaapi.StreamApp
 import org.apache.gearpump.streaming.kafka.KafkaStoreFactory
@@ -63,8 +62,7 @@ object KafkaReadWrite extends AkkaApp with ArgumentsParser {
     props.put(KafkaConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList)
     props.put(KafkaConfig.CHECKPOINT_STORE_NAME_PREFIX_CONFIG, appName)
 
-    val context = ClientContext(akkaConf)
-    val app = StreamApp(appName, context)
+    val app = StreamApp(appName, akkaConf)
 
     if (atLeastOnce) {
       val checkpointStoreFactory = new KafkaStoreFactory(props)
@@ -75,7 +73,6 @@ object KafkaReadWrite extends AkkaApp with ArgumentsParser {
         .writeToKafka(sinkTopic, props, sinkNum)
     }
 
-    context.submit(app)
-    context.close()
+    app.run()
   }
 }

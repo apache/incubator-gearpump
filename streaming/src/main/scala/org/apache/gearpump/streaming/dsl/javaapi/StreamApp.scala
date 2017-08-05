@@ -18,31 +18,35 @@
 
 package org.apache.gearpump.streaming.dsl.javaapi
 
-import java.util.Collection
-
+import com.typesafe.config.Config
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.cluster.client.{ClientContext, RunningApplication}
-import org.apache.gearpump.streaming.dsl.scalaapi.{CollectionDataSource, StreamApp}
+import org.apache.gearpump.streaming.dsl.scalaapi
+import org.apache.gearpump.streaming.dsl.scalaapi.CollectionDataSource
 import org.apache.gearpump.streaming.source.DataSource
 
 import scala.collection.JavaConverters._
 
-class JavaStreamApp(name: String, context: ClientContext, userConfig: UserConfig) {
+class StreamApp(name: String, context: ClientContext, userConfig: UserConfig) {
 
-  private val streamApp = StreamApp(name, context, userConfig)
+  def this(name: String, akkaConfig: Config) = {
+    this(name, ClientContext.apply(akkaConfig), UserConfig.empty)
+  }
 
-  def source[T](collection: Collection[T], parallelism: Int,
-      conf: UserConfig, description: String): JavaStream[T] = {
+  private val streamApp = scalaapi.StreamApp(name, context, userConfig)
+
+  def source[T](collection: java.util.Collection[T], parallelism: Int,
+      conf: UserConfig, description: String): Stream[T] = {
     val dataSource = new CollectionDataSource(collection.asScala.toSeq)
     source(dataSource, parallelism, conf, description)
   }
 
   def source[T](dataSource: DataSource, parallelism: Int,
-      conf: UserConfig, description: String): JavaStream[T] = {
-    new JavaStream[T](streamApp.source(dataSource, parallelism, conf, description))
+      conf: UserConfig, description: String): Stream[T] = {
+    new Stream[T](streamApp.source(dataSource, parallelism, conf, description))
   }
 
-  def submit(): RunningApplication = {
-    context.submit(streamApp)
+  def run(): RunningApplication = {
+    streamApp.run()
   }
 }

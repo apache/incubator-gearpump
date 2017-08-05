@@ -21,9 +21,10 @@ package org.apache.gearpump.streaming.dsl.scalaapi
 import java.time.Instant
 
 import akka.actor.ActorSystem
+import com.typesafe.config.Config
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.cluster.client.ClientContext
+import org.apache.gearpump.cluster.client.{ClientContext, RunningApplication}
 import org.apache.gearpump.streaming.StreamApplication
 import org.apache.gearpump.streaming.dsl.plan._
 import org.apache.gearpump.streaming.source.{DataSource, Watermark}
@@ -48,44 +49,42 @@ import scala.language.implicitConversions
  *
  * @param name name of app
  */
-class StreamApp(
-    name: String, system: ActorSystem, userConfig: UserConfig,
+class StreamApp private(
+    name: String, context: ClientContext, userConfig: UserConfig,
     private val graph: Graph[Op, OpEdge]) {
 
-  def this(name: String, system: ActorSystem, userConfig: UserConfig) = {
-    this(name, system, userConfig, Graph.empty[Op, OpEdge])
-  }
-
-  def plan(): StreamApplication = {
-    implicit val actorSystem = system
+  def plan: StreamApplication = {
+    implicit val actorSystem = context.system
     val planner = new Planner
     val dag = planner.plan(graph)
     StreamApplication(name, dag, userConfig)
   }
+
+  def source[T](dataSource: DataSource, parallelism: Int = 1,
+      conf: UserConfig = UserConfig.empty, description: String = "source"): Stream[T] = {
+    implicit val sourceOp = DataSourceOp(dataSource, parallelism, description, conf)
+    graph.addVertex(sourceOp)
+    new Stream[T](graph, sourceOp)
+  }
+
+  def source[T](seq: Seq[T], parallelism: Int, description: String): Stream[T] = {
+    this.source(new CollectionDataSource[T](seq), parallelism, UserConfig.empty, description)
+  }
+
+  def run(): RunningApplication = {
+    context.submit(plan)
+  }
 }
 
 object StreamApp {
+
+  def apply(name: String, config: Config): StreamApp = {
+    StreamApp(name, ClientContext(config))
+  }
+
   def apply(name: String, context: ClientContext, userConfig: UserConfig = UserConfig.empty)
     : StreamApp = {
-    new StreamApp(name, context.system, userConfig)
-  }
-
-  implicit def streamAppToApplication(streamApp: StreamApp): StreamApplication = {
-    streamApp.plan()
-  }
-
-  implicit class Source(app: StreamApp) extends java.io.Serializable {
-
-    def source[T](dataSource: DataSource, parallelism: Int = 1,
-        conf: UserConfig = UserConfig.empty, description: String = "source"): Stream[T] = {
-      implicit val sourceOp = DataSourceOp(dataSource, parallelism, description, conf)
-      app.graph.addVertex(sourceOp)
-      new Stream[T](app.graph, sourceOp)
-    }
-
-    def source[T](seq: Seq[T], parallelism: Int, description: String): Stream[T] = {
-      this.source(new CollectionDataSource[T](seq), parallelism, UserConfig.empty, description)
-    }
+    new StreamApp(name, context, userConfig, Graph.empty[Op, OpEdge])
   }
 }
 
