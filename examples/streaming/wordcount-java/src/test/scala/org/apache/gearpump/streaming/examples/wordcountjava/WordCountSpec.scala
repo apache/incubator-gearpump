@@ -21,7 +21,7 @@ package org.apache.gearpump.streaming.examples.wordcountjava
 import org.apache.gearpump.cluster.ClientToMaster.SubmitApplication
 import org.apache.gearpump.cluster.MasterToClient.SubmitApplicationResult
 import org.apache.gearpump.cluster.{MasterHarness, TestUtil}
-import org.apache.gearpump.streaming.examples.wordcountjava.dsl.WordCountTest
+import org.apache.gearpump.streaming.examples.wordcountjava.dsl.WordCount
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{BeforeAndAfter, Matchers, PropSpec}
 
@@ -49,7 +49,7 @@ class WordCountSpec
     val args = requiredArgs
 
     Future {
-      WordCountTest.main(masterConfig, args)
+      WordCount.main(masterConfig, args)
     }
 
     masterReceiver.expectMsgType[SubmitApplication](PROCESS_BOOT_TIME)
