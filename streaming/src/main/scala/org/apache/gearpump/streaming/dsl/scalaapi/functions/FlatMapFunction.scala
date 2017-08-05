@@ -17,7 +17,7 @@
  */
 package org.apache.gearpump.streaming.dsl.scalaapi.functions
 
-import org.apache.gearpump.streaming.dsl.api.functions.{FilterFunction, MapFunction}
+import org.apache.gearpump.streaming.dsl.api.functions.{FilterFunction, MapFunction, SerializableFunction}
 import org.apache.gearpump.streaming.dsl.javaapi.functions.{FlatMapFunction => JFlatMapFunction}
 
 import scala.collection.JavaConverters._
@@ -93,8 +93,8 @@ object FlatMapFunction {
  * Transforms one input into zero or more outputs of possibly different types.
  * This Scala version of FlatMapFunction returns a TraversableOnce.
  *
- * @param T Input value type
- * @param R Output value type
+ * @tparam T Input value type
+ * @tparam R Output value type
  */
 abstract class FlatMapFunction[T, R] extends SerializableFunction {
 
