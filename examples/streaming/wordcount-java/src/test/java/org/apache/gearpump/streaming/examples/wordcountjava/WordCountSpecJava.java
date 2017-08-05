@@ -19,7 +19,7 @@
 package org.apache.gearpump.streaming.examples.wordcountjava;
 
 import org.apache.gearpump.cluster.ClusterConfig;
-import org.apache.gearpump.streaming.examples.wordcountjava.dsl.WordCountTest;
+import org.apache.gearpump.streaming.examples.wordcountjava.dsl.WordCount;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ public class WordCountSpecJava {
     @Test
     public void test1() {
         try {
-            WordCountTest.main(ClusterConfig.defaultConfig(), null);
+            WordCount.main(ClusterConfig.defaultConfig(), null);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
