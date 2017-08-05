@@ -18,13 +18,11 @@
 
 package org.apache.gearpump.streaming.dsl.api.functions
 
-import org.apache.gearpump.streaming.dsl.scalaapi.functions.SerializableFunction
-
 /**
  * Combines input into an accumulator.
  *
- * @param A type of accumulator
- * @param T Type of input
+ * @tparam A type of accumulator
+ * @tparam T Type of input
  */
 abstract class FoldFunction[T, A] extends SerializableFunction {
 

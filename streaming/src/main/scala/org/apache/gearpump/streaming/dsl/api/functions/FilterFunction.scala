@@ -17,8 +17,6 @@
  */
 package org.apache.gearpump.streaming.dsl.api.functions
 
-import org.apache.gearpump.streaming.dsl.scalaapi.functions.SerializableFunction
-
 object FilterFunction {
 
   def apply[T](fn: T => Boolean): FilterFunction[T] = {
@@ -33,7 +31,7 @@ object FilterFunction {
 /**
  * Returns true to keep the input and false otherwise.
  *
- * @param T Input value type
+ * @tparam T Input value type
  */
 abstract class FilterFunction[T] extends SerializableFunction {
 
