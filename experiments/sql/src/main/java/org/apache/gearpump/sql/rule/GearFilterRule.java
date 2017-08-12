@@ -32,8 +32,7 @@ public class GearFilterRule extends ConverterRule {
     public static final GearFilterRule INSTANCE = new GearFilterRule();
 
     private GearFilterRule() {
-        super(LogicalFilter.class, Convention.NONE, GearLogicalConvention.INSTANCE,
-                "GearFilterRule");
+        super(LogicalFilter.class, Convention.NONE, GearLogicalConvention.INSTANCE, "GearFilterRule");
     }
 
     @Override
@@ -41,9 +40,10 @@ public class GearFilterRule extends ConverterRule {
         final Filter filter = (Filter) rel;
         final RelNode input = filter.getInput();
 
-        return new GearFilterRel(filter.getCluster(),
+        GearFilterRel gearRel = new GearFilterRel(filter.getCluster(),
                 filter.getTraitSet().replace(GearLogicalConvention.INSTANCE),
                 convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
                 filter.getCondition());
+        return gearRel;
     }
 }
