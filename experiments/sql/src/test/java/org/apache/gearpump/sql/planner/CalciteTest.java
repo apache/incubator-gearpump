@@ -21,6 +21,7 @@ package org.apache.gearpump.sql.planner;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -33,7 +34,8 @@ import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.rules.*;
+import org.apache.calcite.rel.rules.LoptOptimizeJoinRule;
+import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
@@ -50,11 +52,10 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
-import org.apache.calcite.tools.FrameworkConfig;
-import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.Program;
-import org.apache.calcite.tools.Programs;
+import org.apache.calcite.tools.*;
 import org.apache.calcite.util.Util;
+import org.apache.gearpump.sql.rule.GearFilterRule;
+import org.apache.gearpump.sql.table.SampleTransactions;
 import org.apache.gearpump.sql.utils.CalciteFrameworkConfiguration;
 import org.apache.gearpump.sql.validator.CalciteSqlValidator;
 
@@ -64,11 +65,11 @@ import java.util.List;
 
 public class CalciteTest {
 
-    private final SqlOperatorTable operatorTable;
-    private final FrameworkConfig config;
-    private final ImmutableList<RelTraitDef> traitDefs;
-    private final SqlParser.Config parserConfig;
-    private final SqlRexConvertletTable convertletTable;
+    private SqlOperatorTable operatorTable;
+    private FrameworkConfig config;
+    private ImmutableList<RelTraitDef> traitDefs;
+    private SqlParser.Config parserConfig;
+    private SqlRexConvertletTable convertletTable;
     private State state;
     private SchemaPlus defaultSchema;
     private JavaTypeFactory typeFactory;
@@ -86,6 +87,9 @@ public class CalciteTest {
         this.convertletTable = config.getConvertletTable();
         this.executor = config.getExecutor();
         reset();
+    }
+
+    public CalciteTest() {
     }
 
     private void ensure(State state) {
@@ -250,7 +254,6 @@ public class CalciteTest {
         }
     }
 
-
     void calTest() throws SqlParseException {
 
 //        String sql = "select t.orders.id from t.orders";
@@ -292,32 +295,97 @@ public class CalciteTest {
 
         // Create a set of rules to apply
         Program program = Programs.ofRules(
-                FilterProjectTransposeRule.INSTANCE,
-                ProjectMergeRule.INSTANCE,
-                FilterMergeRule.INSTANCE,
-                FilterJoinRule.JOIN,
+//                FilterProjectTransposeRule.INSTANCE,
+//                ProjectMergeRule.INSTANCE,
+//                FilterMergeRule.INSTANCE,
+//                FilterJoinRule.JOIN,
+                GearFilterRule.INSTANCE,
                 LoptOptimizeJoinRule.INSTANCE);
 
         RelTraitSet traitSet = planner.emptyTraitSet().replace(EnumerableConvention.INSTANCE);
 
         // Execute the program
-        RelNode optimized = program.run(planner, root.rel, traitSet, ImmutableList.<RelOptMaterialization>of(), ImmutableList.<RelOptLattice>of());
-        System.out.println(RelOptUtil.toString(optimized));
+//        RelNode optimized = program.run(planner, root.rel, traitSet, ImmutableList.<RelOptMaterialization>of(), ImmutableList.<RelOptLattice>of());
+//        System.out.println(RelOptUtil.toString(optimized));
 
     }
 
-    public static void main(String[] args) throws ClassNotFoundException, SQLException, SqlParseException {
+    // new test -------------------------
+    private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) {
+        try {
+            return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private Planner getPlanner(List<RelTraitDef> traitDefs,
+                               SqlParser.Config parserConfig,
+                               Program... programs) throws ClassNotFoundException, SQLException {
 
         Class.forName("org.apache.calcite.jdbc.Driver");
         java.sql.Connection connection = DriverManager.getConnection("jdbc:calcite:");
         CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
         SchemaPlus rootSchema = calciteConnection.getRootSchema();
-        rootSchema.add("t", new ReflectiveSchema(new StreamQueryPlanner.Transactions()));
+        rootSchema.add("T", new ReflectiveSchema(new SampleTransactions.Transactions()));
 
-        FrameworkConfig frameworkConfig = CalciteFrameworkConfiguration.getDefaultconfig(rootSchema);
-        CalciteTest ct = new CalciteTest(frameworkConfig);
-        ct.ready();
-        ct.calTest();
+        final FrameworkConfig config = Frameworks.newConfigBuilder()
+                .parserConfig(parserConfig)
+                .defaultSchema(rootSchema)
+                .traitDefs(traitDefs)
+                .programs(programs)
+                .build();
+        return Frameworks.getPlanner(config);
+    }
+
+    void calTest2() throws SqlParseException, ValidationException, RelConversionException {
+
+        RuleSet ruleSet = RuleSets.ofList(
+                SortRemoveRule.INSTANCE,
+                EnumerableRules.ENUMERABLE_PROJECT_RULE,
+                EnumerableRules.ENUMERABLE_SORT_RULE);
+
+        Planner planner = getPlanner(null, Programs.of(ruleSet));
+
+        String sql = "SELECT * FROM t.products ORDER BY t.products.id";
+
+        SqlNode parse = planner.parse(sql);
+        System.out.println(parse.toString());
+        SqlNode validate = planner.validate(parse);
+        RelNode convert = planner.rel(validate).project();
+        RelTraitSet traitSet = convert.getTraitSet().replace(EnumerableConvention.INSTANCE);
+        RelNode transform = planner.transform(0, traitSet, convert);
+        System.out.println(RelOptUtil.toString(transform));
+
+    }
+
+
+    public static void main(String[] args) throws ClassNotFoundException, SQLException, SqlParseException {
+
+        // calTest()
+//        Class.forName("org.apache.calcite.jdbc.Driver");
+//        java.sql.Connection connection = DriverManager.getConnection("jdbc:calcite:");
+//        CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
+//        SchemaPlus rootSchema = calciteConnection.getRootSchema();
+//        rootSchema.add("t", new ReflectiveSchema(new StreamQueryPlanner.Transactions()));
+//
+//        FrameworkConfig frameworkConfig = CalciteFrameworkConfiguration.getDefaultconfig(rootSchema);
+//        CalciteTest ct = new CalciteTest(frameworkConfig);
+//        ct.ready();
+//        ct.calTest();
+
+        // calTest2()
+        CalciteTest ct = new CalciteTest();
+        try {
+            ct.calTest2();
+        } catch (ValidationException e) {
+            e.printStackTrace();
+        } catch (RelConversionException e) {
+            e.printStackTrace();
+        }
 
     }
 }
