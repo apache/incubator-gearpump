@@ -39,7 +39,7 @@ object WindowFunction {
 trait WindowFunction {
 
   /**
-   * Assign elements into [[Window]]s.
+   * Assigns elements into windows.
    */
   def apply[T](context: WindowFunction.Context[T]): Array[Window]
 
