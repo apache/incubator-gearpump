@@ -23,6 +23,9 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Intersect;
 import org.apache.calcite.rel.core.SetOp;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import scala.Tuple2;
 
 import java.util.List;
 
@@ -45,4 +48,8 @@ public class GearIntersectRel extends Intersect implements GearRelNode {
         return new GearIntersectRel(getCluster(), traitSet, inputs, all);
     }
 
+    @Override
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        return null;
+    }
 }
