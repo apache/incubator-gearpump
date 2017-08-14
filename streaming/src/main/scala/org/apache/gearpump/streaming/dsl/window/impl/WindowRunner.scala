@@ -163,7 +163,8 @@ class DefaultWindowRunner[IN, OUT](
       } else {
         // All windows have been triggered.
         if (time == Watermark.MAX) {
-          // This means there will no more inputs so it's safe to advance to the maximum watermark.
+          // This means there will be no more inputs
+          // so it's safe to advance to the maximum watermark.
           TriggeredOutputs(outputs, Watermark.MAX)
         } else {
           TriggeredOutputs(outputs, wmk)
