@@ -28,6 +28,9 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import scala.Tuple2;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -84,5 +87,10 @@ public class GearSortRel extends Sort implements GearRelNode {
 
     public static <T extends Number & Comparable> int numberCompare(T a, T b) {
         return a.compareTo(b);
+    }
+
+    @Override
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        return null;
     }
 }

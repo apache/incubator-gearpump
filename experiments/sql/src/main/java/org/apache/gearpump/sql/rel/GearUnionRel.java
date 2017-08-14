@@ -24,6 +24,9 @@ import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Union;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import scala.Tuple2;
 
 import java.util.List;
 
@@ -46,4 +49,8 @@ public class GearUnionRel extends Union implements GearRelNode {
         return new GearUnionRel(getCluster(), traitSet, inputs, all);
     }
 
+    @Override
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        return null;
+    }
 }

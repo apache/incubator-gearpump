@@ -24,6 +24,9 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import scala.Tuple2;
 
 import java.util.List;
 
@@ -41,4 +44,8 @@ public class GearProjectRel extends Project implements GearRelNode {
         return new GearProjectRel(getCluster(), traitSet, input, projects, rowType);
     }
 
+    @Override
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        return null;
+    }
 }

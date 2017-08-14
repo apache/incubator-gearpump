@@ -24,6 +24,9 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import scala.Tuple2;
 
 
 public class GearValuesRel extends Values implements GearRelNode {
@@ -33,4 +36,8 @@ public class GearValuesRel extends Values implements GearRelNode {
         super(cluster, rowType, tuples, traits);
     }
 
+    @Override
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        return null;
+    }
 }
