@@ -35,6 +35,7 @@ import org.apache.gearpump.sql.rule.GearAggregationRule;
 import org.apache.gearpump.sql.rule.GearFlatMapRule;
 import org.apache.gearpump.sql.table.SampleString;
 import org.apache.gearpump.sql.utils.GearConfiguration;
+import org.apache.log4j.Logger;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -42,13 +43,15 @@ import java.util.List;
 
 public class SqlWordCountTest {
 
+    private final static Logger logger = Logger.getLogger(SqlWordCountTest.class);
+
     private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) {
         try {
             return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            logger.error(e);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
         return null;
     }
@@ -72,7 +75,8 @@ public class SqlWordCountTest {
         return Frameworks.getPlanner(config);
     }
 
-    void wordCountTest(GearConfiguration gearConfig) throws SqlParseException, ValidationException, RelConversionException {
+    void wordCountTest(GearConfiguration gearConfig) throws SqlParseException,
+            ValidationException, RelConversionException {
 
         RuleSet ruleSet = RuleSets.ofList(
                 GearFlatMapRule.INSTANCE,
@@ -81,12 +85,14 @@ public class SqlWordCountTest {
         Planner planner = getPlanner(null, Programs.of(ruleSet));
 
         String sql = "SELECT COUNT(*) FROM str.kv GROUP BY str.kv.word";
+        logger.info("\n\nSQL Query:-\t" + sql + "\n");
 
         SqlNode parse = planner.parse(sql);
-        System.out.println(parse.toString());
+        logger.info("SQL Parse Tree:- \n\n" + parse.toString() + "\n");
+
         SqlNode validate = planner.validate(parse);
         RelNode convert = planner.rel(validate).project();
-        System.out.println(RelOptUtil.toString(convert));
+        logger.info("Relational Expression:- \n\n" + RelOptUtil.toString(convert) + "\n");
 
         gearConfig.defaultConfiguration();
         gearConfig.ConfigJavaStreamApp();
@@ -94,9 +100,8 @@ public class SqlWordCountTest {
         RelTraitSet traitSet = convert.getTraitSet().replace(GearLogicalConvention.INSTANCE);
         try {
             RelNode transform = planner.transform(0, traitSet, convert);
-            System.out.println(RelOptUtil.toString(transform));
+            logger.info(RelOptUtil.toString(transform));
         } catch (Exception e) {
-//            System.out.println(e.getMessage());
         }
 
     }
@@ -105,13 +110,14 @@ public class SqlWordCountTest {
     public static void main(String[] args) throws ClassNotFoundException, SQLException, SqlParseException {
 
         SqlWordCountTest gearSqlWordCount = new SqlWordCountTest();
+
         try {
             GearConfiguration gearConfig = new GearConfiguration();
             gearSqlWordCount.wordCountTest(gearConfig);
         } catch (ValidationException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         } catch (RelConversionException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
 
     }

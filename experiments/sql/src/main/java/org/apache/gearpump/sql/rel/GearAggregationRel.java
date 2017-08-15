@@ -35,6 +35,7 @@ import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
 import org.apache.gearpump.streaming.dsl.javaapi.functions.GroupByFunction;
 import org.apache.gearpump.streaming.dsl.window.api.Trigger;
 import org.apache.gearpump.streaming.dsl.window.api.WindowFunction;
+import org.apache.log4j.Logger;
 import scala.Tuple2;
 
 import java.time.Duration;
@@ -43,25 +44,26 @@ import java.util.List;
 
 public class GearAggregationRel extends Aggregate implements GearRelNode {
 
+    private final static Logger logger = Logger.getLogger(GearAggregationRel.class);
     private int windowFieldIdx = -1;
     private WindowFunction windowFn;
     private Trigger trigger;
     private Duration allowedLatence = Duration.ZERO;
 
-    public GearAggregationRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, boolean indicator,
-                              ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
+    public GearAggregationRel(RelOptCluster cluster, RelTraitSet traits, RelNode child,
+                              boolean indicator, ImmutableBitSet groupSet,
+                              List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
         super(cluster, traits, child, indicator, groupSet, groupSets, aggCalls);
     }
 
     @Override
-    public Aggregate copy(RelTraitSet traitSet, RelNode input, boolean indicator, ImmutableBitSet groupSet,
-                          List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
+    public Aggregate copy(RelTraitSet traitSet, RelNode input, boolean indicator,
+                          ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets,
+                          List<AggregateCall> aggCalls) {
         return null;
     }
 
-
     public RelWriter explainTerms(RelWriter pw) {
-
         pw.item("group", groupSet)
                 .itemIf("window", windowFn, windowFn != null)
                 .itemIf("trigger", trigger, trigger != null)
@@ -77,16 +79,17 @@ public class GearAggregationRel extends Aggregate implements GearRelNode {
         return pw;
     }
 
-
     @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-
-        System.out.println("GearAggregationRel ***************** 1");
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app,
+                                                                 JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        logger.debug("Adding Map");
         JavaStream<Tuple2<String, Integer>> ones = SampleString.WORDS.map(new Ones(), "map");
 
-        JavaStream<Tuple2<String, Integer>> groupedOnes = ones.groupBy(new TupleKey(), 1, "groupBy");
+        logger.debug("Adding GroupBy");
+        JavaStream<Tuple2<String, Integer>> groupedOnes = ones.groupBy(new TupleKey(),
+                1, "groupBy");
 //        groupedOnes.log();
-
+        logger.debug("Adding Reduce");
         JavaStream<Tuple2<String, Integer>> wordCount = groupedOnes.reduce(new Count(), "reduce");
         wordCount.log();
 

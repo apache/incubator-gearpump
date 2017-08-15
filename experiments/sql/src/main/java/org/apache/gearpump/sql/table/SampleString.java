@@ -7,7 +7,11 @@ public class SampleString {
     public static JavaStream<String> WORDS;
 
     public static class Stream {
-        public final Message[] KV = {new Message("001", "This is a good start, bingo!! bingo!!")};
+        public static final Message[] KV = {new Message("001", "This is a good start, bingo!! bingo!!")};
+
+        public static String getKV() {
+            return KV[0].WORD;
+        }
     }
 
     public static class Message {
@@ -19,6 +23,5 @@ public class SampleString {
             this.WORD = WORD;
         }
     }
-
 
 }
