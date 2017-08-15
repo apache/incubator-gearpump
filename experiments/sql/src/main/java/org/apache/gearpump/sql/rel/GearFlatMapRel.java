@@ -33,6 +33,7 @@ import org.apache.gearpump.streaming.dsl.javaapi.functions.FlatMapFunction;
 import org.apache.gearpump.streaming.source.DataSource;
 import org.apache.gearpump.streaming.source.Watermark;
 import org.apache.gearpump.streaming.task.TaskContext;
+import org.apache.log4j.Logger;
 import scala.Tuple2;
 
 import java.time.Instant;
@@ -42,8 +43,14 @@ import java.util.Iterator;
 
 public class GearFlatMapRel extends Filter implements GearRelNode {
 
+    private final static Logger logger = Logger.getLogger(GearFlatMapRel.class);
+
     public GearFlatMapRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode condition) {
         super(cluster, traits, child, condition);
+    }
+
+    public GearFlatMapRel() {
+        super(null, null, null, null);
     }
 
     @Override
@@ -54,8 +61,10 @@ public class GearFlatMapRel extends Filter implements GearRelNode {
     @Override
     public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app,
                                                                  JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        logger.debug("Adding Source");
         JavaStream<String> sentence = app.source(new StringSource(SampleString.Stream.getKV()),
                 1, UserConfig.empty(), "source");
+        logger.debug("Adding flatMap");
         SampleString.WORDS = sentence.flatMap(new Split(), "flatMap");
         return null;
     }

@@ -33,6 +33,7 @@ import org.apache.gearpump.sql.rel.GearAggregationRel;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.utils.GearConfiguration;
 import org.apache.gearpump.streaming.dsl.window.api.*;
+import org.apache.log4j.Logger;
 
 import java.time.Duration;
 import java.util.GregorianCalendar;
@@ -40,17 +41,15 @@ import java.util.List;
 
 
 public class GearAggregationRule extends RelOptRule {
+
+    private final static Logger logger = Logger.getLogger(GearAggregationRule.class);
     public static final GearAggregationRule INSTANCE =
             new GearAggregationRule(Aggregate.class, Project.class, RelFactories.LOGICAL_BUILDER);
 
-    public GearAggregationRule(
-            Class<? extends Aggregate> aggregateClass,
-            Class<? extends Project> projectClass,
-            RelBuilderFactory relBuilderFactory) {
-        super(
-                operand(aggregateClass,
-                        operand(projectClass, any())),
-                relBuilderFactory, null);
+    public GearAggregationRule(Class<? extends Aggregate> aggregateClass,
+                               Class<? extends Project> projectClass,
+                               RelBuilderFactory relBuilderFactory) {
+        super(operand(aggregateClass, operand(projectClass, any())), relBuilderFactory, null);
     }
 
     public GearAggregationRule(RelOptRuleOperand operand, String description) {
@@ -59,7 +58,6 @@ public class GearAggregationRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        System.out.println("GearAggregationRule ************");
         final Aggregate aggregate = call.rel(0);
         final Project project = call.rel(1);
         updateWindowTrigger(call, aggregate, project);
@@ -130,7 +128,7 @@ public class GearAggregationRule extends RelOptRule {
             gearRel.buildGearPipeline(GearConfiguration.app, null);
             GearConfiguration.app.submit().waitUntilFinish();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e);
         }
 
     }
@@ -146,5 +144,4 @@ public class GearAggregationRule extends RelOptRule {
             throw new IllegalArgumentException(String.format("[%s] is not valid.", parameterNode));
         }
     }
-
 }

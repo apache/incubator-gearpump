@@ -19,45 +19,34 @@
 package org.apache.gearpump.sql.rule;
 
 import org.apache.calcite.plan.Convention;
-import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTrait;
-import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rex.RexNode;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.rel.GearFlatMapRel;
 import org.apache.gearpump.sql.utils.GearConfiguration;
+import org.apache.log4j.Logger;
 
 
 public class GearFlatMapRule extends ConverterRule {
 
+    private final static Logger logger = Logger.getLogger(GearFlatMapRule.class);
     public static final GearFlatMapRule INSTANCE = new GearFlatMapRule(Aggregate.class, Convention.NONE);
 
-    public GearFlatMapRule(Class<? extends Aggregate> aggregateClass,
-                           RelTrait projectIn) {
+    public GearFlatMapRule(Class<? extends Aggregate> aggregateClass, RelTrait projectIn) {
         super(aggregateClass, projectIn, GearLogicalConvention.INSTANCE, "GearFlatMapRule");
     }
 
-
     @Override
     public RelNode convert(RelNode rel) {
-        System.out.println("GearFlatRule ******************");
-
-        RelOptCluster cluster = null;
-        RelTraitSet traits = null;
-        RelNode child = null;
-        RexNode condition = null;
-
-        GearFlatMapRel flatRel = new GearFlatMapRel(cluster, traits, child, condition);
-
         try {
+            GearFlatMapRel flatRel = new GearFlatMapRel();
             flatRel.buildGearPipeline(GearConfiguration.app, null);
         } catch (Exception e) {
+            logger.error(e);
         }
         return null;
     }
-
 
 }
