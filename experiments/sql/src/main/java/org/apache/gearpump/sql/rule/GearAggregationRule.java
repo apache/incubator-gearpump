@@ -20,9 +20,7 @@ package org.apache.gearpump.sql.rule;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.*;
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rex.RexCall;
@@ -65,30 +63,9 @@ public class GearAggregationRule extends RelOptRule {
         final Aggregate aggregate = call.rel(0);
         final Project project = call.rel(1);
         updateWindowTrigger(call, aggregate, project);
-
-        RelOptCluster cluster = aggregate.getCluster();
-        RelTraitSet traits = aggregate.getTraitSet();//Do Replace
-        RelNode child = convert(aggregate.getInput(),
-                aggregate.getInput().getTraitSet().replace(GearLogicalConvention.INSTANCE));
-        boolean indicator = aggregate.indicator;
-        ImmutableBitSet groupSet = aggregate.getGroupSet();
-        List<ImmutableBitSet> groupSets = aggregate.getGroupSets();
-        List<AggregateCall> aggCalls = aggregate.getAggCallList();
-
-        try {
-            GearAggregationRel gearRel = new GearAggregationRel(cluster, traits, child,
-                    indicator, groupSet, groupSets, aggCalls);
-            gearRel.buildGearPipeline(GearConfiguration.app, null);
-            GearConfiguration.app.submit().waitUntilFinish();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
     }
 
-    private void updateWindowTrigger(RelOptRuleCall call, Aggregate aggregate,
-                                     Project project) {
+    private void updateWindowTrigger(RelOptRuleCall call, Aggregate aggregate, Project project) {
         ImmutableBitSet groupByFields = aggregate.getGroupSet();
         List<RexNode> projectMapping = project.getProjects();
 
@@ -139,6 +116,21 @@ public class GearAggregationRule extends RelOptRule {
                         break;
                 }
             }
+        }
+
+        try {
+            GearAggregationRel gearRel = new GearAggregationRel(aggregate.getCluster(),
+                    aggregate.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+                    convert(aggregate.getInput(),
+                            aggregate.getInput().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+                    aggregate.indicator,
+                    aggregate.getGroupSet(),
+                    aggregate.getGroupSets(),
+                    aggregate.getAggCallList());
+            gearRel.buildGearPipeline(GearConfiguration.app, null);
+            GearConfiguration.app.submit().waitUntilFinish();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
     }

@@ -27,11 +27,9 @@ import org.apache.gearpump.DefaultMessage;
 import org.apache.gearpump.Message;
 import org.apache.gearpump.cluster.UserConfig;
 import org.apache.gearpump.sql.table.SampleString;
-import org.apache.gearpump.streaming.dsl.api.functions.MapFunction;
 import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
 import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
 import org.apache.gearpump.streaming.dsl.javaapi.functions.FlatMapFunction;
-import org.apache.gearpump.streaming.dsl.javaapi.functions.GroupByFunction;
 import org.apache.gearpump.streaming.source.DataSource;
 import org.apache.gearpump.streaming.source.Watermark;
 import org.apache.gearpump.streaming.task.TaskContext;
@@ -44,8 +42,7 @@ import java.util.Iterator;
 
 public class GearFlatMapRel extends Filter implements GearRelNode {
 
-    public GearFlatMapRel(RelOptCluster cluster, RelTraitSet traits, RelNode child,
-                          RexNode condition) {
+    public GearFlatMapRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode condition) {
         super(cluster, traits, child, condition);
     }
 
@@ -55,38 +52,15 @@ public class GearFlatMapRel extends Filter implements GearRelNode {
     }
 
     @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-
-        System.out.println("GearFlatMapRel *********************** 1");
-
-        JavaStream<String> sentence = app.source(new StringSource("This is a good start, bingo!! bingo!!"),
+    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app,
+                                                                 JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+        JavaStream<String> sentence = app.source(new StringSource(SampleString.Stream.getKV()),
                 1, UserConfig.empty(), "source");
-        System.out.println("GearFlatMapRel ********************** 2");
         SampleString.WORDS = sentence.flatMap(new Split(), "flatMap");
-        System.out.println("GearFlatMapRel ********************** 3");
-
         return null;
     }
 
-    private static class Ones extends MapFunction<String, Tuple2<String, Integer>> {
-
-        @Override
-        public Tuple2<String, Integer> map(String s) {
-            return new Tuple2<>(s, 1);
-        }
-    }
-
-    private static class TupleKey extends GroupByFunction<Tuple2<String, Integer>, String> {
-
-        @Override
-        public String groupBy(Tuple2<String, Integer> tuple) {
-            return tuple._1();
-        }
-    }
-
-
     private static class StringSource implements DataSource {
-
         private final String str;
         private boolean hasNext = true;
 
@@ -120,7 +94,6 @@ public class GearFlatMapRel extends Filter implements GearRelNode {
     }
 
     private static class Split extends FlatMapFunction<String, String> {
-
         @Override
         public Iterator<String> flatMap(String s) {
             return Arrays.asList(s.split("\\s+")).iterator();
