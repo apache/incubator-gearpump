@@ -26,7 +26,6 @@ import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.rel.GearProjectRel;
 
-
 public class GearProjectRule extends ConverterRule {
 
     public static final GearProjectRule INSTANCE = new GearProjectRule();

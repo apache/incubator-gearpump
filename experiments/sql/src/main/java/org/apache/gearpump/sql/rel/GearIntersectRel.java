@@ -29,7 +29,6 @@ import scala.Tuple2;
 
 import java.util.List;
 
-
 public class GearIntersectRel extends Intersect implements GearRelNode {
     private GearSetOperatorRelBase delegate;
 

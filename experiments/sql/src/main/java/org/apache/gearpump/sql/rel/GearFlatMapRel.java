@@ -40,7 +40,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Iterator;
 
-
 public class GearFlatMapRel extends Filter implements GearRelNode {
 
     private final static Logger logger = Logger.getLogger(GearFlatMapRel.class);

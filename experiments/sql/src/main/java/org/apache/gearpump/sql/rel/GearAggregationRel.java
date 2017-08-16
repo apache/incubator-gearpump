@@ -41,7 +41,6 @@ import scala.Tuple2;
 import java.time.Duration;
 import java.util.List;
 
-
 public class GearAggregationRel extends Aggregate implements GearRelNode {
 
     private final static Logger logger = Logger.getLogger(GearAggregationRel.class);

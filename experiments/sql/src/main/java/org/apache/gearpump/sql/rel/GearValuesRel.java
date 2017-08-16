@@ -28,7 +28,6 @@ import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
 import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
 import scala.Tuple2;
 
-
 public class GearValuesRel extends Values implements GearRelNode {
 
     public GearValuesRel(RelOptCluster cluster, RelDataType rowType, ImmutableList<ImmutableList<RexLiteral>> tuples,

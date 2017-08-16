@@ -29,7 +29,6 @@ import scala.Tuple2;
 
 import java.util.List;
 
-
 public class GearMinusRel extends Minus implements GearRelNode {
 
     private GearSetOperatorRelBase delegate;

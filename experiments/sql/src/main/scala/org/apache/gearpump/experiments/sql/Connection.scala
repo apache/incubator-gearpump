@@ -13,9 +13,6 @@ import org.apache.calcite.linq4j.tree.Expression
 import org.apache.calcite.linq4j.{Enumerator, Queryable}
 import org.apache.log4j.Logger
 
-/**
-  * Created by Buddhi on 6/8/2017.
-  */
 class Connection extends CalciteConnection {
 
   import org.apache.calcite.schema.SchemaPlus

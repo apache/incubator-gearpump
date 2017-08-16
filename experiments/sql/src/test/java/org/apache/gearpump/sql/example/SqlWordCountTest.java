@@ -18,7 +18,6 @@
 
 package org.apache.gearpump.sql.example;
 
-
 import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;

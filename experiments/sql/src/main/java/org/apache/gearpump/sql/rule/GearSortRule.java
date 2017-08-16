@@ -26,7 +26,6 @@ import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.rel.GearSortRel;
 
-
 public class GearSortRule extends ConverterRule {
 
     public static final GearSortRule INSTANCE = new GearSortRule();

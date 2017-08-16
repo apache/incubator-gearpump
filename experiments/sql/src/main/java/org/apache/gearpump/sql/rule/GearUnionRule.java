@@ -26,7 +26,6 @@ import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.rel.GearUnionRel;
 
-
 public class GearUnionRule extends ConverterRule {
 
     public static final GearUnionRule INSTANCE = new GearUnionRule();

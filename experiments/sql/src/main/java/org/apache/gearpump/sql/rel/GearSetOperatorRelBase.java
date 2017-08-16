@@ -23,7 +23,6 @@ import org.apache.calcite.rel.RelNode;
 import java.io.Serializable;
 import java.util.List;
 
-
 public class GearSetOperatorRelBase {
 
     public enum OpType implements Serializable {

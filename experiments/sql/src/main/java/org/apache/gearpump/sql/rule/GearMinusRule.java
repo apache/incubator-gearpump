@@ -28,7 +28,6 @@ import org.apache.gearpump.sql.rel.GearMinusRel;
 
 import java.util.List;
 
-
 public class GearMinusRule extends ConverterRule {
 
     public static final GearMinusRule INSTANCE = new GearMinusRule();

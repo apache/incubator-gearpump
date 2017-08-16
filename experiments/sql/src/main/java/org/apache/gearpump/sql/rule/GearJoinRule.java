@@ -26,7 +26,6 @@ import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.gearpump.sql.rel.GearJoinRel;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
-
 public class GearJoinRule extends ConverterRule {
 
     public static final GearJoinRule INSTANCE = new GearJoinRule();

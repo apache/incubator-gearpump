@@ -26,7 +26,6 @@ import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
 import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
 import scala.Tuple2;
 
-
 public class GearIOSourceRel extends TableScan implements GearRelNode {
 
     public GearIOSourceRel(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table) {

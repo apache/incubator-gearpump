@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 class GearSqlRelUtils {
     private static final Logger LOG = LoggerFactory.getLogger(GearSqlRelUtils.class);
 
