@@ -30,7 +30,6 @@ import scala.Tuple2;
 
 import java.util.List;
 
-
 public class GearProjectRel extends Project implements GearRelNode {
 
     public GearProjectRel(RelOptCluster cluster, RelTraitSet traits, RelNode input,

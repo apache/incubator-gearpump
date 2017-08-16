@@ -26,7 +26,6 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.gearpump.sql.rel.GearIOSourceRel;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
-
 public class GearIOSourceRule extends ConverterRule {
 
     public static final GearIOSourceRule INSTANCE = new GearIOSourceRule();

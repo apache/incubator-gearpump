@@ -27,7 +27,6 @@ import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
 import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
 import scala.Tuple2;
 
-
 public class GearFilterRel extends Filter implements GearRelNode {
 
     public GearFilterRel(RelOptCluster cluster, RelTraitSet traits, RelNode child,

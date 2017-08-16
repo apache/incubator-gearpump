@@ -34,7 +34,6 @@ import org.apache.calcite.schema.Table;
 import org.apache.gearpump.sql.rel.GearIOSinkRel;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
-
 public class GearIOSinkRule extends ConverterRule {
 
     public static final GearIOSinkRule INSTANCE = new GearIOSinkRule();

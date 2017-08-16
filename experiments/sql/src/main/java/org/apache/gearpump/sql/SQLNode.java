@@ -34,7 +34,6 @@ import junit.framework.ComparisonFailure;
 
 import java.util.regex.Pattern;
 
-
 public class SQLNode {
 
     private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\r\n|\r|\n");

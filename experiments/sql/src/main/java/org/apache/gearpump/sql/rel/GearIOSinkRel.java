@@ -31,7 +31,6 @@ import scala.Tuple2;
 
 import java.util.List;
 
-
 public class GearIOSinkRel extends TableModify implements GearRelNode {
     public GearIOSinkRel(RelOptCluster cluster, RelTraitSet traits, RelOptTable table,
                          Prepare.CatalogReader catalogReader, RelNode child, Operation operation,

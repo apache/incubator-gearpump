@@ -26,7 +26,6 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.gearpump.sql.rel.GearFilterRel;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
-
 public class GearFilterRule extends ConverterRule {
 
     public static final GearFilterRule INSTANCE = new GearFilterRule();

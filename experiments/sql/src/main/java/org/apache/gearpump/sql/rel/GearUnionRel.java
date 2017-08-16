@@ -30,7 +30,6 @@ import scala.Tuple2;
 
 import java.util.List;
 
-
 public class GearUnionRel extends Union implements GearRelNode {
 
     private GearSetOperatorRelBase delegate;

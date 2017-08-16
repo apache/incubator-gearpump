@@ -39,7 +39,6 @@ import java.time.Duration;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-
 public class GearAggregationRule extends RelOptRule {
 
     private final static Logger logger = Logger.getLogger(GearAggregationRule.class);

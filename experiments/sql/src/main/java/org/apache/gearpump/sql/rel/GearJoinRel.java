@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-
 public class GearJoinRel extends Join implements GearRelNode {
     public GearJoinRel(RelOptCluster cluster, RelTraitSet traits, RelNode left, RelNode right,
                        RexNode condition, Set<CorrelationId> variablesSet, JoinRelType joinType) {

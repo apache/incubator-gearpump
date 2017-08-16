@@ -28,7 +28,6 @@ import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
 import java.util.List;
 
-
 public class GearIntersectRule extends ConverterRule {
 
     public static final GearIntersectRule INSTANCE = new GearIntersectRule();

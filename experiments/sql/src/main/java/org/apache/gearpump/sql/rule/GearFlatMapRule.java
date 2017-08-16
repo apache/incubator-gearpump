@@ -28,7 +28,6 @@ import org.apache.gearpump.sql.rel.GearFlatMapRel;
 import org.apache.gearpump.sql.utils.GearConfiguration;
 import org.apache.log4j.Logger;
 
-
 public class GearFlatMapRule extends ConverterRule {
 
     private final static Logger logger = Logger.getLogger(GearFlatMapRule.class);

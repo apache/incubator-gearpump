@@ -36,7 +36,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class GearSortRel extends Sort implements GearRelNode {
 
     private List<Integer> fieldIndices = new ArrayList<>();

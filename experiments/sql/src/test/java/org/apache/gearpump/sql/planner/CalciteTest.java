@@ -18,7 +18,6 @@
 
 package org.apache.gearpump.sql.planner;
 
-
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
