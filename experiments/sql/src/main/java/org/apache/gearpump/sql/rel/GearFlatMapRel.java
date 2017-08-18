@@ -33,7 +33,8 @@ import org.apache.gearpump.streaming.dsl.javaapi.functions.FlatMapFunction;
 import org.apache.gearpump.streaming.source.DataSource;
 import org.apache.gearpump.streaming.source.Watermark;
 import org.apache.gearpump.streaming.task.TaskContext;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.time.Instant;
@@ -42,70 +43,70 @@ import java.util.Iterator;
 
 public class GearFlatMapRel extends Filter implements GearRelNode {
 
-    private final static Logger logger = Logger.getLogger(GearFlatMapRel.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GearFlatMapRel.class);
 
-    public GearFlatMapRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode condition) {
-        super(cluster, traits, child, condition);
-    }
+  public GearFlatMapRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode condition) {
+    super(cluster, traits, child, condition);
+  }
 
-    public GearFlatMapRel() {
-        super(null, null, null, null);
+  public GearFlatMapRel() {
+    super(null, null, null, null);
+  }
+
+  @Override
+  public Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
+    return new GearFlatMapRel(getCluster(), traitSet, input, condition);
+  }
+
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app,
+                                                               JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    LOG.debug("Adding Source");
+    JavaStream<String> sentence = app.source(new StringSource(SampleString.Stream.getKV()),
+      1, UserConfig.empty(), "source");
+    LOG.debug("Adding flatMap");
+    SampleString.WORDS = sentence.flatMap(new Split(), "flatMap");
+    return null;
+  }
+
+  private static class StringSource implements DataSource {
+    private final String str;
+    private boolean hasNext = true;
+
+    StringSource(String str) {
+      this.str = str;
     }
 
     @Override
-    public Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
-        return new GearFlatMapRel(getCluster(), traitSet, input, condition);
+    public void open(TaskContext context, Instant startTime) {
     }
 
     @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app,
-                                                                 JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        logger.debug("Adding Source");
-        JavaStream<String> sentence = app.source(new StringSource(SampleString.Stream.getKV()),
-                1, UserConfig.empty(), "source");
-        logger.debug("Adding flatMap");
-        SampleString.WORDS = sentence.flatMap(new Split(), "flatMap");
-        return null;
+    public Message read() {
+      Message msg = new DefaultMessage(str, Instant.now());
+      hasNext = false;
+      return msg;
     }
 
-    private static class StringSource implements DataSource {
-        private final String str;
-        private boolean hasNext = true;
-
-        StringSource(String str) {
-            this.str = str;
-        }
-
-        @Override
-        public void open(TaskContext context, Instant startTime) {
-        }
-
-        @Override
-        public Message read() {
-            Message msg = new DefaultMessage(str, Instant.now());
-            hasNext = false;
-            return msg;
-        }
-
-        @Override
-        public void close() {
-        }
-
-        @Override
-        public Instant getWatermark() {
-            if (hasNext) {
-                return Instant.now();
-            } else {
-                return Watermark.MAX();
-            }
-        }
+    @Override
+    public void close() {
     }
 
-    private static class Split extends FlatMapFunction<String, String> {
-        @Override
-        public Iterator<String> flatMap(String s) {
-            return Arrays.asList(s.split("\\s+")).iterator();
-        }
+    @Override
+    public Instant getWatermark() {
+      if (hasNext) {
+        return Instant.now();
+      } else {
+        return Watermark.MAX();
+      }
     }
+  }
+
+  private static class Split extends FlatMapFunction<String, String> {
+    @Override
+    public Iterator<String> flatMap(String s) {
+      return Arrays.asList(s.split("\\s+")).iterator();
+    }
+  }
 
 }

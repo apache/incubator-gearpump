@@ -29,19 +29,19 @@ import scala.Tuple2;
 
 public class GearFilterRel extends Filter implements GearRelNode {
 
-    public GearFilterRel(RelOptCluster cluster, RelTraitSet traits, RelNode child,
-                         RexNode condition) {
-        super(cluster, traits, child, condition);
-    }
+  public GearFilterRel(RelOptCluster cluster, RelTraitSet traits, RelNode child,
+                       RexNode condition) {
+    super(cluster, traits, child, condition);
+  }
 
-    @Override
-    public Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
-        return new GearFilterRel(getCluster(), traitSet, input, condition);
-    }
+  @Override
+  public Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
+    return new GearFilterRel(getCluster(), traitSet, input, condition);
+  }
 
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

@@ -28,21 +28,21 @@ import org.apache.gearpump.sql.rel.GearProjectRel;
 
 public class GearProjectRule extends ConverterRule {
 
-    public static final GearProjectRule INSTANCE = new GearProjectRule();
+  public static final GearProjectRule INSTANCE = new GearProjectRule();
 
-    private GearProjectRule() {
-        super(LogicalProject.class, Convention.NONE, GearLogicalConvention.INSTANCE,
-                "GearProjectRule");
-    }
+  private GearProjectRule() {
+    super(LogicalProject.class, Convention.NONE, GearLogicalConvention.INSTANCE,
+      "GearProjectRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        final Project project = (Project) rel;
-        final RelNode input = project.getInput();
+  @Override
+  public RelNode convert(RelNode rel) {
+    final Project project = (Project) rel;
+    final RelNode input = project.getInput();
 
-        return new GearProjectRel(project.getCluster(),
-                project.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
-                project.getProjects(), project.getRowType());
-    }
+    return new GearProjectRel(project.getCluster(),
+      project.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+      project.getProjects(), project.getRowType());
+  }
 }

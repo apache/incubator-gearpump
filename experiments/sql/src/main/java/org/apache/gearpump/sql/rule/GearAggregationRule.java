@@ -33,7 +33,8 @@ import org.apache.gearpump.sql.rel.GearAggregationRel;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.utils.GearConfiguration;
 import org.apache.gearpump.streaming.dsl.window.api.*;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.GregorianCalendar;
@@ -41,106 +42,106 @@ import java.util.List;
 
 public class GearAggregationRule extends RelOptRule {
 
-    private final static Logger logger = Logger.getLogger(GearAggregationRule.class);
-    public static final GearAggregationRule INSTANCE =
-            new GearAggregationRule(Aggregate.class, Project.class, RelFactories.LOGICAL_BUILDER);
+  private static final Logger LOG = LoggerFactory.getLogger(GearAggregationRule.class);
+  public static final GearAggregationRule INSTANCE =
+    new GearAggregationRule(Aggregate.class, Project.class, RelFactories.LOGICAL_BUILDER);
 
-    public GearAggregationRule(Class<? extends Aggregate> aggregateClass,
-                               Class<? extends Project> projectClass,
-                               RelBuilderFactory relBuilderFactory) {
-        super(operand(aggregateClass, operand(projectClass, any())), relBuilderFactory, null);
-    }
+  public GearAggregationRule(Class<? extends Aggregate> aggregateClass,
+                             Class<? extends Project> projectClass,
+                             RelBuilderFactory relBuilderFactory) {
+    super(operand(aggregateClass, operand(projectClass, any())), relBuilderFactory, null);
+  }
 
-    public GearAggregationRule(RelOptRuleOperand operand, String description) {
-        super(operand, description);
-    }
+  public GearAggregationRule(RelOptRuleOperand operand, String description) {
+    super(operand, description);
+  }
 
-    @Override
-    public void onMatch(RelOptRuleCall call) {
-        final Aggregate aggregate = call.rel(0);
-        final Project project = call.rel(1);
-        updateWindowTrigger(call, aggregate, project);
-    }
+  @Override
+  public void onMatch(RelOptRuleCall call) {
+    final Aggregate aggregate = call.rel(0);
+    final Project project = call.rel(1);
+    updateWindowTrigger(call, aggregate, project);
+  }
 
-    private void updateWindowTrigger(RelOptRuleCall call, Aggregate aggregate, Project project) {
-        ImmutableBitSet groupByFields = aggregate.getGroupSet();
-        List<RexNode> projectMapping = project.getProjects();
+  private void updateWindowTrigger(RelOptRuleCall call, Aggregate aggregate, Project project) {
+    ImmutableBitSet groupByFields = aggregate.getGroupSet();
+    List<RexNode> projectMapping = project.getProjects();
 
-        WindowFunction windowFn = new GlobalWindowFunction();
-        Trigger triggerFn;
-        int windowFieldIdx = -1;
-        Duration allowedLatence = Duration.ZERO;
+    WindowFunction windowFn = new GlobalWindowFunction();
+    Trigger triggerFn;
+    int windowFieldIdx = -1;
+    Duration allowedLatence = Duration.ZERO;
 
-        for (int groupField : groupByFields.asList()) {
-            RexNode projNode = projectMapping.get(groupField);
-            if (projNode instanceof RexCall) {
-                SqlOperator op = ((RexCall) projNode).op;
-                ImmutableList<RexNode> parameters = ((RexCall) projNode).operands;
-                String functionName = op.getName();
-                switch (functionName) {
-                    case "TUMBLE":
-                        windowFieldIdx = groupField;
-                        windowFn = (WindowFunction) FixedWindows.apply(Duration.ofMillis(getWindowParameterAsMillis(parameters.get(1))));
-                        if (parameters.size() == 3) {
-                            GregorianCalendar delayTime = (GregorianCalendar) ((RexLiteral) parameters.get(2))
-                                    .getValue();
-                            triggerFn = createTriggerWithDelay(delayTime);
-                            allowedLatence = (Duration.ofMillis(delayTime.getTimeInMillis()));
-                        }
-                        break;
-                    case "HOP":
-                        windowFieldIdx = groupField;
-                        windowFn = (WindowFunction) SlidingWindows.apply(Duration.ofMillis(getWindowParameterAsMillis(parameters.get(1))), Duration.ofMillis(getWindowParameterAsMillis(parameters.get(2))));
-
-                        if (parameters.size() == 4) {
-                            GregorianCalendar delayTime = (GregorianCalendar) ((RexLiteral) parameters.get(3))
-                                    .getValue();
-                            triggerFn = createTriggerWithDelay(delayTime);
-                            allowedLatence = (Duration.ofMillis(delayTime.getTimeInMillis()));
-                        }
-                        break;
-                    case "SESSION":
-                        windowFieldIdx = groupField;
-                        windowFn = (WindowFunction) SessionWindows.apply(Duration.ofMillis(getWindowParameterAsMillis(parameters.get(1))));
-                        if (parameters.size() == 3) {
-                            GregorianCalendar delayTime = (GregorianCalendar) ((RexLiteral) parameters.get(2))
-                                    .getValue();
-                            triggerFn = createTriggerWithDelay(delayTime);
-                            allowedLatence = (Duration.ofMillis(delayTime.getTimeInMillis()));
-                        }
-                        break;
-                    default:
-                        break;
-                }
+    for (int groupField : groupByFields.asList()) {
+      RexNode projNode = projectMapping.get(groupField);
+      if (projNode instanceof RexCall) {
+        SqlOperator op = ((RexCall) projNode).op;
+        ImmutableList<RexNode> parameters = ((RexCall) projNode).operands;
+        String functionName = op.getName();
+        switch (functionName) {
+          case "TUMBLE":
+            windowFieldIdx = groupField;
+            windowFn = (WindowFunction) FixedWindows.apply(Duration.ofMillis(getWindowParameterAsMillis(parameters.get(1))));
+            if (parameters.size() == 3) {
+              GregorianCalendar delayTime = (GregorianCalendar) ((RexLiteral) parameters.get(2))
+                .getValue();
+              triggerFn = createTriggerWithDelay(delayTime);
+              allowedLatence = (Duration.ofMillis(delayTime.getTimeInMillis()));
             }
-        }
+            break;
+          case "HOP":
+            windowFieldIdx = groupField;
+            windowFn = (WindowFunction) SlidingWindows.apply(Duration.ofMillis(getWindowParameterAsMillis(parameters.get(1))), Duration.ofMillis(getWindowParameterAsMillis(parameters.get(2))));
 
-        try {
-            GearAggregationRel gearRel = new GearAggregationRel(aggregate.getCluster(),
-                    aggregate.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                    convert(aggregate.getInput(),
-                            aggregate.getInput().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
-                    aggregate.indicator,
-                    aggregate.getGroupSet(),
-                    aggregate.getGroupSets(),
-                    aggregate.getAggCallList());
-            gearRel.buildGearPipeline(GearConfiguration.app, null);
-            GearConfiguration.app.submit().waitUntilFinish();
-        } catch (Exception e) {
-            logger.error(e);
+            if (parameters.size() == 4) {
+              GregorianCalendar delayTime = (GregorianCalendar) ((RexLiteral) parameters.get(3))
+                .getValue();
+              triggerFn = createTriggerWithDelay(delayTime);
+              allowedLatence = (Duration.ofMillis(delayTime.getTimeInMillis()));
+            }
+            break;
+          case "SESSION":
+            windowFieldIdx = groupField;
+            windowFn = (WindowFunction) SessionWindows.apply(Duration.ofMillis(getWindowParameterAsMillis(parameters.get(1))));
+            if (parameters.size() == 3) {
+              GregorianCalendar delayTime = (GregorianCalendar) ((RexLiteral) parameters.get(2))
+                .getValue();
+              triggerFn = createTriggerWithDelay(delayTime);
+              allowedLatence = (Duration.ofMillis(delayTime.getTimeInMillis()));
+            }
+            break;
+          default:
+            break;
         }
-
+      }
     }
 
-    private Trigger createTriggerWithDelay(GregorianCalendar delayTime) {
-        return null;
+    try {
+      GearAggregationRel gearRel = new GearAggregationRel(aggregate.getCluster(),
+        aggregate.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+        convert(aggregate.getInput(),
+          aggregate.getInput().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+        aggregate.indicator,
+        aggregate.getGroupSet(),
+        aggregate.getGroupSets(),
+        aggregate.getAggCallList());
+      gearRel.buildGearPipeline(GearConfiguration.app, null);
+      GearConfiguration.app.submit().waitUntilFinish();
+    } catch (Exception e) {
+      LOG.error(e.getMessage());
     }
 
-    private long getWindowParameterAsMillis(RexNode parameterNode) {
-        if (parameterNode instanceof RexLiteral) {
-            return RexLiteral.intValue(parameterNode);
-        } else {
-            throw new IllegalArgumentException(String.format("[%s] is not valid.", parameterNode));
-        }
+  }
+
+  private Trigger createTriggerWithDelay(GregorianCalendar delayTime) {
+    return null;
+  }
+
+  private long getWindowParameterAsMillis(RexNode parameterNode) {
+    if (parameterNode instanceof RexLiteral) {
+      return RexLiteral.intValue(parameterNode);
+    } else {
+      throw new IllegalArgumentException(String.format("[%s] is not valid.", parameterNode));
     }
+  }
 }

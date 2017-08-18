@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.gearpump.sql.planner;
 
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -25,16 +26,16 @@ import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
  */
 public class GearRelDataTypeSystem extends RelDataTypeSystemImpl {
 
-    public static final RelDataTypeSystem GEAR_REL_DATATYPE_SYSTEM = new GearRelDataTypeSystem();
+  public static final RelDataTypeSystem GEAR_REL_DATATYPE_SYSTEM = new GearRelDataTypeSystem();
 
-    @Override
-    public int getMaxNumericScale() {
-        return 38;
-    }
+  @Override
+  public int getMaxNumericScale() {
+    return 38;
+  }
 
-    @Override
-    public int getMaxNumericPrecision() {
-        return 38;
-    }
+  @Override
+  public int getMaxNumericPrecision() {
+    return 38;
+  }
 
 }

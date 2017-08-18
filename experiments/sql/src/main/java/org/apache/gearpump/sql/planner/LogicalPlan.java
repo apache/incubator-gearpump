@@ -27,17 +27,17 @@ import org.apache.calcite.tools.ValidationException;
 
 public class LogicalPlan {
 
-    public static RelNode getLogicalPlan(String query, Planner planner) throws ValidationException,
-            RelConversionException {
-        SqlNode sqlNode;
+  public static RelNode getLogicalPlan(String query, Planner planner) throws ValidationException,
+    RelConversionException {
+    SqlNode sqlNode;
 
-        try {
-            sqlNode = planner.parse(query);
-        } catch (SqlParseException e) {
-            throw new RuntimeException("SQL query parsing error", e);
-        }
-        SqlNode validatedSqlNode = planner.validate(sqlNode);
-
-        return planner.rel(validatedSqlNode).project();
+    try {
+      sqlNode = planner.parse(query);
+    } catch (SqlParseException e) {
+      throw new RuntimeException("SQL query parsing error", e);
     }
+    SqlNode validatedSqlNode = planner.validate(sqlNode);
+
+    return planner.rel(validatedSqlNode).project();
+  }
 }

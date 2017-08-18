@@ -28,12 +28,12 @@ import scala.Tuple2;
 
 public class GearIOSourceRel extends TableScan implements GearRelNode {
 
-    public GearIOSourceRel(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table) {
-        super(cluster, traitSet, table);
-    }
+  public GearIOSourceRel(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table) {
+    super(cluster, traitSet, table);
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

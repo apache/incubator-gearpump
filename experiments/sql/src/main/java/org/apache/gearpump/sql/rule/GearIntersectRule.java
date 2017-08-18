@@ -30,22 +30,22 @@ import java.util.List;
 
 public class GearIntersectRule extends ConverterRule {
 
-    public static final GearIntersectRule INSTANCE = new GearIntersectRule();
+  public static final GearIntersectRule INSTANCE = new GearIntersectRule();
 
-    private GearIntersectRule() {
-        super(LogicalIntersect.class, Convention.NONE,
-                GearLogicalConvention.INSTANCE, "GearIntersectRule");
-    }
+  private GearIntersectRule() {
+    super(LogicalIntersect.class, Convention.NONE,
+      GearLogicalConvention.INSTANCE, "GearIntersectRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        Intersect intersect = (Intersect) rel;
-        final List<RelNode> inputs = intersect.getInputs();
-        return new GearIntersectRel(
-                intersect.getCluster(),
-                intersect.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convertList(inputs, GearLogicalConvention.INSTANCE),
-                intersect.all
-        );
-    }
+  @Override
+  public RelNode convert(RelNode rel) {
+    Intersect intersect = (Intersect) rel;
+    final List<RelNode> inputs = intersect.getInputs();
+    return new GearIntersectRel(
+      intersect.getCluster(),
+      intersect.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convertList(inputs, GearLogicalConvention.INSTANCE),
+      intersect.all
+    );
+  }
 }

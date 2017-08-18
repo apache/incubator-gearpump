@@ -32,21 +32,21 @@ import scala.Tuple2;
 import java.util.List;
 
 public class GearIOSinkRel extends TableModify implements GearRelNode {
-    public GearIOSinkRel(RelOptCluster cluster, RelTraitSet traits, RelOptTable table,
-                         Prepare.CatalogReader catalogReader, RelNode child, Operation operation,
-                         List<String> updateColumnList, List<RexNode> sourceExpressionList, boolean flattened) {
-        super(cluster, traits, table, catalogReader, child, operation, updateColumnList,
-                sourceExpressionList, flattened);
-    }
+  public GearIOSinkRel(RelOptCluster cluster, RelTraitSet traits, RelOptTable table,
+                       Prepare.CatalogReader catalogReader, RelNode child, Operation operation,
+                       List<String> updateColumnList, List<RexNode> sourceExpressionList, boolean flattened) {
+    super(cluster, traits, table, catalogReader, child, operation, updateColumnList,
+      sourceExpressionList, flattened);
+  }
 
-    @Override
-    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new GearIOSinkRel(getCluster(), traitSet, getTable(), getCatalogReader(), sole(inputs),
-                getOperation(), getUpdateColumnList(), getSourceExpressionList(), isFlattened());
-    }
+  @Override
+  public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+    return new GearIOSinkRel(getCluster(), traitSet, getTable(), getCatalogReader(), sole(inputs),
+      getOperation(), getUpdateColumnList(), getSourceExpressionList(), isFlattened());
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

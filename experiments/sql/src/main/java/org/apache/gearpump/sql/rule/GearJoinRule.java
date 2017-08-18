@@ -28,26 +28,26 @@ import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
 public class GearJoinRule extends ConverterRule {
 
-    public static final GearJoinRule INSTANCE = new GearJoinRule();
+  public static final GearJoinRule INSTANCE = new GearJoinRule();
 
-    private GearJoinRule() {
-        super(LogicalJoin.class, Convention.NONE,
-                GearLogicalConvention.INSTANCE, "GearJoinRule");
-    }
+  private GearJoinRule() {
+    super(LogicalJoin.class, Convention.NONE,
+      GearLogicalConvention.INSTANCE, "GearJoinRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        Join join = (Join) rel;
-        return new GearJoinRel(
-                join.getCluster(),
-                join.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convert(join.getLeft(),
-                        join.getLeft().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
-                convert(join.getRight(),
-                        join.getRight().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
-                join.getCondition(),
-                join.getVariablesSet(),
-                join.getJoinType()
-        );
-    }
+  @Override
+  public RelNode convert(RelNode rel) {
+    Join join = (Join) rel;
+    return new GearJoinRel(
+      join.getCluster(),
+      join.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convert(join.getLeft(),
+        join.getLeft().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+      convert(join.getRight(),
+        join.getRight().getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+      join.getCondition(),
+      join.getVariablesSet(),
+      join.getJoinType()
+    );
+  }
 }

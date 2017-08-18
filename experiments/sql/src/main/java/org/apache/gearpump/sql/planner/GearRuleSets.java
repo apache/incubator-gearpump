@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.gearpump.sql.planner;
 
 import com.google.common.collect.ImmutableList;
@@ -26,34 +27,34 @@ import org.apache.gearpump.sql.rule.*;
 import java.util.Iterator;
 
 public class GearRuleSets {
-    private static final ImmutableSet<RelOptRule> calciteToGearConversionRules = ImmutableSet
-            .<RelOptRule>builder().add(GearIOSourceRule.INSTANCE, GearProjectRule.INSTANCE,
-                    GearFilterRule.INSTANCE, GearIOSinkRule.INSTANCE,
-                    GearAggregationRule.INSTANCE, GearSortRule.INSTANCE, GearValuesRule.INSTANCE,
-                    GearIntersectRule.INSTANCE, GearMinusRule.INSTANCE, GearUnionRule.INSTANCE,
-                    GearJoinRule.INSTANCE)
-            .build();
+  private static final ImmutableSet<RelOptRule> calciteToGearConversionRules = ImmutableSet
+    .<RelOptRule>builder().add(GearIOSourceRule.INSTANCE, GearProjectRule.INSTANCE,
+      GearFilterRule.INSTANCE, GearIOSinkRule.INSTANCE,
+      GearAggregationRule.INSTANCE, GearSortRule.INSTANCE, GearValuesRule.INSTANCE,
+      GearIntersectRule.INSTANCE, GearMinusRule.INSTANCE, GearUnionRule.INSTANCE,
+      GearJoinRule.INSTANCE)
+    .build();
 
-    public static RuleSet[] getRuleSets() {
-        return new RuleSet[]{new GearRuleSet(
-                ImmutableSet.<RelOptRule>builder().addAll(calciteToGearConversionRules).build())};
+  public static RuleSet[] getRuleSets() {
+    return new RuleSet[]{new GearRuleSet(
+      ImmutableSet.<RelOptRule>builder().addAll(calciteToGearConversionRules).build())};
+  }
+
+  private static class GearRuleSet implements RuleSet {
+    final ImmutableSet<RelOptRule> rules;
+
+    public GearRuleSet(ImmutableSet<RelOptRule> rules) {
+      this.rules = rules;
     }
 
-    private static class GearRuleSet implements RuleSet {
-        final ImmutableSet<RelOptRule> rules;
-
-        public GearRuleSet(ImmutableSet<RelOptRule> rules) {
-            this.rules = rules;
-        }
-
-        public GearRuleSet(ImmutableList<RelOptRule> rules) {
-            this.rules = ImmutableSet.<RelOptRule>builder().addAll(rules).build();
-        }
-
-        @Override
-        public Iterator<RelOptRule> iterator() {
-            return rules.iterator();
-        }
+    public GearRuleSet(ImmutableList<RelOptRule> rules) {
+      this.rules = ImmutableSet.<RelOptRule>builder().addAll(rules).build();
     }
+
+    @Override
+    public Iterator<RelOptRule> iterator() {
+      return rules.iterator();
+    }
+  }
 
 }

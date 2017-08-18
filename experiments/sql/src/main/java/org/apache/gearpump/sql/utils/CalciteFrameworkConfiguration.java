@@ -35,24 +35,24 @@ import java.util.List;
 
 public class CalciteFrameworkConfiguration {
 
-    public static FrameworkConfig getDefaultconfig(SchemaPlus schema) {
-        final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
+  public static FrameworkConfig getDefaultconfig(SchemaPlus schema) {
+    final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
 
-        traitDefs.add(ConventionTraitDef.INSTANCE);
-        traitDefs.add(RelCollationTraitDef.INSTANCE);
+    traitDefs.add(ConventionTraitDef.INSTANCE);
+    traitDefs.add(RelCollationTraitDef.INSTANCE);
 
-        FrameworkConfig frameworkConfiguration = Frameworks.newConfigBuilder()
-                .parserConfig(SqlParser.configBuilder()
-                        .setLex(Lex.JAVA)
-                        .build())
-                .defaultSchema(schema)
-                .traitDefs(traitDefs)
-                .context(Contexts.EMPTY_CONTEXT)
-                .ruleSets(RuleSets.ofList())
-                .costFactory(null)
-                .typeSystem(RelDataTypeSystem.DEFAULT)
-                .build();
+    FrameworkConfig frameworkConfiguration = Frameworks.newConfigBuilder()
+      .parserConfig(SqlParser.configBuilder()
+        .setLex(Lex.JAVA)
+        .build())
+      .defaultSchema(schema)
+      .traitDefs(traitDefs)
+      .context(Contexts.EMPTY_CONTEXT)
+      .ruleSets(RuleSets.ofList())
+      .costFactory(null)
+      .typeSystem(RelDataTypeSystem.DEFAULT)
+      .build();
 
-        return frameworkConfiguration;
-    }
+    return frameworkConfiguration;
+  }
 }

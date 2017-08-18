@@ -28,44 +28,44 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class GearSqlRelUtils {
-    private static final Logger LOG = LoggerFactory.getLogger(GearSqlRelUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GearSqlRelUtils.class);
 
-    private static final AtomicInteger sequence = new AtomicInteger(0);
-    private static final AtomicInteger classSequence = new AtomicInteger(0);
+  private static final AtomicInteger sequence = new AtomicInteger(0);
+  private static final AtomicInteger classSequence = new AtomicInteger(0);
 
-    public static String getStageName(GearRelNode relNode) {
-        return relNode.getClass().getSimpleName().toUpperCase() + "_" + relNode.getId() + "_"
-                + sequence.getAndIncrement();
+  public static String getStageName(GearRelNode relNode) {
+    return relNode.getClass().getSimpleName().toUpperCase() + "_" + relNode.getId() + "_"
+      + sequence.getAndIncrement();
+  }
+
+  public static String getClassName(GearRelNode relNode) {
+    return "Generated_" + relNode.getClass().getSimpleName().toUpperCase() + "_" + relNode.getId()
+      + "_" + classSequence.getAndIncrement();
+  }
+
+  public static GearRelNode getGearRelInput(RelNode input) {
+    if (input instanceof RelSubset) {
+      // go with known best input
+      input = ((RelSubset) input).getBest();
     }
+    return (GearRelNode) input;
+  }
 
-    public static String getClassName(GearRelNode relNode) {
-        return "Generated_" + relNode.getClass().getSimpleName().toUpperCase() + "_" + relNode.getId()
-                + "_" + classSequence.getAndIncrement();
-    }
+  public static String explain(final RelNode rel) {
+    return explain(rel, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+  }
 
-    public static GearRelNode getGearRelInput(RelNode input) {
-        if (input instanceof RelSubset) {
-            // go with known best input
-            input = ((RelSubset) input).getBest();
-        }
-        return (GearRelNode) input;
+  public static String explain(final RelNode rel, SqlExplainLevel detailLevel) {
+    String explain = "";
+    try {
+      explain = RelOptUtil.toString(rel);
+    } catch (StackOverflowError e) {
+      LOG.error("StackOverflowError occurred while extracting plan. "
+        + "Please report it to the dev@ mailing list.");
+      LOG.error("RelNode " + rel + " ExplainLevel " + detailLevel, e);
+      LOG.error("Forcing plan to empty string and continue... "
+        + "SQL Runner may not working properly after.");
     }
-
-    public static String explain(final RelNode rel) {
-        return explain(rel, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
-    }
-
-    public static String explain(final RelNode rel, SqlExplainLevel detailLevel) {
-        String explain = "";
-        try {
-            explain = RelOptUtil.toString(rel);
-        } catch (StackOverflowError e) {
-            LOG.error("StackOverflowError occurred while extracting plan. "
-                    + "Please report it to the dev@ mailing list.");
-            LOG.error("RelNode " + rel + " ExplainLevel " + detailLevel, e);
-            LOG.error("Forcing plan to empty string and continue... "
-                    + "SQL Runner may not working properly after.");
-        }
-        return explain;
-    }
+    return explain;
+  }
 }

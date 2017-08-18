@@ -34,7 +34,8 @@ import org.apache.gearpump.sql.rule.GearAggregationRule;
 import org.apache.gearpump.sql.rule.GearFlatMapRule;
 import org.apache.gearpump.sql.table.SampleString;
 import org.apache.gearpump.sql.utils.GearConfiguration;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -42,82 +43,83 @@ import java.util.List;
 
 public class SqlWordCountTest {
 
-    private final static Logger logger = Logger.getLogger(SqlWordCountTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SqlWordCountTest.class);
 
-    private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) {
-        try {
-            return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs);
-        } catch (ClassNotFoundException e) {
-            logger.error(e);
-        } catch (SQLException e) {
-            logger.error(e);
-        }
-        return null;
+  private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) {
+    try {
+      return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs);
+    } catch (ClassNotFoundException e) {
+      LOG.error(e.getMessage());
+    } catch (SQLException e) {
+      LOG.error(e.getMessage());
+    }
+    return null;
+  }
+
+  private Planner getPlanner(List<RelTraitDef> traitDefs,
+                             SqlParser.Config parserConfig,
+                             Program... programs) throws ClassNotFoundException, SQLException {
+
+    Class.forName("org.apache.calcite.jdbc.Driver");
+    java.sql.Connection connection = DriverManager.getConnection("jdbc:calcite:");
+    CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
+    SchemaPlus rootSchema = calciteConnection.getRootSchema();
+    rootSchema.add("STR", new ReflectiveSchema(new SampleString.Stream()));
+
+    final FrameworkConfig config = Frameworks.newConfigBuilder()
+      .parserConfig(parserConfig)
+      .defaultSchema(rootSchema)
+      .traitDefs(traitDefs)
+      .programs(programs)
+      .build();
+    return Frameworks.getPlanner(config);
+  }
+
+  void wordCountTest(GearConfiguration gearConfig) throws SqlParseException,
+    ValidationException, RelConversionException {
+
+    RuleSet ruleSet = RuleSets.ofList(
+      GearFlatMapRule.INSTANCE,
+      GearAggregationRule.INSTANCE);
+
+    Planner planner = getPlanner(null, Programs.of(ruleSet));
+
+    String sql = "SELECT COUNT(*) FROM str.kv GROUP BY str.kv.word";
+    System.out.println("SQL Query:-\t" + sql + "\n");
+
+    SqlNode parse = planner.parse(sql);
+    System.out.println("SQL Parse Tree:- \n" + parse.toString() + "\n\n");
+
+    SqlNode validate = planner.validate(parse);
+    RelNode convert = planner.rel(validate).project();
+    System.out.println("Relational Expression:- \n" + RelOptUtil.toString(convert) + "\n");
+
+    gearConfig.defaultConfiguration();
+    gearConfig.ConfigJavaStreamApp();
+
+    RelTraitSet traitSet = convert.getTraitSet().replace(GearLogicalConvention.INSTANCE);
+    try {
+      RelNode transform = planner.transform(0, traitSet, convert);
+      System.out.println(RelOptUtil.toString(transform));
+    } catch (Exception e) {
     }
 
-    private Planner getPlanner(List<RelTraitDef> traitDefs,
-                               SqlParser.Config parserConfig,
-                               Program... programs) throws ClassNotFoundException, SQLException {
+  }
 
-        Class.forName("org.apache.calcite.jdbc.Driver");
-        java.sql.Connection connection = DriverManager.getConnection("jdbc:calcite:");
-        CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
-        SchemaPlus rootSchema = calciteConnection.getRootSchema();
-        rootSchema.add("STR", new ReflectiveSchema(new SampleString.Stream()));
 
-        final FrameworkConfig config = Frameworks.newConfigBuilder()
-                .parserConfig(parserConfig)
-                .defaultSchema(rootSchema)
-                .traitDefs(traitDefs)
-                .programs(programs)
-                .build();
-        return Frameworks.getPlanner(config);
+  public static void main(String[] args) throws ClassNotFoundException,
+    SQLException, SqlParseException {
+
+    SqlWordCountTest gearSqlWordCount = new SqlWordCountTest();
+
+    try {
+      GearConfiguration gearConfig = new GearConfiguration();
+      gearSqlWordCount.wordCountTest(gearConfig);
+    } catch (ValidationException e) {
+      LOG.error(e.getMessage());
+    } catch (RelConversionException e) {
+      LOG.error(e.getMessage());
     }
 
-    void wordCountTest(GearConfiguration gearConfig) throws SqlParseException,
-            ValidationException, RelConversionException {
-
-        RuleSet ruleSet = RuleSets.ofList(
-                GearFlatMapRule.INSTANCE,
-                GearAggregationRule.INSTANCE);
-
-        Planner planner = getPlanner(null, Programs.of(ruleSet));
-
-        String sql = "SELECT COUNT(*) FROM str.kv GROUP BY str.kv.word";
-        logger.info("\n\nSQL Query:-\t" + sql + "\n");
-
-        SqlNode parse = planner.parse(sql);
-        logger.info("SQL Parse Tree:- \n\n" + parse.toString() + "\n");
-
-        SqlNode validate = planner.validate(parse);
-        RelNode convert = planner.rel(validate).project();
-        logger.info("Relational Expression:- \n\n" + RelOptUtil.toString(convert) + "\n");
-
-        gearConfig.defaultConfiguration();
-        gearConfig.ConfigJavaStreamApp();
-
-        RelTraitSet traitSet = convert.getTraitSet().replace(GearLogicalConvention.INSTANCE);
-        try {
-            RelNode transform = planner.transform(0, traitSet, convert);
-            logger.info(RelOptUtil.toString(transform));
-        } catch (Exception e) {
-        }
-
-    }
-
-
-    public static void main(String[] args) throws ClassNotFoundException, SQLException, SqlParseException {
-
-        SqlWordCountTest gearSqlWordCount = new SqlWordCountTest();
-
-        try {
-            GearConfiguration gearConfig = new GearConfiguration();
-            gearSqlWordCount.wordCountTest(gearConfig);
-        } catch (ValidationException e) {
-            logger.error(e.getMessage());
-        } catch (RelConversionException e) {
-            logger.error(e.getMessage());
-        }
-
-    }
+  }
 }

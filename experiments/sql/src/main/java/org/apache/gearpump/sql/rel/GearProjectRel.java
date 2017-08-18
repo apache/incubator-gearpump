@@ -32,19 +32,19 @@ import java.util.List;
 
 public class GearProjectRel extends Project implements GearRelNode {
 
-    public GearProjectRel(RelOptCluster cluster, RelTraitSet traits, RelNode input,
-                          List<? extends RexNode> projects, RelDataType rowType) {
-        super(cluster, traits, input, projects, rowType);
-    }
+  public GearProjectRel(RelOptCluster cluster, RelTraitSet traits, RelNode input,
+                        List<? extends RexNode> projects, RelDataType rowType) {
+    super(cluster, traits, input, projects, rowType);
+  }
 
-    @Override
-    public Project copy(RelTraitSet traitSet, RelNode input, List<RexNode> projects,
-                        RelDataType rowType) {
-        return new GearProjectRel(getCluster(), traitSet, input, projects, rowType);
-    }
+  @Override
+  public Project copy(RelTraitSet traitSet, RelNode input, List<RexNode> projects,
+                      RelDataType rowType) {
+    return new GearProjectRel(getCluster(), traitSet, input, projects, rowType);
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

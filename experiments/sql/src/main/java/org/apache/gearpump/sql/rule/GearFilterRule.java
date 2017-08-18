@@ -28,21 +28,21 @@ import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
 public class GearFilterRule extends ConverterRule {
 
-    public static final GearFilterRule INSTANCE = new GearFilterRule();
+  public static final GearFilterRule INSTANCE = new GearFilterRule();
 
-    private GearFilterRule() {
-        super(LogicalFilter.class, Convention.NONE, GearLogicalConvention.INSTANCE, "GearFilterRule");
-    }
+  private GearFilterRule() {
+    super(LogicalFilter.class, Convention.NONE, GearLogicalConvention.INSTANCE, "GearFilterRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        final Filter filter = (Filter) rel;
-        final RelNode input = filter.getInput();
+  @Override
+  public RelNode convert(RelNode rel) {
+    final Filter filter = (Filter) rel;
+    final RelNode input = filter.getInput();
 
-        GearFilterRel gearRel = new GearFilterRel(filter.getCluster(),
-                filter.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
-                filter.getCondition());
-        return gearRel;
-    }
+    GearFilterRel gearRel = new GearFilterRel(filter.getCluster(),
+      filter.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+      filter.getCondition());
+    return gearRel;
+  }
 }

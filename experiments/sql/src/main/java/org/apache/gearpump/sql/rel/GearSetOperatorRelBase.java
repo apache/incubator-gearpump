@@ -25,23 +25,23 @@ import java.util.List;
 
 public class GearSetOperatorRelBase {
 
-    public enum OpType implements Serializable {
-        UNION,
-        INTERSECT,
-        MINUS
-    }
+  public enum OpType implements Serializable {
+    UNION,
+    INTERSECT,
+    MINUS
+  }
 
-    private GearRelNode gearRelNode;
-    private List<RelNode> inputs;
-    private boolean all;
-    private OpType opType;
+  private GearRelNode gearRelNode;
+  private List<RelNode> inputs;
+  private boolean all;
+  private OpType opType;
 
-    public GearSetOperatorRelBase(GearRelNode gearRelNode, OpType opType,
-                                  List<RelNode> inputs, boolean all) {
-        this.gearRelNode = gearRelNode;
-        this.opType = opType;
-        this.inputs = inputs;
-        this.all = all;
-    }
+  public GearSetOperatorRelBase(GearRelNode gearRelNode, OpType opType,
+                                List<RelNode> inputs, boolean all) {
+    this.gearRelNode = gearRelNode;
+    this.opType = opType;
+    this.inputs = inputs;
+    this.all = all;
+  }
 
 }

@@ -30,13 +30,13 @@ import scala.Tuple2;
 
 public class GearValuesRel extends Values implements GearRelNode {
 
-    public GearValuesRel(RelOptCluster cluster, RelDataType rowType, ImmutableList<ImmutableList<RexLiteral>> tuples,
-                         RelTraitSet traits) {
-        super(cluster, rowType, tuples, traits);
-    }
+  public GearValuesRel(RelOptCluster cluster, RelDataType rowType, ImmutableList<ImmutableList<RexLiteral>> tuples,
+                       RelTraitSet traits) {
+    super(cluster, rowType, tuples, traits);
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

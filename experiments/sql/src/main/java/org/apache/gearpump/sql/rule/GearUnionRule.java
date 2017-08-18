@@ -28,22 +28,22 @@ import org.apache.gearpump.sql.rel.GearUnionRel;
 
 public class GearUnionRule extends ConverterRule {
 
-    public static final GearUnionRule INSTANCE = new GearUnionRule();
+  public static final GearUnionRule INSTANCE = new GearUnionRule();
 
-    private GearUnionRule() {
-        super(LogicalUnion.class, Convention.NONE, GearLogicalConvention.INSTANCE,
-                "GearUnionRule");
-    }
+  private GearUnionRule() {
+    super(LogicalUnion.class, Convention.NONE, GearLogicalConvention.INSTANCE,
+      "GearUnionRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        Union union = (Union) rel;
+  @Override
+  public RelNode convert(RelNode rel) {
+    Union union = (Union) rel;
 
-        return new GearUnionRel(
-                union.getCluster(),
-                union.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convertList(union.getInputs(), GearLogicalConvention.INSTANCE),
-                union.all
-        );
-    }
+    return new GearUnionRel(
+      union.getCluster(),
+      union.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convertList(union.getInputs(), GearLogicalConvention.INSTANCE),
+      union.all
+    );
+  }
 }

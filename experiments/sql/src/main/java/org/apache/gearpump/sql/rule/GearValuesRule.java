@@ -28,21 +28,21 @@ import org.apache.gearpump.sql.rel.GearValuesRel;
 
 public class GearValuesRule extends ConverterRule {
 
-    public static final GearValuesRule INSTANCE = new GearValuesRule();
+  public static final GearValuesRule INSTANCE = new GearValuesRule();
 
-    private GearValuesRule() {
-        super(LogicalValues.class, Convention.NONE,
-                GearLogicalConvention.INSTANCE, "GearValuesRule");
-    }
+  private GearValuesRule() {
+    super(LogicalValues.class, Convention.NONE,
+      GearLogicalConvention.INSTANCE, "GearValuesRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        Values values = (Values) rel;
-        return new GearValuesRel(
-                values.getCluster(),
-                values.getRowType(),
-                values.getTuples(),
-                values.getTraitSet().replace(GearLogicalConvention.INSTANCE)
-        );
-    }
+  @Override
+  public RelNode convert(RelNode rel) {
+    Values values = (Values) rel;
+    return new GearValuesRel(
+      values.getCluster(),
+      values.getRowType(),
+      values.getTuples(),
+      values.getTraitSet().replace(GearLogicalConvention.INSTANCE)
+    );
+  }
 }

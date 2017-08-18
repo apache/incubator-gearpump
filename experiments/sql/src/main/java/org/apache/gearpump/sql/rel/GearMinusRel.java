@@ -31,21 +31,21 @@ import java.util.List;
 
 public class GearMinusRel extends Minus implements GearRelNode {
 
-    private GearSetOperatorRelBase delegate;
+  private GearSetOperatorRelBase delegate;
 
-    public GearMinusRel(RelOptCluster cluster, RelTraitSet traits, List<RelNode> inputs,
-                        boolean all) {
-        super(cluster, traits, inputs, all);
-        delegate = new GearSetOperatorRelBase(this, GearSetOperatorRelBase.OpType.MINUS, inputs, all);
-    }
+  public GearMinusRel(RelOptCluster cluster, RelTraitSet traits, List<RelNode> inputs,
+                      boolean all) {
+    super(cluster, traits, inputs, all);
+    delegate = new GearSetOperatorRelBase(this, GearSetOperatorRelBase.OpType.MINUS, inputs, all);
+  }
 
-    @Override
-    public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all) {
-        return new GearMinusRel(getCluster(), traitSet, inputs, all);
-    }
+  @Override
+  public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all) {
+    return new GearMinusRel(getCluster(), traitSet, inputs, all);
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

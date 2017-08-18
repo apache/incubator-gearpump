@@ -38,58 +38,58 @@ import java.util.List;
 
 public class GearSortRel extends Sort implements GearRelNode {
 
-    private List<Integer> fieldIndices = new ArrayList<>();
-    private List<Boolean> orientation = new ArrayList<>();
-    private List<Boolean> nullsFirst = new ArrayList<>();
+  private List<Integer> fieldIndices = new ArrayList<>();
+  private List<Boolean> orientation = new ArrayList<>();
+  private List<Boolean> nullsFirst = new ArrayList<>();
 
-    private int startIndex = 0;
-    private int count;
+  private int startIndex = 0;
+  private int count;
 
-    public GearSortRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RelCollation collation,
-                       RexNode offset, RexNode fetch) {
-        super(cluster, traits, child, collation, offset, fetch);
-
-        List<RexNode> fieldExps = getChildExps();
-        RelCollationImpl collationImpl = (RelCollationImpl) collation;
-        List<RelFieldCollation> collations = collationImpl.getFieldCollations();
-        for (int i = 0; i < fieldExps.size(); i++) {
-            RexNode fieldExp = fieldExps.get(i);
-            RexInputRef inputRef = (RexInputRef) fieldExp;
-            fieldIndices.add(inputRef.getIndex());
-            orientation.add(collations.get(i).getDirection() == RelFieldCollation.Direction.ASCENDING);
-
-            RelFieldCollation.NullDirection rawNullDirection = collations.get(i).nullDirection;
-            if (rawNullDirection == RelFieldCollation.NullDirection.UNSPECIFIED) {
-                rawNullDirection = collations.get(i).getDirection().defaultNullDirection();
-            }
-            nullsFirst.add(rawNullDirection == RelFieldCollation.NullDirection.FIRST);
-        }
-
-        if (fetch == null) {
-            throw new UnsupportedOperationException("ORDER BY without a LIMIT is not supported!");
-        }
-
-        RexLiteral fetchLiteral = (RexLiteral) fetch;
-        count = ((BigDecimal) fetchLiteral.getValue()).intValue();
-
-        if (offset != null) {
-            RexLiteral offsetLiteral = (RexLiteral) offset;
-            startIndex = ((BigDecimal) offsetLiteral.getValue()).intValue();
-        }
-    }
-
-    @Override
-    public Sort copy(RelTraitSet traitSet, RelNode newInput, RelCollation newCollation,
+  public GearSortRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RelCollation collation,
                      RexNode offset, RexNode fetch) {
-        return new GearSortRel(getCluster(), traitSet, newInput, newCollation, offset, fetch);
+    super(cluster, traits, child, collation, offset, fetch);
+
+    List<RexNode> fieldExps = getChildExps();
+    RelCollationImpl collationImpl = (RelCollationImpl) collation;
+    List<RelFieldCollation> collations = collationImpl.getFieldCollations();
+    for (int i = 0; i < fieldExps.size(); i++) {
+      RexNode fieldExp = fieldExps.get(i);
+      RexInputRef inputRef = (RexInputRef) fieldExp;
+      fieldIndices.add(inputRef.getIndex());
+      orientation.add(collations.get(i).getDirection() == RelFieldCollation.Direction.ASCENDING);
+
+      RelFieldCollation.NullDirection rawNullDirection = collations.get(i).nullDirection;
+      if (rawNullDirection == RelFieldCollation.NullDirection.UNSPECIFIED) {
+        rawNullDirection = collations.get(i).getDirection().defaultNullDirection();
+      }
+      nullsFirst.add(rawNullDirection == RelFieldCollation.NullDirection.FIRST);
     }
 
-    public static <T extends Number & Comparable> int numberCompare(T a, T b) {
-        return a.compareTo(b);
+    if (fetch == null) {
+      throw new UnsupportedOperationException("ORDER BY without a LIMIT is not supported!");
     }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
+    RexLiteral fetchLiteral = (RexLiteral) fetch;
+    count = ((BigDecimal) fetchLiteral.getValue()).intValue();
+
+    if (offset != null) {
+      RexLiteral offsetLiteral = (RexLiteral) offset;
+      startIndex = ((BigDecimal) offsetLiteral.getValue()).intValue();
     }
+  }
+
+  @Override
+  public Sort copy(RelTraitSet traitSet, RelNode newInput, RelCollation newCollation,
+                   RexNode offset, RexNode fetch) {
+    return new GearSortRel(getCluster(), traitSet, newInput, newCollation, offset, fetch);
+  }
+
+  public static <T extends Number & Comparable> int numberCompare(T a, T b) {
+    return a.compareTo(b);
+  }
+
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

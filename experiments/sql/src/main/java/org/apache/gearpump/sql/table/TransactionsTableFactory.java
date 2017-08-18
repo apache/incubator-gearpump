@@ -32,57 +32,57 @@ import java.util.Map;
 
 public class TransactionsTableFactory implements TableFactory<Table> {
 
+  @Override
+  public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
+    final Object[][] rows = {
+      {100, "I001", "item1", 3},
+      {101, "I002", "item2", 5},
+      {102, "I003", "item3", 8},
+      {103, "I004", "item4", 33},
+      {104, "I005", "item5", 23}
+    };
+
+    return new TransactionsTable(ImmutableList.copyOf(rows));
+  }
+
+  public static class TransactionsTable implements ScannableTable {
+
+    protected final RelProtoDataType protoRowType = new RelProtoDataType() {
+      public RelDataType apply(RelDataTypeFactory a0) {
+        return a0.builder()
+          .add("timeStamp", SqlTypeName.TIMESTAMP)
+          .add("id", SqlTypeName.VARCHAR, 10)
+          .add("item", SqlTypeName.VARCHAR, 50)
+          .add("quantity", SqlTypeName.INTEGER)
+          .build();
+      }
+    };
+
+    private final ImmutableList<Object[]> rows;
+
+    public TransactionsTable(ImmutableList<Object[]> rows) {
+      this.rows = rows;
+    }
+
+    public Enumerable<Object[]> scan(DataContext root) {
+      return Linq4j.asEnumerable(rows);
+    }
+
     @Override
-    public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
-        final Object[][] rows = {
-                {100, "I001", "item1", 3},
-                {101, "I002", "item2", 5},
-                {102, "I003", "item3", 8},
-                {103, "I004", "item4", 33},
-                {104, "I005", "item5", 23}
-        };
-
-        return new TransactionsTable(ImmutableList.copyOf(rows));
+    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+      return protoRowType.apply(typeFactory);
     }
 
-    public static class TransactionsTable implements ScannableTable {
-
-        protected final RelProtoDataType protoRowType = new RelProtoDataType() {
-            public RelDataType apply(RelDataTypeFactory a0) {
-                return a0.builder()
-                        .add("timeStamp", SqlTypeName.TIMESTAMP)
-                        .add("id", SqlTypeName.VARCHAR, 10)
-                        .add("item", SqlTypeName.VARCHAR, 50)
-                        .add("quantity", SqlTypeName.INTEGER)
-                        .build();
-            }
-        };
-
-        private final ImmutableList<Object[]> rows;
-
-        public TransactionsTable(ImmutableList<Object[]> rows) {
-            this.rows = rows;
-        }
-
-        public Enumerable<Object[]> scan(DataContext root) {
-            return Linq4j.asEnumerable(rows);
-        }
-
-        @Override
-        public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-            return protoRowType.apply(typeFactory);
-        }
-
-        @Override
-        public Statistic getStatistic() {
-            return Statistics.UNKNOWN;
-        }
-
-        @Override
-        public Schema.TableType getJdbcTableType() {
-            return Schema.TableType.TABLE;
-        }
-
+    @Override
+    public Statistic getStatistic() {
+      return Statistics.UNKNOWN;
     }
+
+    @Override
+    public Schema.TableType getJdbcTableType() {
+      return Schema.TableType.TABLE;
+    }
+
+  }
 
 }

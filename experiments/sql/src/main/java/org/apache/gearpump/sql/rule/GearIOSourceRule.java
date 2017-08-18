@@ -28,19 +28,19 @@ import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
 public class GearIOSourceRule extends ConverterRule {
 
-    public static final GearIOSourceRule INSTANCE = new GearIOSourceRule();
+  public static final GearIOSourceRule INSTANCE = new GearIOSourceRule();
 
-    private GearIOSourceRule() {
-        super(LogicalTableScan.class, Convention.NONE, GearLogicalConvention.INSTANCE,
-                "GearIOSourceRule");
-    }
+  private GearIOSourceRule() {
+    super(LogicalTableScan.class, Convention.NONE, GearLogicalConvention.INSTANCE,
+      "GearIOSourceRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        final TableScan scan = (TableScan) rel;
+  @Override
+  public RelNode convert(RelNode rel) {
+    final TableScan scan = (TableScan) rel;
 
-        return new GearIOSourceRel(scan.getCluster(),
-                scan.getTraitSet().replace(GearLogicalConvention.INSTANCE), scan.getTable());
-    }
+    return new GearIOSourceRel(scan.getCluster(),
+      scan.getTraitSet().replace(GearLogicalConvention.INSTANCE), scan.getTable());
+  }
 
 }

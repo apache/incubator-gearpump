@@ -36,44 +36,44 @@ import org.apache.gearpump.sql.rel.GearLogicalConvention;
 
 public class GearIOSinkRule extends ConverterRule {
 
-    public static final GearIOSinkRule INSTANCE = new GearIOSinkRule();
+  public static final GearIOSinkRule INSTANCE = new GearIOSinkRule();
 
-    private GearIOSinkRule() {
-        super(LogicalTableModify.class, Convention.NONE, GearLogicalConvention.INSTANCE,
-                "GearIOSinkRule");
-    }
+  private GearIOSinkRule() {
+    super(LogicalTableModify.class, Convention.NONE, GearLogicalConvention.INSTANCE,
+      "GearIOSinkRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        final TableModify tableModify = (TableModify) rel;
-        final RelNode input = tableModify.getInput();
+  @Override
+  public RelNode convert(RelNode rel) {
+    final TableModify tableModify = (TableModify) rel;
+    final RelNode input = tableModify.getInput();
 
-        final RelOptCluster cluster = tableModify.getCluster();
-        final RelTraitSet traitSet = tableModify.getTraitSet().replace(GearLogicalConvention.INSTANCE);
-        final RelOptTable relOptTable = tableModify.getTable();
-        final Prepare.CatalogReader catalogReader = tableModify.getCatalogReader();
-        final RelNode convertedInput = convert(input,
-                input.getTraitSet().replace(GearLogicalConvention.INSTANCE));
-        final TableModify.Operation operation = tableModify.getOperation();
-        final List<String> updateColumnList = tableModify.getUpdateColumnList();
-        final List<RexNode> sourceExpressionList = tableModify.getSourceExpressionList();
-        final boolean flattened = tableModify.isFlattened();
+    final RelOptCluster cluster = tableModify.getCluster();
+    final RelTraitSet traitSet = tableModify.getTraitSet().replace(GearLogicalConvention.INSTANCE);
+    final RelOptTable relOptTable = tableModify.getTable();
+    final Prepare.CatalogReader catalogReader = tableModify.getCatalogReader();
+    final RelNode convertedInput = convert(input,
+      input.getTraitSet().replace(GearLogicalConvention.INSTANCE));
+    final TableModify.Operation operation = tableModify.getOperation();
+    final List<String> updateColumnList = tableModify.getUpdateColumnList();
+    final List<RexNode> sourceExpressionList = tableModify.getSourceExpressionList();
+    final boolean flattened = tableModify.isFlattened();
 
-        final Table table = tableModify.getTable().unwrap(Table.class);
+    final Table table = tableModify.getTable().unwrap(Table.class);
 
-        switch (table.getJdbcTableType()) {
-            case TABLE:
-            case STREAM:
-                if (operation != TableModify.Operation.INSERT) {
-                    throw new UnsupportedOperationException(
-                            String.format("Streams doesn't support %s modify operation", operation));
-                }
-                return new GearIOSinkRel(cluster, traitSet,
-                        relOptTable, catalogReader, convertedInput, operation, updateColumnList,
-                        sourceExpressionList, flattened);
-            default:
-                throw new IllegalArgumentException(
-                        String.format("Unsupported table type: %s", table.getJdbcTableType()));
+    switch (table.getJdbcTableType()) {
+      case TABLE:
+      case STREAM:
+        if (operation != TableModify.Operation.INSERT) {
+          throw new UnsupportedOperationException(
+            String.format("Streams doesn't support %s modify operation", operation));
         }
+        return new GearIOSinkRel(cluster, traitSet,
+          relOptTable, catalogReader, convertedInput, operation, updateColumnList,
+          sourceExpressionList, flattened);
+      default:
+        throw new IllegalArgumentException(
+          String.format("Unsupported table type: %s", table.getJdbcTableType()));
     }
+  }
 }

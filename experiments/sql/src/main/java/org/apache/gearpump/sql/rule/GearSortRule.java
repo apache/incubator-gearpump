@@ -28,24 +28,24 @@ import org.apache.gearpump.sql.rel.GearSortRel;
 
 public class GearSortRule extends ConverterRule {
 
-    public static final GearSortRule INSTANCE = new GearSortRule();
+  public static final GearSortRule INSTANCE = new GearSortRule();
 
-    private GearSortRule() {
-        super(LogicalSort.class, Convention.NONE,
-                GearLogicalConvention.INSTANCE, "GearSortRule");
-    }
+  private GearSortRule() {
+    super(LogicalSort.class, Convention.NONE,
+      GearLogicalConvention.INSTANCE, "GearSortRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        Sort sort = (Sort) rel;
-        final RelNode input = sort.getInput();
-        return new GearSortRel(
-                sort.getCluster(),
-                sort.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
-                sort.getCollation(),
-                sort.offset,
-                sort.fetch
-        );
-    }
+  @Override
+  public RelNode convert(RelNode rel) {
+    Sort sort = (Sort) rel;
+    final RelNode input = sort.getInput();
+    return new GearSortRel(
+      sort.getCluster(),
+      sort.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convert(input, input.getTraitSet().replace(GearLogicalConvention.INSTANCE)),
+      sort.getCollation(),
+      sort.offset,
+      sort.fetch
+    );
+  }
 }

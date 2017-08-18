@@ -30,25 +30,25 @@ import scala.Tuple2;
 import java.util.List;
 
 public class GearIntersectRel extends Intersect implements GearRelNode {
-    private GearSetOperatorRelBase delegate;
+  private GearSetOperatorRelBase delegate;
 
-    public GearIntersectRel(
-            RelOptCluster cluster,
-            RelTraitSet traits,
-            List<RelNode> inputs,
-            boolean all) {
-        super(cluster, traits, inputs, all);
-        delegate = new GearSetOperatorRelBase(this,
-                GearSetOperatorRelBase.OpType.INTERSECT, inputs, all);
-    }
+  public GearIntersectRel(
+    RelOptCluster cluster,
+    RelTraitSet traits,
+    List<RelNode> inputs,
+    boolean all) {
+    super(cluster, traits, inputs, all);
+    delegate = new GearSetOperatorRelBase(this,
+      GearSetOperatorRelBase.OpType.INTERSECT, inputs, all);
+  }
 
-    @Override
-    public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all) {
-        return new GearIntersectRel(getCluster(), traitSet, inputs, all);
-    }
+  @Override
+  public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all) {
+    return new GearIntersectRel(getCluster(), traitSet, inputs, all);
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

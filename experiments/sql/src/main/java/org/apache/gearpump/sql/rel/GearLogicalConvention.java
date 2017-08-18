@@ -21,45 +21,45 @@ package org.apache.gearpump.sql.rel;
 import org.apache.calcite.plan.*;
 
 public enum GearLogicalConvention implements Convention {
-    INSTANCE;
+  INSTANCE;
 
-    @Override
-    public Class getInterface() {
-        return GearRelNode.class;
-    }
+  @Override
+  public Class getInterface() {
+    return GearRelNode.class;
+  }
 
-    @Override
-    public String getName() {
-        return "GEAR_LOGICAL";
-    }
+  @Override
+  public String getName() {
+    return "GEAR_LOGICAL";
+  }
 
-    @Override
-    public RelTraitDef getTraitDef() {
-        return ConventionTraitDef.INSTANCE;
-    }
+  @Override
+  public RelTraitDef getTraitDef() {
+    return ConventionTraitDef.INSTANCE;
+  }
 
-    @Override
-    public boolean satisfies(RelTrait trait) {
-        return this == trait;
-    }
+  @Override
+  public boolean satisfies(RelTrait trait) {
+    return this == trait;
+  }
 
-    @Override
-    public void register(RelOptPlanner planner) {
-    }
+  @Override
+  public void register(RelOptPlanner planner) {
+  }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
+  @Override
+  public String toString() {
+    return getName();
+  }
 
-    @Override
-    public boolean canConvertConvention(Convention toConvention) {
-        return false;
-    }
+  @Override
+  public boolean canConvertConvention(Convention toConvention) {
+    return false;
+  }
 
-    @Override
-    public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits) {
-        return false;
-    }
+  @Override
+  public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits) {
+    return false;
+  }
 
 }

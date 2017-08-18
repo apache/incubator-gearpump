@@ -32,24 +32,24 @@ import java.util.List;
 
 public class GearUnionRel extends Union implements GearRelNode {
 
-    private GearSetOperatorRelBase delegate;
+  private GearSetOperatorRelBase delegate;
 
-    public GearUnionRel(RelOptCluster cluster, RelTraitSet traits, List<RelNode> inputs, boolean all) {
-        super(cluster, traits, inputs, all);
-        this.delegate = new GearSetOperatorRelBase(this, GearSetOperatorRelBase.OpType.UNION, inputs, all);
-    }
+  public GearUnionRel(RelOptCluster cluster, RelTraitSet traits, List<RelNode> inputs, boolean all) {
+    super(cluster, traits, inputs, all);
+    this.delegate = new GearSetOperatorRelBase(this, GearSetOperatorRelBase.OpType.UNION, inputs, all);
+  }
 
-    public GearUnionRel(RelInput input) {
-        super(input);
-    }
+  public GearUnionRel(RelInput input) {
+    super(input);
+  }
 
-    @Override
-    public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all) {
-        return new GearUnionRel(getCluster(), traitSet, inputs, all);
-    }
+  @Override
+  public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all) {
+    return new GearUnionRel(getCluster(), traitSet, inputs, all);
+  }
 
-    @Override
-    public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
-        return null;
-    }
+  @Override
+  public JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception {
+    return null;
+  }
 }

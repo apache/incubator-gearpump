@@ -26,26 +26,27 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.gearpump.sql.rel.GearLogicalConvention;
 import org.apache.gearpump.sql.rel.GearFlatMapRel;
 import org.apache.gearpump.sql.utils.GearConfiguration;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GearFlatMapRule extends ConverterRule {
 
-    private final static Logger logger = Logger.getLogger(GearFlatMapRule.class);
-    public static final GearFlatMapRule INSTANCE = new GearFlatMapRule(Aggregate.class, Convention.NONE);
+  private static final Logger LOG = LoggerFactory.getLogger(GearFlatMapRule.class);
+  public static final GearFlatMapRule INSTANCE = new GearFlatMapRule(Aggregate.class, Convention.NONE);
 
-    public GearFlatMapRule(Class<? extends Aggregate> aggregateClass, RelTrait projectIn) {
-        super(aggregateClass, projectIn, GearLogicalConvention.INSTANCE, "GearFlatMapRule");
-    }
+  public GearFlatMapRule(Class<? extends Aggregate> aggregateClass, RelTrait projectIn) {
+    super(aggregateClass, projectIn, GearLogicalConvention.INSTANCE, "GearFlatMapRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        try {
-            GearFlatMapRel flatRel = new GearFlatMapRel();
-            flatRel.buildGearPipeline(GearConfiguration.app, null);
-        } catch (Exception e) {
-            logger.error(e);
-        }
-        return null;
+  @Override
+  public RelNode convert(RelNode rel) {
+    try {
+      GearFlatMapRel flatRel = new GearFlatMapRel();
+      flatRel.buildGearPipeline(GearConfiguration.app, null);
+    } catch (Exception e) {
+      LOG.error(e.getMessage());
     }
+    return null;
+  }
 
 }

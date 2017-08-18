@@ -30,22 +30,22 @@ import java.util.List;
 
 public class GearMinusRule extends ConverterRule {
 
-    public static final GearMinusRule INSTANCE = new GearMinusRule();
+  public static final GearMinusRule INSTANCE = new GearMinusRule();
 
-    private GearMinusRule() {
-        super(LogicalMinus.class, Convention.NONE,
-                GearLogicalConvention.INSTANCE, "GearMinusRule");
-    }
+  private GearMinusRule() {
+    super(LogicalMinus.class, Convention.NONE,
+      GearLogicalConvention.INSTANCE, "GearMinusRule");
+  }
 
-    @Override
-    public RelNode convert(RelNode rel) {
-        Minus minus = (Minus) rel;
-        final List<RelNode> inputs = minus.getInputs();
-        return new GearMinusRel(
-                minus.getCluster(),
-                minus.getTraitSet().replace(GearLogicalConvention.INSTANCE),
-                convertList(inputs, GearLogicalConvention.INSTANCE),
-                minus.all
-        );
-    }
+  @Override
+  public RelNode convert(RelNode rel) {
+    Minus minus = (Minus) rel;
+    final List<RelNode> inputs = minus.getInputs();
+    return new GearMinusRel(
+      minus.getCluster(),
+      minus.getTraitSet().replace(GearLogicalConvention.INSTANCE),
+      convertList(inputs, GearLogicalConvention.INSTANCE),
+      minus.all
+    );
+  }
 }
