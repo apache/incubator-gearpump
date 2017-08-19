@@ -19,7 +19,8 @@ package org.apache.gearpump.streaming.dsl.window.api
 
 import java.time.{Duration, Instant}
 
-import org.apache.gearpump.{MIN_TIME_MILLIS, MAX_TIME_MILLIS, TimeStamp}
+import org.apache.gearpump.Time
+import org.apache.gearpump.Time.MilliSeconds
 import org.apache.gearpump.streaming.dsl.window.impl.Window
 
 import scala.collection.mutable.ArrayBuffer
@@ -32,8 +33,14 @@ object WindowFunction {
   }
 }
 
+/**
+ * Determines how elements are assigned to windows for calculation.
+ */
 trait WindowFunction {
 
+  /**
+   * Assigns elements into windows.
+   */
   def apply[T](context: WindowFunction.Context[T]): Array[Window]
 
   def isNonMerging: Boolean
@@ -46,10 +53,13 @@ abstract class NonMergingWindowFunction extends WindowFunction {
 
 object GlobalWindowFunction {
 
-  val globalWindow = Array(Window(Instant.ofEpochMilli(MIN_TIME_MILLIS),
-    Instant.ofEpochMilli(MAX_TIME_MILLIS)))
+  val globalWindow = Array(Window(Instant.ofEpochMilli(Time.MIN_TIME_MILLIS),
+    Instant.ofEpochMilli(Time.MAX_TIME_MILLIS)))
 }
 
+/**
+ * All elements are assigned to the same global window for calculation.
+ */
 case class GlobalWindowFunction() extends NonMergingWindowFunction {
 
   override def apply[T](context: WindowFunction.Context[T]): Array[Window] = {
@@ -57,6 +67,12 @@ case class GlobalWindowFunction() extends NonMergingWindowFunction {
   }
 }
 
+/**
+ * Elements are assigned to non-merging sliding windows for calculation.
+ *
+ * @param size window size
+ * @param step window step to slide forward
+ */
 case class SlidingWindowFunction(size: Duration, step: Duration)
   extends NonMergingWindowFunction {
 
@@ -80,11 +96,17 @@ case class SlidingWindowFunction(size: Duration, step: Duration)
     windows.toArray
   }
 
-  private def lastStartFor(timestamp: TimeStamp, windowStep: Long): TimeStamp = {
+  private def lastStartFor(timestamp: MilliSeconds, windowStep: Long): MilliSeconds = {
     timestamp - (timestamp + windowStep) % windowStep
   }
 }
 
+/**
+ * Elements are assigned to merging windows for calculation. Windows are merged
+ * if their distance is within the defined gap.
+ *
+ * @param gap session gap
+ */
 case class SessionWindowFunction(gap: Duration) extends WindowFunction {
 
   override def apply[T](context: WindowFunction.Context[T]): Array[Window] = {

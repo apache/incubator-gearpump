@@ -18,9 +18,7 @@
 
 package org.apache.gearpump.streaming.transaction.api
 
-import org.apache.gearpump.TimeStamp
-import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.task.TaskContext
+import org.apache.gearpump.Time.MilliSeconds
 
 /**
  * CheckpointStore persistently stores mapping of timestamp to checkpoint
@@ -29,9 +27,9 @@ import org.apache.gearpump.streaming.task.TaskContext
  */
 trait CheckpointStore {
 
-  def persist(timeStamp: TimeStamp, checkpoint: Array[Byte]): Unit
+  def persist(timeStamp: MilliSeconds, checkpoint: Array[Byte]): Unit
 
-  def recover(timestamp: TimeStamp): Option[Array[Byte]]
+  def recover(timestamp: MilliSeconds): Option[Array[Byte]]
 
   def close(): Unit
 }

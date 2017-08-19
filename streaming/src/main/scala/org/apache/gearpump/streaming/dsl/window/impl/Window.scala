@@ -19,22 +19,16 @@ package org.apache.gearpump.streaming.dsl.window.impl
 
 import java.time.Instant
 
-import akka.actor.ActorSystem
-import org.apache.gearpump.cluster.UserConfig
-import org.apache.gearpump.streaming.Constants._
-import org.apache.gearpump.streaming.Processor
-import org.apache.gearpump.{Message, TimeStamp}
-import org.apache.gearpump.streaming.dsl.window.api._
-import org.apache.gearpump.streaming.task.Task
+import org.apache.gearpump.Time.MilliSeconds
 
 object Window {
-  def ofEpochMilli(startTime: TimeStamp, endTime: TimeStamp): Window = {
+  def ofEpochMilli(startTime: MilliSeconds, endTime: MilliSeconds): Window = {
     Window(Instant.ofEpochMilli(startTime), Instant.ofEpochMilli(endTime))
   }
 }
 
 /**
- * A window unit including startTime and excluding endTime.
+ * A window unit from startTime(including) to endTime(excluding).
  */
 case class Window(startTime: Instant, endTime: Instant) extends Comparable[Window] {
 
