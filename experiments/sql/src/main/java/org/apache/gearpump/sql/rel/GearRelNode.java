@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.planner;
+package org.apache.gearpump.sql.rel;
 
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.tools.Planner;
-import org.apache.calcite.tools.RelConversionException;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStream;
+import org.apache.gearpump.streaming.dsl.javaapi.JavaStreamApp;
+import scala.Tuple2;
 
-public class LogicalPlan {
+public interface GearRelNode extends RelNode {
 
-    public static RelNode getLogicalPlan(String query, Planner planner) throws ValidationException,
-            RelConversionException {
-        SqlNode sqlNode;
+  JavaStream<Tuple2<String, Integer>> buildGearPipeline(JavaStreamApp app, JavaStream<Tuple2<String, Integer>> javaStream) throws Exception;
 
-        try {
-            sqlNode = planner.parse(query);
-        } catch (SqlParseException e) {
-            throw new RuntimeException("SQL query parsing error", e);
-        }
-        SqlNode validatedSqlNode = planner.validate(sqlNode);
-
-        return planner.rel(validatedSqlNode).project();
-    }
 }

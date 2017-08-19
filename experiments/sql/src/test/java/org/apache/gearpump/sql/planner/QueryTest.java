@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.planner;
+package org.apache.gearpump.sql.planner;
 
 import com.google.common.io.Resources;
 import org.apache.calcite.jdbc.CalciteConnection;
@@ -25,7 +25,8 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -34,31 +35,31 @@ import java.sql.SQLException;
 
 public class QueryTest {
 
-    private final static Logger logger = Logger.getLogger(QueryTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(QueryTest.class);
 
-    @Test
-    public void testLogicalPlan() {
+  @Test
+  public void testLogicalPlan() {
 
-        try {
-            CalciteConnection connection = new Connection();
-            String salesSchema = Resources.toString(Query.class.getResource("/model.json"), Charset.defaultCharset());
-            new ModelHandler(connection, "inline:" + salesSchema);
+    try {
+      CalciteConnection connection = new Connection();
+      String salesSchema = Resources.toString(Query.class.getResource("/model.json"),
+        Charset.defaultCharset());
+      new ModelHandler(connection, "inline:" + salesSchema);
 
-            Query queryPlanner = new Query(connection.getRootSchema().getSubSchema(connection.getSchema()));
-            RelNode logicalPlan = queryPlanner.getLogicalPlan("SELECT item FROM transactions");
+      Query queryPlanner = new Query(connection.getRootSchema().getSubSchema(connection.getSchema()));
+      RelNode logicalPlan = queryPlanner.getLogicalPlan("SELECT item FROM transactions");
 
-            logger.info("Getting Logical Plan...");
-            System.out.println(RelOptUtil.toString(logicalPlan));
+      System.out.println("Getting Logical Plan...\n" + RelOptUtil.toString(logicalPlan));
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (RelConversionException e) {
-            e.printStackTrace();
-        } catch (ValidationException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
+    } catch (IOException e) {
+      LOG.error(e.getMessage());
+    } catch (RelConversionException e) {
+      LOG.error(e.getMessage());
+    } catch (ValidationException e) {
+      LOG.error(e.getMessage());
+    } catch (SQLException e) {
+      LOG.error(e.getMessage());
     }
+
+  }
 }

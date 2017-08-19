@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.planner;
+package org.apache.gearpump.sql.planner;
 
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
@@ -30,7 +30,8 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.*;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,40 +41,40 @@ import java.util.List;
  */
 public class Query {
 
-    private final static Logger logger = Logger.getLogger(Query.class);
-    private final Planner queryPlanner;
+  private static final Logger LOG = LoggerFactory.getLogger(Query.class);
+  private final Planner queryPlanner;
 
-    public Query(SchemaPlus schema) {
+  public Query(SchemaPlus schema) {
 
-        final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
+    final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
 
-        traitDefs.add(ConventionTraitDef.INSTANCE);
-        traitDefs.add(RelCollationTraitDef.INSTANCE);
+    traitDefs.add(ConventionTraitDef.INSTANCE);
+    traitDefs.add(RelCollationTraitDef.INSTANCE);
 
-        FrameworkConfig calciteFrameworkConfig = Frameworks.newConfigBuilder()
-                .parserConfig(SqlParser.configBuilder()
-                        .setLex(Lex.MYSQL)
-                        .build())
-                .defaultSchema(schema)
-                .traitDefs(traitDefs)
-                .context(Contexts.EMPTY_CONTEXT)
-                .ruleSets(RuleSets.ofList())
-                .costFactory(null)
-                .typeSystem(RelDataTypeSystem.DEFAULT)
-                .build();
-        this.queryPlanner = Frameworks.getPlanner(calciteFrameworkConfig);
+    FrameworkConfig calciteFrameworkConfig = Frameworks.newConfigBuilder()
+      .parserConfig(SqlParser.configBuilder()
+        .setLex(Lex.MYSQL)
+        .build())
+      .defaultSchema(schema)
+      .traitDefs(traitDefs)
+      .context(Contexts.EMPTY_CONTEXT)
+      .ruleSets(RuleSets.ofList())
+      .costFactory(null)
+      .typeSystem(RelDataTypeSystem.DEFAULT)
+      .build();
+    this.queryPlanner = Frameworks.getPlanner(calciteFrameworkConfig);
+  }
+
+  public RelNode getLogicalPlan(String query) throws ValidationException, RelConversionException {
+    SqlNode sqlNode = null;
+    try {
+      sqlNode = queryPlanner.parse(query);
+    } catch (SqlParseException e) {
+      LOG.error(e.getMessage());
     }
 
-    public RelNode getLogicalPlan(String query) throws ValidationException, RelConversionException {
-        SqlNode sqlNode = null;
-        try {
-            sqlNode = queryPlanner.parse(query);
-        } catch (SqlParseException e) {
-            logger.error("SQL Parse Exception", e);
-        }
-
-        SqlNode validatedSqlNode = queryPlanner.validate(sqlNode);
-        return queryPlanner.rel(validatedSqlNode).project();
-    }
+    SqlNode validatedSqlNode = queryPlanner.validate(sqlNode);
+    return queryPlanner.rel(validatedSqlNode).project();
+  }
 
 }
