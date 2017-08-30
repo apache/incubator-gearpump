@@ -54,6 +54,15 @@ object Dependencies {
   val chillVersion = "0.6.0"
   val jedisVersion = "2.9.0"
   val rabbitmqVersion = "3.5.3"
+  val calciteVersion = "1.12.0"
+
+  val annotationDependencies = Seq(
+    // work around for compiler warnings like
+    // "Class javax.annotation.CheckReturnValue not found - continuing with a stub"
+    // see https://issues.scala-lang.org/browse/SI-8978
+    // marked as "provided" to be excluded from assembling
+    "com.google.code.findbugs" % "jsr305" % "3.0.2" % "provided"
+  )
 
   val annotationDependencies = Seq(
     // work around for compiler warnings like
