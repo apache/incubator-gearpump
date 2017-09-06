@@ -67,7 +67,7 @@ object LogUtil {
     }
   }
 
-  /** getLogger(Class <?>) implementation for Java */
+  /** getLogger(Class) implementation for Java */
   def getLogger[T](clazz: Class[T]): Logger = {
     LoggerFactory.getLogger(clazz.getSimpleName)
   }
