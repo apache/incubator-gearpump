@@ -19,8 +19,7 @@ package org.apache.gearpump.streaming.source
 
 import java.time.Instant
 
-import org.apache.gearpump.Message
-import org.apache.gearpump.{MAX_TIME_MILLIS, MIN_TIME_MILLIS}
+import org.apache.gearpump.{Message, Time}
 
 /**
  * message used by source task to report source watermark.
@@ -29,9 +28,14 @@ case class Watermark(instant: Instant) {
   def toMessage: Message = Message("watermark", instant)
 }
 
+/**
+ * All input data with event times less than watermark have been observed
+ */
 object Watermark {
 
-  val MAX: Instant = Instant.ofEpochMilli(MAX_TIME_MILLIS)
+  // all input data have been observed
+  val MAX: Instant = Instant.ofEpochMilli(Time.MAX_TIME_MILLIS + 1)
 
-  val MIN: Instant = Instant.ofEpochMilli(MIN_TIME_MILLIS)
+  // no input data have been observed
+  val MIN: Instant = Instant.ofEpochMilli(Time.MIN_TIME_MILLIS)
 }

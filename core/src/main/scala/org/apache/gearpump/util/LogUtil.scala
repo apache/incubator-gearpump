@@ -19,9 +19,7 @@
 package org.apache.gearpump.util
 
 import java.io.File
-import java.net.InetAddress
 import java.util.Properties
-import scala.util.Try
 
 import com.typesafe.config.Config
 import org.apache.log4j.PropertyConfigurator
@@ -69,6 +67,11 @@ object LogUtil {
     }
   }
 
+  /** getLogger(Class) implementation for Java */
+  def getLogger[T](clazz: Class[T]): Logger = {
+    LoggerFactory.getLogger(clazz.getSimpleName)
+  }
+
   /** Custom the log file locations by reading config from system properties */
   def loadConfiguration(config: Config, processType: ProcessType.ProcessType): Unit = {
     // Set log file name
@@ -93,8 +96,7 @@ object LogUtil {
   }
 
   def daemonLogDir(config: Config): File = {
-    val dir = config.getString(Constants.GEARPUMP_LOG_DAEMON_DIR)
-    new File(dir)
+    Util.asSubDirOfGearpumpHome(config.getString(Constants.GEARPUMP_LOG_DAEMON_DIR))
   }
 
   def verboseLogToConsole(): Unit = {
@@ -114,12 +116,10 @@ object LogUtil {
   }
 
   private def jvmName: String = {
-    val hostname = Try(InetAddress.getLocalHost.getHostName).getOrElse("local")
     java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
   }
 
   def applicationLogDir(config: Config): File = {
-    val appLogDir = config.getString(Constants.GEARPUMP_LOG_APPLICATION_DIR)
-    new File(appLogDir)
+    Util.asSubDirOfGearpumpHome(config.getString(Constants.GEARPUMP_LOG_APPLICATION_DIR))
   }
 }

@@ -27,7 +27,7 @@ import scala.util.{Failure, Success, Try}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import org.apache.gearpump.cluster.AppJar
-import org.apache.gearpump.jarstore.{JarStoreClient, JarStoreServer}
+import org.apache.gearpump.jarstore.JarStoreClient
 import org.apache.gearpump.transport.HostPort
 
 object Util {
@@ -178,5 +178,10 @@ object Util {
         appMasterClassPath.getOrElse(Array.empty[String])),
       JvmSetting(executorVMArgs
         .getOrElse(Array.empty[String]), executorClassPath.getOrElse(Array.empty[String])))
+  }
+
+  def asSubDirOfGearpumpHome(dir: String): File = {
+    new File(System.getProperty(Constants.GEARPUMP_HOME), dir)
+
   }
 }

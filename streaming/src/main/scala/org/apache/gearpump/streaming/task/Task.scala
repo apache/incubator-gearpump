@@ -23,11 +23,11 @@ import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 import akka.actor.Actor.Receive
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import org.apache.gearpump.Message
+import org.apache.gearpump.Time.MilliSeconds
 import org.slf4j.Logger
-
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.util.LogUtil
-import org.apache.gearpump.{Message, TimeStamp}
 
 /**
  * This provides context information for a task.
@@ -114,7 +114,12 @@ trait TaskContext {
    *
    * @return the min clock
    */
-  def upstreamMinClock: TimeStamp
+  def upstreamMinClock: MilliSeconds
+
+  /**
+   * Update TaskActor with the processing progress (watermark)
+   */
+  def updateWatermark(watermark: Instant): Unit
 
   /**
    * Logger is environment dependant, it should be provided by

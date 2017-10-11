@@ -28,7 +28,7 @@ import org.apache.gearpump.streaming.kafka.lib.KafkaMessageDecoder
 import org.apache.gearpump.streaming.kafka.lib.source.consumer.FetchThread.FetchThreadFactory
 import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient
 import KafkaClient.KafkaClientFactory
-import org.apache.gearpump.streaming.kafka.lib.source.consumer.{KafkaMessage, FetchThread}
+import org.apache.gearpump.streaming.kafka.lib.source.consumer.{FetchThread, KafkaMessage}
 import org.apache.gearpump.streaming.kafka.lib.source.grouper.PartitionGrouper
 import org.apache.gearpump.streaming.kafka.lib.util.KafkaClient
 import org.apache.gearpump.streaming.kafka.util.KafkaConfig
@@ -36,7 +36,8 @@ import org.apache.gearpump.streaming.kafka.util.KafkaConfig.KafkaConfigFactory
 import org.apache.gearpump.streaming.task.TaskContext
 import org.apache.gearpump.streaming.transaction.api._
 import org.apache.gearpump.util.LogUtil
-import org.apache.gearpump.{Message, TimeStamp}
+import org.apache.gearpump.Message
+import org.apache.gearpump.Time.MilliSeconds
 import org.slf4j.Logger
 
 object AbstractKafkaSource {
@@ -97,6 +98,7 @@ abstract class AbstractKafkaSource(
   /**
    * Reads a record from incoming queue, decodes, filters and checkpoints offsets
    * before returns a Message. Message can be null if the incoming queue is empty.
+ *
    * @return a [[org.apache.gearpump.Message]] or null
    */
   override def read(): Message = {
@@ -146,7 +148,7 @@ abstract class AbstractKafkaSource(
     }
   }
 
-  private def maybeRecover(startTime: TimeStamp): Unit = {
+  private def maybeRecover(startTime: MilliSeconds): Unit = {
     checkpointStores.foreach { case (tp, store) =>
       for {
         bytes <- store.recover(startTime)

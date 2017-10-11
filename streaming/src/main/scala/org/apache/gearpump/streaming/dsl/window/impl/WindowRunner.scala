@@ -19,131 +19,161 @@ package org.apache.gearpump.streaming.dsl.window.impl
 
 import java.time.Instant
 
-import akka.actor.ActorSystem
 import com.gs.collections.api.block.predicate.Predicate
-import org.apache.gearpump.Message
-import org.apache.gearpump.cluster.UserConfig
-import com.gs.collections.api.block.procedure.{Procedure, Procedure2}
+import com.gs.collections.api.block.procedure.Procedure
 import com.gs.collections.impl.list.mutable.FastList
-import com.gs.collections.impl.map.mutable.UnifiedMap
 import com.gs.collections.impl.map.sorted.mutable.TreeSortedMap
-import org.apache.gearpump.streaming.Constants._
 import org.apache.gearpump.streaming.dsl.plan.functions.FunctionRunner
-import org.apache.gearpump.streaming.dsl.window.api.Discarding
-import org.apache.gearpump.streaming.task.TaskContext
-import org.apache.gearpump.util.LogUtil
-import org.slf4j.Logger
+import org.apache.gearpump.streaming.dsl.window.api.WindowFunction.Context
+import org.apache.gearpump.streaming.dsl.window.api.{Discarding, Windows}
+import org.apache.gearpump.streaming.source.Watermark
+import org.apache.gearpump.streaming.task.TaskUtil
 
+import scala.collection.mutable.ArrayBuffer
 
-trait WindowRunner {
+/**
+ * Inputs for [[WindowRunner]].
+ */
+case class TimestampedValue[T](value: T, timestamp: Instant)
 
-  def process(message: Message): Unit
+/**
+ * Outputs triggered by [[WindowRunner]]
+ */
+case class TriggeredOutputs[T](outputs: TraversableOnce[TimestampedValue[T]],
+    watermark: Instant)
 
-  def trigger(time: Instant): Unit
+/**
+ * This is responsible for executing window calculation.
+ *   1. Groups elements into windows as defined by window function
+ *   2. Applies window calculation to each group
+ *   3. Emits results on triggering
+ */
+trait WindowRunner[IN, OUT] extends java.io.Serializable {
+
+  def process(timestampedValue: TimestampedValue[IN]): Unit
+
+  def trigger(time: Instant): TriggeredOutputs[OUT]
 }
 
-object DefaultWindowRunner {
+/**
+ * A composite WindowRunner that first executes its left child and feeds results
+ * into result child.
+ */
+case class AndThen[IN, MIDDLE, OUT](left: WindowRunner[IN, MIDDLE],
+    right: WindowRunner[MIDDLE, OUT]) extends WindowRunner[IN, OUT] {
 
-  private val LOG: Logger = LogUtil.getLogger(classOf[DefaultWindowRunner[_, _, _]])
+  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
+    left.process(timestampedValue)
+  }
+
+  override def trigger(time: Instant): TriggeredOutputs[OUT] = {
+    val lOutputs = left.trigger(time)
+    lOutputs.outputs.foreach(right.process)
+    right.trigger(lOutputs.watermark)
+  }
 }
 
-class DefaultWindowRunner[IN, GROUP, OUT](
-    taskContext: TaskContext, userConfig: UserConfig,
-    groupBy: GroupAlsoByWindow[IN, GROUP])(implicit system: ActorSystem)
-  extends WindowRunner {
+/**
+ * Default implementation for [[WindowRunner]].
+ */
+class DefaultWindowRunner[IN, OUT](
+    windows: Windows,
+    fnRunner: FunctionRunner[IN, OUT])
+  extends WindowRunner[IN, OUT] {
 
-  private val windowFn = groupBy.window.windowFn
-  private val groupedWindowInputs = new UnifiedMap[GROUP, TreeSortedMap[Window, FastList[IN]]]
-  private val groupedFnRunners = new UnifiedMap[GROUP, FunctionRunner[IN, OUT]]
-  private val groupedRunnerSetups = new UnifiedMap[GROUP, Boolean]
+  private val windowFn = windows.windowFn
+  private val windowInputs = new TreeSortedMap[Window, FastList[TimestampedValue[IN]]]
+  private var setup = false
+  private var watermark = Watermark.MIN
 
-  override def process(message: Message): Unit = {
-    val input = message.msg.asInstanceOf[IN]
-    val (group, windows) = groupBy.groupBy(message)
-    if (!groupedWindowInputs.containsKey(group)) {
-      groupedWindowInputs.put(group, new TreeSortedMap[Window, FastList[IN]]())
-    }
-    val windowInputs = groupedWindowInputs.get(group)
-    windows.foreach { win =>
+  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
+    val wins = windowFn(new Context[IN] {
+      override def element: IN = timestampedValue.value
+
+      override def timestamp: Instant = timestampedValue.timestamp
+    })
+    wins.foreach { win =>
       if (windowFn.isNonMerging) {
         if (!windowInputs.containsKey(win)) {
-          val inputs = new FastList[IN](1)
+          val inputs = new FastList[TimestampedValue[IN]]
           windowInputs.put(win, inputs)
         }
-        windowInputs.get(win).add(input)
+        windowInputs.get(win).add(timestampedValue)
       } else {
-        merge(windowInputs, win, input)
+        merge(windowInputs, win, timestampedValue)
       }
     }
 
-    if (!groupedFnRunners.containsKey(group)) {
-      val runner = userConfig.getValue[FunctionRunner[IN, OUT]](GEARPUMP_STREAMING_OPERATOR).get
-      groupedFnRunners.put(group, runner)
-      groupedRunnerSetups.put(group, false)
-    }
-
-    def merge(windowInputs: TreeSortedMap[Window, FastList[IN]], win: Window, input: IN): Unit = {
-      val intersected = windowInputs.keySet.select(new Predicate[Window] {
+    def merge(
+        winIns: TreeSortedMap[Window, FastList[TimestampedValue[IN]]],
+        win: Window, tv: TimestampedValue[IN]): Unit = {
+      val intersected = winIns.keySet.select(new Predicate[Window] {
         override def accept(each: Window): Boolean = {
           win.intersects(each)
         }
       })
       var mergedWin = win
-      val mergedInputs = FastList.newListWith(input)
+      val mergedInputs = FastList.newListWith(tv)
       intersected.forEach(new Procedure[Window] {
         override def value(each: Window): Unit = {
           mergedWin = mergedWin.span(each)
-          mergedInputs.addAll(windowInputs.remove(each))
+          mergedInputs.addAll(winIns.remove(each))
         }
       })
-      windowInputs.put(mergedWin, mergedInputs)
+      winIns.put(mergedWin, mergedInputs)
     }
-
   }
 
-  override def trigger(time: Instant): Unit = {
-    groupedWindowInputs.forEachKeyValue(new Procedure2[GROUP, TreeSortedMap[Window, FastList[IN]]] {
-      override def value(group: GROUP, windowInputs: TreeSortedMap[Window, FastList[IN]]): Unit = {
-        onTrigger(group, windowInputs)
-      }
-    })
-
+  override def trigger(time: Instant): TriggeredOutputs[OUT] = {
     @annotation.tailrec
-    def onTrigger(group: GROUP, windowInputs: TreeSortedMap[Window, FastList[IN]]): Unit = {
+    def onTrigger(
+        outputs: ArrayBuffer[TimestampedValue[OUT]],
+        wmk: Instant): TriggeredOutputs[OUT] = {
       if (windowInputs.notEmpty()) {
         val firstWin = windowInputs.firstKey
         if (!time.isBefore(firstWin.endTime)) {
           val inputs = windowInputs.remove(firstWin)
-          if (groupedFnRunners.containsKey(group)) {
-            val runner = FunctionRunner.withEmitFn(groupedFnRunners.get(group),
-              (output: OUT) => taskContext.output(Message(output, time)))
-            val setup = groupedRunnerSetups.get(group)
-            if (!setup) {
-              runner.setup()
-              groupedRunnerSetups.put(group, true)
-            }
-            inputs.forEach(new Procedure[IN] {
-              override def value(t: IN): Unit = {
-                // .toList forces eager evaluation
-                runner.process(t).toList
-              }
-            })
-            // .toList forces eager evaluation
-            runner.finish().toList
-            if (groupBy.window.accumulationMode == Discarding) {
-              runner.teardown()
-              groupedRunnerSetups.put(group, false)
-              // dicarding, setup need to be called for each window
-              onTrigger(group, windowInputs)
-            } else {
-              // accumulating, setup is only called for the first window
-              onTrigger(group, windowInputs)
-            }
-          } else {
-            throw new RuntimeException(s"FunctionRunner not found for group $group")
+          if (!setup) {
+            fnRunner.setup()
+            setup = true
           }
+          inputs.forEach(new Procedure[TimestampedValue[IN]] {
+            override def value(tv: TimestampedValue[IN]): Unit = {
+              fnRunner.process(tv.value).foreach {
+                out: OUT => outputs += TimestampedValue(out, tv.timestamp)
+              }
+            }
+          })
+          fnRunner.finish().foreach {
+            out: OUT =>
+              outputs += TimestampedValue(out, firstWin.endTime.minusMillis(1))
+          }
+          val newWmk = TaskUtil.max(wmk, firstWin.endTime)
+          if (windows.accumulationMode == Discarding) {
+            fnRunner.teardown()
+            // discarding, setup need to be called for each window
+            setup = false
+          }
+          onTrigger(outputs, newWmk)
+        } else {
+          // The output watermark is the minimum of end of last triggered window
+          // and start of first un-triggered window
+          TriggeredOutputs(outputs, TaskUtil.min(wmk, firstWin.startTime))
+        }
+      } else {
+        // All windows have been triggered.
+        if (time == Watermark.MAX) {
+          // This means there will be no more inputs
+          // so it's safe to advance to the maximum watermark.
+          TriggeredOutputs(outputs, Watermark.MAX)
+        } else {
+          TriggeredOutputs(outputs, wmk)
         }
       }
     }
+
+    val triggeredOutputs = onTrigger(ArrayBuffer.empty[TimestampedValue[OUT]], watermark)
+    watermark = TaskUtil.max(watermark, triggeredOutputs.watermark)
+    TriggeredOutputs(triggeredOutputs.outputs, watermark)
   }
 }

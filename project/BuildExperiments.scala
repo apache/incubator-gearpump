@@ -29,7 +29,8 @@ object BuildExperiments extends sbt.Build {
     cgroup,
     redis,
     storm,
-    yarn
+    yarn,
+    rabbitmq
   )
 
   lazy val yarn = Project(
@@ -45,7 +46,8 @@ object BuildExperiments extends sbt.Build {
           "org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion,
           "org.apache.hadoop" % "hadoop-yarn-server-resourcemanager" % hadoopVersion % "provided",
           "org.apache.hadoop" % "hadoop-yarn-server-nodemanager" % hadoopVersion % "provided"
-        )
+        ).map(_.exclude("org.slf4j", "slf4j-api"))
+          .map(_.exclude("org.slf4j", "slf4j-log4j12"))
       ))
     .dependsOn(services % "test->test;compile->compile",
       core % "provided", gearpumpHadoop).disablePlugins(sbtassembly.AssemblyPlugin)
@@ -58,7 +60,7 @@ object BuildExperiments extends sbt.Build {
         libraryDependencies ++= Seq(
           "org.json4s" %% "json4s-jackson" % "3.2.11",
           "com.typesafe.akka" %% "akka-stream" % akkaVersion
-        ),
+        ) ++ annotationDependencies,
         mainClass in(Compile, packageBin) := Some("akka.stream.gearpump.example.Test")
       ))
     .dependsOn (core % "provided", streaming % "test->test; provided")
@@ -72,8 +74,9 @@ object BuildExperiments extends sbt.Build {
         libraryDependencies ++= Seq(
           "redis.clients" % "jedis" % jedisVersion
         )
-      )
-  ).dependsOn(core % "provided", streaming % "test->test; provided")
+      ))
+    .dependsOn(core % "provided", streaming % "test->test; provided")
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val storm = Project(
     id = "gearpump-experiments-storm",
@@ -117,5 +120,29 @@ object BuildExperiments extends sbt.Build {
     base = file("experiments/cgroup"),
     settings = commonSettings ++ noPublish)
     .dependsOn (core % "provided")
+    .disablePlugins(sbtassembly.AssemblyPlugin)
+
+  lazy val rabbitmq = Project(
+    id = "gearpump-experimentals-rabbitmq",
+    base = file("experiments/rabbitmq"),
+    settings = commonSettings ++ noPublish ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "com.rabbitmq" % "amqp-client" % rabbitmqVersion
+        )
+      ))
+    .dependsOn(core % "provided", streaming % "test->test; provided")
+    .disablePlugins(sbtassembly.AssemblyPlugin)
+
+  lazy val sql = Project(
+    id = "gearpump-experiments-sql",
+    base = file("experiments/sql"),
+    settings = commonSettings ++ noPublish ++
+      Seq(
+        libraryDependencies ++= Seq(
+          "org.apache.calcite" % "calcite-core" % calciteVersion
+        )
+      ))
+    .dependsOn(core % "provided", streaming % "test->test; provided")
     .disablePlugins(sbtassembly.AssemblyPlugin)
 }

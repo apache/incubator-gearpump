@@ -19,17 +19,18 @@
 package org.apache.gearpump.streaming.task
 
 import org.slf4j.Logger
-
 import com.google.common.primitives.Shorts
+import org.apache.gearpump.{Message, Time}
+import org.apache.gearpump.Time.MilliSeconds
 import org.apache.gearpump.streaming.partitioner.{MulticastPartitioner, Partitioner, UnicastPartitioner}
 import org.apache.gearpump.streaming.AppMasterToExecutor.MsgLostException
 import org.apache.gearpump.streaming.LifeTime
+import org.apache.gearpump.streaming.source.Watermark
 import org.apache.gearpump.streaming.task.Subscription._
 import org.apache.gearpump.util.LogUtil
-import org.apache.gearpump.{MAX_TIME_MILLIS, Message, MIN_TIME_MILLIS, TimeStamp}
 
 /**
- * Manges the output and message clock for single downstream processor
+ * Manages the output and message clock for single downstream processor
  *
  * @param subscriber downstream processor
  * @param maxPendingMessageCount trigger flow control. Should be bigger than
@@ -40,8 +41,9 @@ class Subscription(
     appId: Int,
     executorId: Int,
     taskId: TaskId,
-    subscriber: Subscriber, sessionId: Int,
-    transport: ExpressTransport,
+    subscriber: Subscriber,
+    sessionId: Int,
+    publisher: TaskActor,
     maxPendingMessageCount: Int = MAX_PENDING_MESSAGE_COUNT,
     ackOnceEveryMessageCount: Int = ONE_ACKREQUEST_EVERY_MESSAGE_COUNT) {
 
@@ -56,10 +58,12 @@ class Subscription(
   // Don't worry if this store negative number. We will wrap the Short
   private val messageCount: Array[Short] = new Array[Short](parallelism)
   private val pendingMessageCount: Array[Short] = new Array[Short](parallelism)
-  private val candidateMinClockSince: Array[Short] = new Array[Short](parallelism)
+  private val processingWatermarkSince: Array[Short] = new Array[Short](parallelism)
 
-  private val minClockValue: Array[TimeStamp] = Array.fill(parallelism)(MAX_TIME_MILLIS)
-  private val candidateMinClock: Array[TimeStamp] = Array.fill(parallelism)(MAX_TIME_MILLIS)
+  private val outputWatermark: Array[MilliSeconds] = Array.fill(parallelism)(
+    Watermark.MIN.toEpochMilli)
+  private val processingWatermark: Array[MilliSeconds] = Array.fill(parallelism)(
+    Watermark.MIN.toEpochMilli)
 
   private var maxPendingCount: Short = 0
 
@@ -85,7 +89,7 @@ class Subscription(
 
   def start(): Unit = {
     val ackRequest = InitialAckRequest(taskId, sessionId)
-    transport.transport(ackRequest, allTasks: _*)
+    publisher.transport(ackRequest, allTasks: _*)
   }
 
   def sendMessage(msg: Message): Int = {
@@ -103,14 +107,13 @@ class Subscription(
 
     var count = 0
     // Only sends message whose timestamp matches the lifeTime
-    if (partition != Partitioner.UNKNOWN_PARTITION_ID && life.contains(msg.timeInMillis)) {
+    if (partition != Partitioner.UNKNOWN_PARTITION_ID && life.contains(
+      msg.timestamp.toEpochMilli)) {
 
       val targetTask = TaskId(processorId, partition)
-      transport.transport(msg, targetTask)
+      publisher.transport(msg, targetTask)
 
-      this.minClockValue(partition) = Math.min(this.minClockValue(partition), msg.timeInMillis)
-      this.candidateMinClock(partition) =
-        Math.min(this.candidateMinClock(partition), msg.timeInMillis)
+      this.processingWatermark(partition) = publisher.getProcessingWatermark.toEpochMilli
 
       incrementMessageCount(partition, 1)
 
@@ -133,7 +136,7 @@ class Subscription(
     }
   }
 
-  private var lastFlushTime: Long = MIN_TIME_MILLIS
+  private var lastFlushTime: Long = Time.MIN_TIME_MILLIS
   private val FLUSH_INTERVAL = 5 * 1000 // ms
   private def needFlush: Boolean = {
     System.currentTimeMillis() - lastFlushTime > FLUSH_INTERVAL &&
@@ -164,15 +167,9 @@ class Subscription(
 
     if (ack.sessionId == sessionId) {
       if (ack.actualReceivedNum == ack.seq) {
-        if ((ack.seq - candidateMinClockSince(index)).toShort >= 0) {
-          if (ack.seq == messageCount(index)) {
-            // All messages have been acked.
-            minClockValue(index) = Long.MaxValue
-          } else {
-            minClockValue(index) = candidateMinClock(index)
-          }
-          candidateMinClock(index) = Long.MaxValue
-          candidateMinClockSince(index) = messageCount(index)
+        if ((ack.seq - processingWatermarkSince(index)).toShort >= 0) {
+          outputWatermark(index) = processingWatermark(index)
+          processingWatermarkSince(index) = messageCount(index)
         }
 
         pendingMessageCount(ack.taskId.index) = (messageCount(ack.taskId.index) - ack.seq).toShort
@@ -185,20 +182,24 @@ class Subscription(
     }
   }
 
-  def minClock: TimeStamp = {
-    minClockValue.min
+  def watermark: MilliSeconds = {
+    outputWatermark.min
   }
 
   def allowSendingMoreMessages(): Boolean = {
     maxPendingCount < maxPendingMessageCount
   }
 
-  def sendAckRequestOnStallingTime(stallingTime: TimeStamp): Unit = {
-    minClockValue.indices.foreach { i =>
-      if (minClockValue(i) == stallingTime && pendingMessageCount(i) > 0
-        && allowSendingMoreMessages) {
+  def onStallingTime(stallingTime: MilliSeconds): Unit = {
+    outputWatermark.indices.foreach { i =>
+      if (outputWatermark(i) == stallingTime &&
+        pendingMessageCount(i) > 0 &&
+        allowSendingMoreMessages) {
         sendAckRequest(i)
         sendLatencyProbe(i)
+      } else if (publisher.getProcessingWatermark == Watermark.MAX &&
+        pendingMessageCount(i) == 0) {
+        outputWatermark(i) = Watermark.MAX.toEpochMilli
       }
     }
   }
@@ -209,7 +210,7 @@ class Subscription(
     incrementMessageCount(partition, ackOnceEveryMessageCount)
     val targetTask = TaskId(processorId, partition)
     val ackRequest = AckRequest(taskId, messageCount(partition), sessionId)
-    transport.transport(ackRequest, targetTask)
+    publisher.transport(ackRequest, targetTask)
   }
 
   private def incrementMessageCount(partition: Int, count: Int): Unit = {
@@ -225,7 +226,7 @@ class Subscription(
   private def sendLatencyProbe(partition: Int): Unit = {
     val probeLatency = LatencyProbe(System.currentTimeMillis())
     val targetTask = TaskId(processorId, partition)
-    transport.transport(probeLatency, targetTask)
+    publisher.transport(probeLatency, targetTask)
   }
 }
 

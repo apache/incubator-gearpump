@@ -20,13 +20,12 @@ We'll use the classical [wordcount](https://github.com/apache/incubator-gearpump
 	      // (word, count1), (word, count2) => (word, count1 + count2)
 	      groupByKey().sum.log
 	
-         context.submit(app).waitUntilFinish()
-         context.close()
+        context.submit(app).waitUntilFinish()
+        context.close()
 	  }
 	}
 
-The example is written in our [Stream DSL]
-(http://gearpump.apache.org/releases/latest/api/scala/index.html#org.apache.gearpump.streaming.dsl.Stream), which provides you with convenient combinators (e.g. `flatMap`, `groupByKey`) to easily write up transformations.
+The example is written in our [Stream DSL](http://gearpump.apache.org/releases/latest/api/scala/index.html#org.apache.gearpump.streaming.dsl.Stream), which provides you with convenient combinators (e.g. `flatMap`, `groupByKey`) to easily write up transformations.
 
 ### IDE Setup (Optional)
 

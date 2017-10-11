@@ -37,7 +37,7 @@ import org.apache.storm.shade.org.yaml.snakeyaml.Yaml
 import org.slf4j.Logger
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.main.{ArgumentsParser, CLIOption}
-import org.apache.gearpump.cluster.{ApplicationStatus, MasterToAppMaster, UserConfig}
+import org.apache.gearpump.cluster.{ApplicationStatus, UserConfig}
 import org.apache.gearpump.experiments.storm.topology.GearpumpStormTopology
 import org.apache.gearpump.experiments.storm.util.TimeCacheMapWrapper.Callback
 import org.apache.gearpump.experiments.storm.util.{GraphBuilder, StormConstants, StormUtil, TimeCacheMapWrapper}
@@ -60,7 +60,7 @@ object GearpumpNimbus extends AkkaApp with ArgumentsParser {
     val akkaConf = updateClientConfig(inputAkkaConf)
     val system = ActorSystem("storm", akkaConf)
 
-    val clientContext = new ClientContext(akkaConf, system, null)
+    val clientContext = ClientContext(akkaConf, system, null)
     val stormConf = Utils.readStormConfig().asInstanceOf[JMap[AnyRef, AnyRef]]
     val thriftConf: JMap[AnyRef, AnyRef] = Map(
       Config.NIMBUS_HOST -> akkaConf.getString(Constants.GEARPUMP_HOSTNAME),

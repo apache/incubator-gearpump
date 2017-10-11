@@ -23,8 +23,7 @@ import java.time.Instant
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.MockUtil
-import org.apache.gearpump.streaming.dsl.plan.functions.FunctionRunner
-import org.apache.gearpump.streaming.dsl.task.TransformTask.Transform
+import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, TriggeredOutputs, WindowRunner}
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.mock.MockitoSugar
@@ -33,55 +32,58 @@ import org.scalatest.prop.PropertyChecks
 
 class DataSourceTaskSpec extends PropSpec with PropertyChecks with Matchers with MockitoSugar {
 
-  property("DataSourceTask should setup data source and Transform") {
-    forAll(Gen.chooseNum[Long](0L, 1000L).map(Instant.ofEpochMilli)) { (startTime: Instant) =>
+  property("DataSourceTask should setup data source") {
+    forAll(Gen.chooseNum[Long](0L, 1000L).map(Instant.ofEpochMilli)) {
+      (startTime: Instant) =>
       val taskContext = MockUtil.mockTaskContext
       implicit val system = MockUtil.system
       val dataSource = mock[DataSource]
       val config = UserConfig.empty
         .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-      val operator = mock[FunctionRunner[Any, Any]]
-      val transform = new Transform[Any, Any](taskContext, Some(operator))
-      val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, transform)
+        val runner = mock[WindowRunner[Any, Any]]
+      val sourceTask = new DataSourceTask[Any, Any](dataSource, runner, taskContext, config)
 
       sourceTask.onStart(startTime)
 
       verify(dataSource).open(taskContext, startTime)
-      verify(operator).setup()
     }
   }
 
   property("DataSourceTask should read from DataSource and transform inputs") {
-    forAll(Gen.alphaStr) { (str: String) =>
-      val taskContext = MockUtil.mockTaskContext
-      implicit val system = MockUtil.system
-      val dataSource = mock[DataSource]
-      val config = UserConfig.empty
-        .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-      val transform = new Transform[Any, Any](taskContext, None)
-      val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, transform)
-      val msg = Message(str)
-      when(dataSource.read()).thenReturn(msg)
+    forAll(Gen.alphaStr, Gen.chooseNum[Long](0L, 1000L).map(Instant.ofEpochMilli)) {
+      (str: String, timestamp: Instant) =>
+        val taskContext = MockUtil.mockTaskContext
+        implicit val system = MockUtil.system
+        val dataSource = mock[DataSource]
+        val config = UserConfig.empty
+          .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
+        val runner = mock[WindowRunner[Any, Any]]
+        val sourceTask = new DataSourceTask[Any, Any](dataSource, runner, taskContext, config)
+        val msg = Message(str, timestamp)
+        when(dataSource.read()).thenReturn(msg)
 
-      sourceTask.onNext(Message("next"))
-      sourceTask.onWatermarkProgress(Watermark.MAX)
-      verify(taskContext).output(Message(str, Watermark.MAX))
+        when(runner.trigger(Watermark.MAX)).thenReturn(
+          TriggeredOutputs(Some(TimestampedValue(str.asInstanceOf[Any], timestamp)), Watermark.MAX))
+
+        sourceTask.onNext(Message("next"))
+        sourceTask.onWatermarkProgress(Watermark.MAX)
+
+        verify(taskContext).output(msg)
+        verify(taskContext).updateWatermark(Watermark.MAX)
     }
   }
 
-  property("DataSourceTask should teardown DataSource and Transform") {
+  property("DataSourceTask should teardown DataSource") {
     val taskContext = MockUtil.mockTaskContext
     implicit val system = MockUtil.system
     val dataSource = mock[DataSource]
     val config = UserConfig.empty
       .withInt(DataSourceConfig.SOURCE_READ_BATCH_SIZE, 1)
-    val operator = mock[FunctionRunner[Any, Any]]
-    val transform = new Transform[Any, Any](taskContext, Some(operator))
-    val sourceTask = new DataSourceTask[Any, Any](taskContext, config, dataSource, transform)
+    val runner = mock[WindowRunner[Any, Any]]
+    val sourceTask = new DataSourceTask[Any, Any](dataSource, runner, taskContext, config)
 
     sourceTask.onStop()
 
     verify(dataSource).close()
-    verify(operator).teardown()
   }
 }

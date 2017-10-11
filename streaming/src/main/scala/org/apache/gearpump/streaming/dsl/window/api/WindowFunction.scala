@@ -19,7 +19,8 @@ package org.apache.gearpump.streaming.dsl.window.api
 
 import java.time.{Duration, Instant}
 
-import org.apache.gearpump.TimeStamp
+import org.apache.gearpump.Time
+import org.apache.gearpump.Time.MilliSeconds
 import org.apache.gearpump.streaming.dsl.window.impl.Window
 
 import scala.collection.mutable.ArrayBuffer
@@ -32,26 +33,54 @@ object WindowFunction {
   }
 }
 
-trait WindowFunction[T] {
+/**
+ * Determines how elements are assigned to windows for calculation.
+ */
+trait WindowFunction {
 
-  def apply(context: WindowFunction.Context[T]): Array[Window]
+  /**
+   * Assigns elements into windows.
+   */
+  def apply[T](context: WindowFunction.Context[T]): Array[Window]
 
   def isNonMerging: Boolean
 }
 
-abstract class NonMergingWindowFunction[T] extends WindowFunction[T] {
+abstract class NonMergingWindowFunction extends WindowFunction {
 
   override def isNonMerging: Boolean = true
 }
 
-case class SlidingWindowFunction[T](size: Duration, step: Duration)
-  extends NonMergingWindowFunction[T] {
+object GlobalWindowFunction {
+
+  val globalWindow = Array(Window(Instant.ofEpochMilli(Time.MIN_TIME_MILLIS),
+    Instant.ofEpochMilli(Time.MAX_TIME_MILLIS)))
+}
+
+/**
+ * All elements are assigned to the same global window for calculation.
+ */
+case class GlobalWindowFunction() extends NonMergingWindowFunction {
+
+  override def apply[T](context: WindowFunction.Context[T]): Array[Window] = {
+    GlobalWindowFunction.globalWindow
+  }
+}
+
+/**
+ * Elements are assigned to non-merging sliding windows for calculation.
+ *
+ * @param size window size
+ * @param step window step to slide forward
+ */
+case class SlidingWindowFunction(size: Duration, step: Duration)
+  extends NonMergingWindowFunction {
 
   def this(size: Duration) = {
     this(size, size)
   }
 
-  override def apply(context: WindowFunction.Context[T]): Array[Window] = {
+  override def apply[T](context: WindowFunction.Context[T]): Array[Window] = {
     val timestamp = context.timestamp
     val sizeMillis = size.toMillis
     val stepMillis = step.toMillis
@@ -67,21 +96,20 @@ case class SlidingWindowFunction[T](size: Duration, step: Duration)
     windows.toArray
   }
 
-  private def lastStartFor(timestamp: TimeStamp, windowStep: Long): TimeStamp = {
+  private def lastStartFor(timestamp: MilliSeconds, windowStep: Long): MilliSeconds = {
     timestamp - (timestamp + windowStep) % windowStep
   }
 }
 
-case class CountWindowFunction[T](size: Int) extends NonMergingWindowFunction[T] {
+/**
+ * Elements are assigned to merging windows for calculation. Windows are merged
+ * if their distance is within the defined gap.
+ *
+ * @param gap session gap
+ */
+case class SessionWindowFunction(gap: Duration) extends WindowFunction {
 
-  override def apply(context: WindowFunction.Context[T]): Array[Window] = {
-    Array(Window.ofEpochMilli(0, size))
-  }
-}
-
-case class SessionWindowFunction[T](gap: Duration) extends WindowFunction[T] {
-
-  override def apply(context: WindowFunction.Context[T]): Array[Window] = {
+  override def apply[T](context: WindowFunction.Context[T]): Array[Window] = {
     Array(Window(context.timestamp, context.timestamp.plus(gap)))
   }
 

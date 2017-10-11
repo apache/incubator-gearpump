@@ -21,7 +21,7 @@ package org.apache.gearpump.cluster.master
 import akka.actor._
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.gearpump._
+import org.apache.gearpump.Time.MilliSeconds
 import org.apache.gearpump.cluster.AppMasterToMaster.{AppDataSaved, SaveAppDataFailed, _}
 import org.apache.gearpump.cluster.AppMasterToWorker._
 import org.apache.gearpump.cluster.{ApplicationStatus, ApplicationTerminalStatus}
@@ -38,7 +38,6 @@ import org.apache.gearpump.util.{ActorUtil, TimeOutScheduler, Util, _}
 import org.slf4j.Logger
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 /**
@@ -48,8 +47,9 @@ private[cluster] class AppManager(kvService: ActorRef, launcher: AppMasterLaunch
   extends Actor with Stash with TimeOutScheduler {
 
   private val LOG: Logger = LogUtil.getLogger(getClass)
+  private val systemConfig: Config = context.system.settings.config
 
-  private val appTotalRetries: Int = 5
+  private val appTotalRetries: Int = systemConfig.getInt(Constants.APPLICATION_TOTAL_RETRIES)
 
   implicit val timeout = FUTURE_TIMEOUT
   implicit val executionContext = context.dispatcher
@@ -228,7 +228,7 @@ private[cluster] class AppManager(kvService: ActorRef, launcher: AppMasterLaunch
   }
 
   private def onApplicationStatusChanged(appId: Int, newStatus: ApplicationStatus,
-      timeStamp: TimeStamp, error: Throwable): Unit = {
+      timeStamp: MilliSeconds, error: Throwable): Unit = {
     applicationRegistry.get(appId) match {
       case Some(appRuntimeInfo) =>
         if (appRuntimeInfo.status.canTransitTo(newStatus)) {

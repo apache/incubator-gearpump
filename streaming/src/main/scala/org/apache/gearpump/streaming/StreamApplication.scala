@@ -18,10 +18,10 @@
 
 package org.apache.gearpump.streaming
 
-import scala.language.implicitConversions
 import scala.reflect.ClassTag
 import akka.actor.ActorSystem
-import org.apache.gearpump.{MAX_TIME_MILLIS, MIN_TIME_MILLIS, TimeStamp}
+import org.apache.gearpump.Time
+import org.apache.gearpump.Time.MilliSeconds
 import org.apache.gearpump.cluster._
 import org.apache.gearpump.streaming.partitioner.{HashPartitioner, Partitioner, PartitionerDescription, PartitionerObject}
 import org.apache.gearpump.streaming.appmaster.AppMaster
@@ -102,8 +102,8 @@ object Processor {
  * When input message's timestamp is beyond current processor's lifetime,
  * then it will not be processed by this processor.
  */
-case class LifeTime(birth: TimeStamp, death: TimeStamp) {
-  def contains(timestamp: TimeStamp): Boolean = {
+case class LifeTime(birth: MilliSeconds, death: MilliSeconds) {
+  def contains(timestamp: MilliSeconds): Boolean = {
     timestamp >= birth && timestamp < death
   }
 
@@ -113,8 +113,7 @@ case class LifeTime(birth: TimeStamp, death: TimeStamp) {
 }
 
 object LifeTime {
-  // MAX_TIME_MILLIS is Long.MaxValue - 1
-  val Immortal = LifeTime(MIN_TIME_MILLIS, MAX_TIME_MILLIS + 1)
+  val Immortal = LifeTime(Time.MIN_TIME_MILLIS, Time.UNREACHABLE)
 }
 
 /**
@@ -151,15 +150,11 @@ object StreamApplication {
       name: String, dag: Graph[T, P], userConfig: UserConfig): StreamApplication = {
     import org.apache.gearpump.streaming.Processor._
 
-    if (dag.hasCycle()) {
-      LOG.warn(s"Detected cycles in DAG of application $name!")
-    }
-
-    val indices = dag.topologicalOrderWithCirclesIterator.toList.zipWithIndex.toMap
+    val indices = dag.topologicalOrderIterator.toList.zipWithIndex.toMap
     val graph = dag.mapVertex { processor =>
       val updatedProcessor = ProcessorToProcessorDescription(indices(processor), processor)
       updatedProcessor
-    }.mapEdge { (node1, edge, node2) =>
+    }.mapEdge { (_, edge, _) =>
       PartitionerDescription(new PartitionerObject(
         Option(edge).getOrElse(StreamApplication.hashPartitioner)))
     }

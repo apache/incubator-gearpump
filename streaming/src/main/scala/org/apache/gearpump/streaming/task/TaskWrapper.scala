@@ -23,10 +23,11 @@ import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 import akka.actor.Actor._
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
-import org.slf4j.Logger
+import org.apache.gearpump.Message
+import org.apache.gearpump.Time.MilliSeconds
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.util.LogUtil
-import org.apache.gearpump.{TimeStamp, Message}
+import org.slf4j.Logger
 
 /**
  * This provides TaskContext for user defined tasks
@@ -107,8 +108,12 @@ class TaskWrapper(
     task.map(_.receiveUnManagedMessage).getOrElse(defaultMessageHandler)
   }
 
-  override def upstreamMinClock: TimeStamp = {
+  override def upstreamMinClock: MilliSeconds = {
     actor.getUpstreamMinClock
+  }
+
+  override def updateWatermark(watermark: Instant): Unit = {
+    actor.updateWatermark(watermark)
   }
 
   def schedule(initialDelay: FiniteDuration, interval: FiniteDuration)(f: => Unit): Cancellable = {

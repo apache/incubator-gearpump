@@ -58,12 +58,12 @@ class StreamAppSpec extends FlatSpec with Matchers with BeforeAndAfterAll with M
     application.name shouldBe "dsl"
     val dag = application.userConfig
       .getValue[Graph[ProcessorDescription, PartitionerDescription]](StreamApplication.DAG).get
-    dag.vertices.size shouldBe 2
-    dag.vertices.foreach { processor =>
+    dag.getVertices.size shouldBe 2
+    dag.getVertices.foreach { processor =>
       processor.taskClass shouldBe classOf[DataSourceTask[_, _]].getName
-      if (processor.description == "A") {
+      if (processor.description == "A.globalWindows") {
         processor.parallelism shouldBe 2
-      } else if (processor.description == "B") {
+      } else if (processor.description == "B.globalWindows") {
         processor.parallelism shouldBe 3
       } else {
         fail(s"undefined source ${processor.description}")
