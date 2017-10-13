@@ -63,7 +63,7 @@ class Subscription(
   private val outputWatermark: Array[MilliSeconds] = Array.fill(parallelism)(
     Watermark.MAX.toEpochMilli)
   private val processingWatermark: Array[MilliSeconds] = Array.fill(parallelism)(
-    Watermark.MAX.toEpochMilli)
+    Watermark.MIN.toEpochMilli)
 
   private var maxPendingCount: Short = 0
 
