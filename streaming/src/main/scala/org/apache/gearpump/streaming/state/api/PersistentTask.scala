@@ -84,6 +84,7 @@ abstract class PersistentTask[T](taskContext: TaskContext, conf: UserConfig)
   }
 
   final override def onWatermarkProgress(watermark: Instant): Unit = {
+    taskContext.updateWatermark(watermark)
     if (checkpointManager.shouldCheckpoint(watermark.toEpochMilli)) {
       checkpointManager.getCheckpointTime.foreach { checkpointTime =>
         val serialized = state.checkpoint()

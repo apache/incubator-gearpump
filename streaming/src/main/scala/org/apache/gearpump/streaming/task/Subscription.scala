@@ -61,7 +61,7 @@ class Subscription(
   private val processingWatermarkSince: Array[Short] = new Array[Short](parallelism)
 
   private val outputWatermark: Array[MilliSeconds] = Array.fill(parallelism)(
-    Watermark.MIN.toEpochMilli)
+    Watermark.MAX.toEpochMilli)
   private val processingWatermark: Array[MilliSeconds] = Array.fill(parallelism)(
     Watermark.MIN.toEpochMilli)
 
