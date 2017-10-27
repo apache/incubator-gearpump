@@ -18,7 +18,8 @@
 FROM openjdk:8u131-jre-alpine
 
 # Install python
-RUN apk add --no-cache python && \
+RUN apk add --update curl && \
+    apk add --no-cache python && \
     python -m ensurepip && \
     rm -r /usr/lib/python*/ensurepip && \
     pip install --upgrade pip setuptools && \
