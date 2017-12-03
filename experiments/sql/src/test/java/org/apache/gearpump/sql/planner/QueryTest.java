@@ -25,41 +25,34 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.sql.SQLException;
 
+import static org.junit.Assert.assertEquals;
+
 public class QueryTest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(QueryTest.class);
-
   @Test
-  public void testLogicalPlan() {
+  public void testLogicalPlan() throws IOException,
+    SQLException,
+    ValidationException,
+    RelConversionException {
 
-    try {
-      CalciteConnection connection = new Connection();
-      String salesSchema = Resources.toString(Query.class.getResource("/model.json"),
-        Charset.defaultCharset());
-      new ModelHandler(connection, "inline:" + salesSchema);
+    CalciteConnection connection = new Connection();
+    String salesSchema = Resources.toString(Query.class.getResource("/model.json"),
+      Charset.defaultCharset());
+    new ModelHandler(connection, "inline:" + salesSchema);
 
-      Query queryPlanner = new Query(connection.getRootSchema().getSubSchema(connection.getSchema()));
-      RelNode logicalPlan = queryPlanner.getLogicalPlan("SELECT item FROM transactions");
+    Query queryPlanner = new Query(connection.getRootSchema().getSubSchema(connection.getSchema()));
+    RelNode logicalPlan = queryPlanner.getLogicalPlan("SELECT item FROM transactions");
 
-      System.out.println("Getting Logical Plan...\n" + RelOptUtil.toString(logicalPlan));
-
-    } catch (IOException e) {
-      LOG.error(e.getMessage());
-    } catch (RelConversionException e) {
-      LOG.error(e.getMessage());
-    } catch (ValidationException e) {
-      LOG.error(e.getMessage());
-    } catch (SQLException e) {
-      LOG.error(e.getMessage());
-    }
+    String expectedLogicalPlan = "LogicalProject(item=[$2])" +
+      "  LogicalTableScan(table=[[SALES, Transactions]])";
+    assertEquals(expectedLogicalPlan,
+      RelOptUtil.toString(logicalPlan).replaceAll(System.getProperty("line.separator"), ""));
 
   }
 }

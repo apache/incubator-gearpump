@@ -57,16 +57,16 @@ import org.apache.gearpump.sql.rule.GearFilterRule;
 import org.apache.gearpump.sql.table.SampleTransactions;
 import org.apache.gearpump.sql.utils.CalciteFrameworkConfiguration;
 import org.apache.gearpump.sql.validator.CalciteSqlValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 
-public class CalciteTest {
+import static org.junit.Assert.assertEquals;
 
-  private static final Logger LOG = LoggerFactory.getLogger(CalciteTest.class);
+public class CalciteTest {
 
   private SqlOperatorTable operatorTable;
   private FrameworkConfig config;
@@ -80,19 +80,38 @@ public class CalciteTest {
   private RexExecutor executor;
   private RelRoot root;
 
-  public CalciteTest(FrameworkConfig config) {
-    this.config = config;
-    this.defaultSchema = config.getDefaultSchema();
-    this.operatorTable = config.getOperatorTable();
-    this.parserConfig = config.getParserConfig();
-    this.state = State.STATE_0_CLOSED;
-    this.traitDefs = config.getTraitDefs();
-    this.convertletTable = config.getConvertletTable();
-    this.executor = config.getExecutor();
-    reset();
-  }
+  @Before
+  public void setFrameworkConfig() throws ClassNotFoundException, SQLException {
 
-  public CalciteTest() {
+    Class.forName("org.apache.calcite.jdbc.Driver");
+    java.sql.Connection connection = DriverManager.getConnection("jdbc:calcite:");
+    CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
+
+    SchemaPlus rootSchema = calciteConnection.getRootSchema();
+    rootSchema.add("t", new ReflectiveSchema(new StreamQueryPlanner.Transactions()));
+
+    config = CalciteFrameworkConfiguration.getDefaultconfig(rootSchema);
+    defaultSchema = config.getDefaultSchema();
+    operatorTable = config.getOperatorTable();
+    parserConfig = config.getParserConfig();
+    state = State.STATE_0_CLOSED;
+    traitDefs = config.getTraitDefs();
+    convertletTable = config.getConvertletTable();
+    executor = config.getExecutor();
+    reset();
+
+    Frameworks.withPlanner(
+      new Frameworks.PlannerAction<Void>() {
+        public Void apply(RelOptCluster cluster, RelOptSchema relOptSchema,
+                          SchemaPlus rootSchema) {
+          Util.discard(rootSchema); // use our own defaultSchema
+          typeFactory = (JavaTypeFactory) cluster.getTypeFactory();
+          planner = cluster.getPlanner();
+          planner.setExecutor(executor);
+          return null;
+        }
+      },
+      config);
   }
 
   private void ensure(State state) {
@@ -122,18 +141,6 @@ public class CalciteTest {
         reset();
     }
     ensure(State.STATE_1_RESET);
-    Frameworks.withPlanner(
-      new Frameworks.PlannerAction<Void>() {
-        public Void apply(RelOptCluster cluster, RelOptSchema relOptSchema,
-                          SchemaPlus rootSchema) {
-          Util.discard(rootSchema); // use our own defaultSchema
-          typeFactory = (JavaTypeFactory) cluster.getTypeFactory();
-          planner = cluster.getPlanner();
-          planner.setExecutor(executor);
-          return null;
-        }
-      },
-      config);
 
     state = State.STATE_2_READY;
 
@@ -182,10 +189,6 @@ public class CalciteTest {
     return SqlConformanceEnum.DEFAULT;
   }
 
-  /**
-   * Implements {@link org.apache.calcite.plan.RelOptTable.ViewExpander}
-   * interface for {@link org.apache.calcite.tools.Planner}.
-   */
   public class ViewExpanderImpl implements ViewExpander {
     @Override
     public RelRoot expandView(RelDataType rowType, String queryString,
@@ -257,20 +260,16 @@ public class CalciteTest {
     }
   }
 
-  void calTest() throws SqlParseException {
-
-//    String sql = "select t.orders.id from t.orders";
-//
-//    String sql = "select t.products.id "
-//      + "from t.orders, t.products "
-//      + "where t.orders.id = t.products.id and quantity>2 ";
+  @Test
+  public void calTest1() throws SqlParseException,
+    ClassNotFoundException,
+    SQLException {
 
     String sql = "SELECT t.products.id AS product_id, t.products.name "
       + "AS product_name, t.orders.id AS order_id "
       + "FROM t.products JOIN t.orders ON t.products.id = t.orders.id  WHERE quantity > 2";
 
     final SqlParser.Config parserConfig = SqlParser.configBuilder().setLex(Lex.MYSQL).build();
-
     // Parse the query
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNode sqlNode = parser.parseStmt();
@@ -291,17 +290,25 @@ public class CalciteTest {
       cluster,
       convertletTable);
     RelRoot root = sqlToRelConverter.convertQuery(validatedSqlNode, false, true);
-    System.out.println(RelOptUtil.toString(root.rel));
+    // Check logical plan
+    String expectedResult = "LogicalProject(product_id=[$0], product_name=[$1], order_id=[$2])" +
+      "  LogicalFilter(condition=[>($3, 2)])" +
+      "    LogicalProject(id=[$0], name=[$1], id1=[$3], quantity=[$4])" +
+      "      LogicalJoin(condition=[=($2, $5)], joinType=[inner])" +
+      "        LogicalProject(id=[$0], name=[$1], id0=[CAST($0):VARCHAR CHARACTER SET \"ISO-8859-1\" COLLATE \"" +
+      "ISO-8859-1$en_US$primary\"])" +
+      "          EnumerableTableScan(table=[[t, products]])" +
+      "        LogicalProject(id=[$0], quantity=[$1], id0=[CAST($0):VARCHAR CHARACTER SET \"ISO-8859-1\" COLLATE \"" +
+      "ISO-8859-1$en_US$primary\"])" +
+      "          EnumerableTableScan(table=[[t, orders]])";
+    assertEquals(expectedResult,
+      RelOptUtil.toString(root.rel).replaceAll(System.getProperty("line.separator"), ""));
 
     // Optimize the plan
     RelOptPlanner planner = new VolcanoPlanner();
 
     // Create a set of rules to apply
     Program program = Programs.ofRules(
-//      FilterProjectTransposeRule.INSTANCE,
-//      ProjectMergeRule.INSTANCE,
-//      FilterMergeRule.INSTANCE,
-//      FilterJoinRule.JOIN,
       GearFilterRule.INSTANCE,
       LoptOptimizeJoinRule.INSTANCE);
 
@@ -310,20 +317,8 @@ public class CalciteTest {
     // Execute the program
 //    RelNode optimized = program.run(planner, root.rel, traitSet,
 //      ImmutableList.<RelOptMaterialization>of(), ImmutableList.<RelOptLattice>of());
-//    logger.info(RelOptUtil.toString(optimized));
+//    LOG.info(RelOptUtil.toString(optimized));
 
-  }
-
-  // new test -------------------------
-  private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) {
-    try {
-      return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs);
-    } catch (ClassNotFoundException e) {
-      LOG.error(e.getMessage());
-    } catch (SQLException e) {
-      LOG.error(e.getMessage());
-    }
-    return null;
   }
 
   private Planner getPlanner(List<RelTraitDef> traitDefs,
@@ -345,53 +340,37 @@ public class CalciteTest {
     return Frameworks.getPlanner(config);
   }
 
-  void calTest2() throws SqlParseException, ValidationException, RelConversionException {
+  @Test
+  public void calTest2() throws SQLException,
+    ClassNotFoundException,
+    SqlParseException,
+    ValidationException,
+    RelConversionException {
 
     RuleSet ruleSet = RuleSets.ofList(
       SortRemoveRule.INSTANCE,
       EnumerableRules.ENUMERABLE_PROJECT_RULE,
       EnumerableRules.ENUMERABLE_SORT_RULE);
-
-    Planner planner = getPlanner(null, Programs.of(ruleSet));
+    Planner planner = getPlanner(traitDefs, SqlParser.Config.DEFAULT, Programs.of(ruleSet));
 
     String sql = "SELECT * FROM t.products ORDER BY t.products.id";
 
     SqlNode parse = planner.parse(sql);
-    System.out.println("SQL Parse Tree:- \n" + parse.toString());
+    String expectedParseResult = "SELECT *FROM `T`.`PRODUCTS`ORDER BY `T`.`PRODUCTS`.`ID`";
+    // Check SQL Parse Tree
+    assertEquals(expectedParseResult,
+      parse.toString().replaceAll(System.getProperty("line.separator"), ""));
 
     SqlNode validate = planner.validate(parse);
     RelNode convert = planner.rel(validate).project();
     RelTraitSet traitSet = convert.getTraitSet().replace(EnumerableConvention.INSTANCE);
     RelNode transform = planner.transform(0, traitSet, convert);
-    System.out.println("\n\nRelational Expression:- \n" + RelOptUtil.toString(transform));
-
+    // Check Relational Expression Result
+    String expectedRelationalExpressionResult = "EnumerableSort(sort0=[$0], dir0=[ASC])" +
+      "  EnumerableProject(ID=[$0], NAME=[$1])" +
+      "    EnumerableTableScan(table=[[T, PRODUCTS]])";
+    assertEquals(expectedRelationalExpressionResult,
+      RelOptUtil.toString(transform).replaceAll(System.getProperty("line.separator"), ""));
   }
 
-
-  public static void main(String[] args) throws ClassNotFoundException,
-    SQLException, SqlParseException {
-
-    // calTest()
-//    Class.forName("org.apache.calcite.jdbc.Driver");
-//    java.sql.Connection connection = DriverManager.getConnection("jdbc:calcite:");
-//    CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
-//    SchemaPlus rootSchema = calciteConnection.getRootSchema();
-//    rootSchema.add("t", new ReflectiveSchema(new StreamQueryPlanner.Transactions()));
-//
-//    FrameworkConfig frameworkConfig = CalciteFrameworkConfiguration.getDefaultconfig(rootSchema);
-//    CalciteTest ct = new CalciteTest(frameworkConfig);
-//    ct.ready();
-//    ct.calTest();
-
-    // calTest2()
-    CalciteTest calTest = new CalciteTest();
-    try {
-      calTest.calTest2();
-    } catch (ValidationException e) {
-      LOG.error(e.getMessage());
-    } catch (RelConversionException e) {
-      LOG.error(e.getMessage());
-    }
-
-  }
 }
