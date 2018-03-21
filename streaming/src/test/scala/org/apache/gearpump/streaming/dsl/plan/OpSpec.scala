@@ -85,7 +85,7 @@ class OpSpec extends WordSpec with Matchers with BeforeAndAfterAll with MockitoS
       val processor = dataSourceOp.toProcessor
       processor shouldBe a[Processor[_]]
       processor.parallelism shouldBe dataSourceOp.parallelism
-      processor.description shouldBe s"${dataSourceOp.description}.globalWindows"
+      processor.description shouldBe s"${dataSourceOp.description}"
     }
   }
 
