@@ -23,6 +23,7 @@ import com.gs.collections.api.block.predicate.Predicate
 import com.gs.collections.api.block.procedure.Procedure
 import com.gs.collections.impl.list.mutable.FastList
 import com.gs.collections.impl.map.sorted.mutable.TreeSortedMap
+import org.apache.gearpump.Message
 import org.apache.gearpump.streaming.dsl.plan.functions.FunctionRunner
 import org.apache.gearpump.streaming.dsl.window.api.WindowFunction.Context
 import org.apache.gearpump.streaming.dsl.window.api.{Discarding, Windows}
@@ -32,57 +33,87 @@ import org.apache.gearpump.streaming.task.TaskUtil
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * Inputs for [[TimedValueProcessor]].
+ * Inputs for [[StreamingOperator]].
  */
-case class TimestampedValue[T](value: T, timestamp: Instant)
+case class TimestampedValue[T](value: T, timestamp: Instant) {
+
+  def this(msg: Message) = {
+    this(msg.value.asInstanceOf[T], msg.timestamp)
+  }
+
+  def toMessage: Message = Message(value, timestamp)
+}
 
 /**
- * Outputs triggered by [[TimedValueProcessor]]
+ * Outputs triggered by [[StreamingOperator]]
  */
 case class TriggeredOutputs[T](outputs: TraversableOnce[TimestampedValue[T]],
     watermark: Instant)
 
-trait TimedValueProcessor[IN, OUT] extends java.io.Serializable {
 
-  def process(timestampedValue: TimestampedValue[IN]): Unit
+trait StreamingOperator[IN, OUT] extends java.io.Serializable {
+
+  def setup(): Unit = {}
+
+  def foreach(timestampedValue: TimestampedValue[IN]): Unit
+
+  def flatMap(
+      timestampedValue: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
+    foreach(timestampedValue)
+    None
+  }
 
   def trigger(time: Instant): TriggeredOutputs[OUT]
+
+  def teardown(): Unit = {}
 }
 
 /**
  * A composite WindowRunner that first executes its left child and feeds results
  * into result child.
  */
-case class AndThen[IN, MIDDLE, OUT](left: TimedValueProcessor[IN, MIDDLE],
-    right: TimedValueProcessor[MIDDLE, OUT]) extends TimedValueProcessor[IN, OUT] {
+case class AndThenOperator[IN, MIDDLE, OUT](left: StreamingOperator[IN, MIDDLE],
+    right: StreamingOperator[MIDDLE, OUT]) extends StreamingOperator[IN, OUT] {
 
-  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
-    left.process(timestampedValue)
+  override def foreach(
+      timestampedValue: TimestampedValue[IN]): Unit = {
+    left.foreach(timestampedValue)
   }
 
   override def trigger(time: Instant): TriggeredOutputs[OUT] = {
     val lOutputs = left.trigger(time)
-    lOutputs.outputs.foreach(right.process)
+    lOutputs.outputs.foreach(right.foreach)
     right.trigger(lOutputs.watermark)
   }
 }
 
-class DirectProcessor[IN, OUT](fnRunner: FunctionRunner[IN, OUT])
-  extends TimedValueProcessor[IN, OUT] {
+/**
+ * @param runner FlatMapper or chained FlatMappers
+ */
+class FlatMapOperator[IN, OUT](runner: FunctionRunner[IN, OUT])
+  extends StreamingOperator[IN, OUT] {
 
-  private val buffer = ArrayBuffer.empty[TimestampedValue[OUT]]
+  override def setup(): Unit = {
+    runner.setup()
+  }
 
-  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
-    fnRunner.setup()
-    fnRunner.process(timestampedValue.value)
+  override def foreach(timestampedValue: TimestampedValue[IN]): Unit = {
+    throw new UnsupportedOperationException("foreach should not be invoked on FlatMapOperator; " +
+      "please use flatMap instead")
+  }
+
+  override def flatMap(
+      timestampedValue: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
+    runner.process(timestampedValue.value)
       .map(TimestampedValue(_, timestampedValue.timestamp))
-      .foreach(tv => buffer.append(tv))
-    fnRunner.finish()
-    fnRunner.teardown()
   }
 
   override def trigger(time: Instant): TriggeredOutputs[OUT] = {
-    TriggeredOutputs(buffer, time)
+    TriggeredOutputs(None, time)
+  }
+
+  override def teardown(): Unit = {
+    runner.teardown()
   }
 }
 
@@ -92,17 +123,18 @@ class DirectProcessor[IN, OUT](fnRunner: FunctionRunner[IN, OUT])
  *   2. Applies window calculation to each group
  *   3. Emits results on triggering
  */
-class WindowProcessor[IN, OUT](
+class WindowOperator[IN, OUT](
     windows: Windows,
-    fnRunner: FunctionRunner[IN, OUT])
-  extends TimedValueProcessor[IN, OUT] {
+    runner: FunctionRunner[IN, OUT])
+  extends StreamingOperator[IN, OUT] {
 
   private val windowFn = windows.windowFn
   private val windowInputs = new TreeSortedMap[Window, FastList[TimestampedValue[IN]]]
-  private var setup = false
+  private var isSetup = false
   private var watermark = Watermark.MIN
 
-  override def process(timestampedValue: TimestampedValue[IN]): Unit = {
+  override def foreach(
+      timestampedValue: TimestampedValue[IN]): Unit = {
     val wins = windowFn(new Context[IN] {
       override def element: IN = timestampedValue.value
 
@@ -149,26 +181,26 @@ class WindowProcessor[IN, OUT](
         val firstWin = windowInputs.firstKey
         if (!time.isBefore(firstWin.endTime)) {
           val inputs = windowInputs.remove(firstWin)
-          if (!setup) {
-            fnRunner.setup()
-            setup = true
+          if (!isSetup) {
+            runner.setup()
+            isSetup = true
           }
           inputs.forEach(new Procedure[TimestampedValue[IN]] {
             override def value(tv: TimestampedValue[IN]): Unit = {
-              fnRunner.process(tv.value).foreach {
+              runner.process(tv.value).foreach {
                 out: OUT => outputs += TimestampedValue(out, tv.timestamp)
               }
             }
           })
-          fnRunner.finish().foreach {
+          runner.finish().foreach {
             out: OUT =>
               outputs += TimestampedValue(out, firstWin.endTime.minusMillis(1))
           }
           val newWmk = TaskUtil.max(wmk, firstWin.endTime)
           if (windows.accumulationMode == Discarding) {
-            fnRunner.teardown()
+            runner.teardown()
             // discarding, setup need to be called for each window
-            setup = false
+            isSetup = false
           }
           onTrigger(outputs, newWmk)
         } else {
