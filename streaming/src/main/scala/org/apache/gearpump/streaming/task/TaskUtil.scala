@@ -53,6 +53,10 @@ object TaskUtil {
     else t1
   }
 
+  def min(t1: Instant, t2: Instant, t3: Instant): Instant = {
+    min(t1, min(t2, t3))
+  }
+
   /**
    * @return t1 if t1 is not smaller than t2 and t2 otherwise
    */

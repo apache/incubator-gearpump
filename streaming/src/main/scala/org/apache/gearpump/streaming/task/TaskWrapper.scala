@@ -46,6 +46,9 @@ class TaskWrapper(
 
   private var task: Option[Task] = None
 
+  private val shouldUpdateProcessingWatermark =
+    !taskClass.isAssignableFrom(classOf[WatermarkProducer])
+
   def setTaskActor(actor: TaskActor): Unit = this.actor = actor
 
   override def appId: Int = context.appId
@@ -97,7 +100,12 @@ class TaskWrapper(
     task.foreach(_.onStart(startTime))
   }
 
-  override def onNext(msg: Message): Unit = task.foreach(_.onNext(msg))
+  override def onNext(msg: Message): Unit = {
+    task.foreach(_.onNext(msg))
+    if (shouldUpdateProcessingWatermark) {
+      updateWatermark(msg.timestamp)
+    }
+  }
 
   override def onStop(): Unit = {
     task.foreach(_.onStop())

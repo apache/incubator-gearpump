@@ -27,7 +27,7 @@ import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants.{GEARPUMP_STREAMING_GROUPBY_FUNCTION, GEARPUMP_STREAMING_OPERATOR}
 import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, WindowRunner}
 import org.apache.gearpump.streaming.source.Watermark
-import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
+import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil, WatermarkProducer}
 
 /**
  * Processes messages in groups as defined by groupBy function.
@@ -35,7 +35,7 @@ import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
 class GroupByTask[IN, GROUP, OUT](
     groupBy: IN => GROUP,
     taskContext: TaskContext,
-    userConfig: UserConfig) extends Task(taskContext, userConfig) {
+    userConfig: UserConfig) extends Task(taskContext, userConfig) with WatermarkProducer {
 
   def this(context: TaskContext, conf: UserConfig) = {
     this(

@@ -41,7 +41,6 @@ import org.apache.gearpump.util.{LogUtil, TimeOutScheduler}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-
 /**
  * All tasks of Gearpump run inside an Actor. TaskActor is the Actor container for a task.
  */
@@ -246,7 +245,6 @@ class TaskActor(
 
   private def doHandleMessage(): Int = {
     var done = false
-
     var count = 0
 
     while (allowSendingMoreMessages() && !done) {
@@ -339,8 +337,7 @@ class TaskActor(
     val subWatermark = getSubscriptionWatermark(subscriptions, watermark)
 
     watermark = TaskUtil.max(Instant.ofEpochMilli(life.birth),
-      TaskUtil.min(upstreamWatermark,
-        TaskUtil.min(processingWatermark, subWatermark)))
+      TaskUtil.min(upstreamWatermark, processingWatermark, subWatermark))
 
     // Checks whether current task is dead.
     if (watermark.toEpochMilli > life.death) {
@@ -361,10 +358,11 @@ class TaskActor(
   }
 
   private def getSubscriptionWatermark(subs: List[(Int, Subscription)], wmk: Instant): Instant = {
+    val wmkInMilli = wmk.toEpochMilli
     Instant.ofEpochMilli(subs.foldLeft(Watermark.MAX.toEpochMilli) {
       case (min, (_, sub)) =>
         val subWmk = sub.watermark
-        if (subWmk == wmk.toEpochMilli) {
+        if (subWmk == wmkInMilli) {
           sub.onStallingTime(subWmk)
         }
         Math.min(min, subWmk)
