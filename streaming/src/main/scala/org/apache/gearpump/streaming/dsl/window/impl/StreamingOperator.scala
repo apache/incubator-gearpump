@@ -55,11 +55,11 @@ trait StreamingOperator[IN, OUT] extends java.io.Serializable {
 
   def setup(): Unit = {}
 
-  def foreach(timestampedValue: TimestampedValue[IN]): Unit
+  def foreach(tv: TimestampedValue[IN]): Unit
 
   def flatMap(
-      timestampedValue: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
-    foreach(timestampedValue)
+      tv: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
+    foreach(tv)
     None
   }
 
@@ -76,8 +76,13 @@ case class AndThenOperator[IN, MIDDLE, OUT](left: StreamingOperator[IN, MIDDLE],
     right: StreamingOperator[MIDDLE, OUT]) extends StreamingOperator[IN, OUT] {
 
   override def foreach(
-      timestampedValue: TimestampedValue[IN]): Unit = {
-    left.foreach(timestampedValue)
+      tv: TimestampedValue[IN]): Unit = {
+    left.flatMap(tv).foreach(right.flatMap)
+  }
+
+  override def flatMap(
+      tv: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
+    left.flatMap(tv).flatMap(right.flatMap)
   }
 
   override def trigger(time: Instant): TriggeredOutputs[OUT] = {
