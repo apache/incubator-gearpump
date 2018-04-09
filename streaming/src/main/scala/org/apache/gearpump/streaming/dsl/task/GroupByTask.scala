@@ -52,9 +52,10 @@ class GroupByTask[IN, GROUP, OUT](
     val group = groupBy(input)
 
     if (!groups.containsKey(group)) {
-      groups.put(group,
-        userConfig.getValue[StreamingOperator[IN, OUT]](
-          GEARPUMP_STREAMING_OPERATOR)(taskContext.system).get)
+      val operator = userConfig.getValue[StreamingOperator[IN, OUT]](
+        GEARPUMP_STREAMING_OPERATOR)(taskContext.system).get
+      operator.setup()
+      groups.put(group, operator)
     }
 
     groups.get(group).foreach(TimestampedValue(message.value.asInstanceOf[IN],
@@ -66,10 +67,18 @@ class GroupByTask[IN, GROUP, OUT](
       taskContext.updateWatermark(Watermark.MAX)
     } else {
       groups.values.forEach(new Consumer[StreamingOperator[IN, OUT]] {
-        override def accept(runner: StreamingOperator[IN, OUT]): Unit = {
-          TaskUtil.trigger(watermark, runner, taskContext)
+        override def accept(operator: StreamingOperator[IN, OUT]): Unit = {
+          TaskUtil.trigger(watermark, operator, taskContext)
         }
       })
     }
+  }
+
+  override def onStop(): Unit = {
+    groups.values.forEach(new Consumer[StreamingOperator[IN, OUT]] {
+      override def accept(operator: StreamingOperator[IN, OUT]): Unit = {
+        operator.teardown()
+      }
+    })
   }
 }

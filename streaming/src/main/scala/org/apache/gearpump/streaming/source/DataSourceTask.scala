@@ -58,6 +58,7 @@ class DataSourceTask[IN, OUT] private[source](
   override def onStart(startTime: Instant): Unit = {
     LOG.info(s"opening data source at ${startTime.toEpochMilli}")
     source.open(context, startTime)
+    operator.setup()
 
     self ! Watermark(source.getWatermark)
   }
@@ -77,6 +78,7 @@ class DataSourceTask[IN, OUT] private[source](
   override def onStop(): Unit = {
     LOG.info("closing data source...")
     source.close()
+    operator.teardown()
   }
 
   private def process(msg: Message): Unit = {

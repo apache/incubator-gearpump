@@ -22,11 +22,11 @@ import java.time.Instant
 import org.apache.gearpump.Message
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.streaming.Constants._
-import org.apache.gearpump.streaming.dsl.window.impl.{TimestampedValue, StreamingOperator}
+import org.apache.gearpump.streaming.dsl.window.impl.{StreamingOperator, TimestampedValue}
 import org.apache.gearpump.streaming.task.{Task, TaskContext, TaskUtil}
 
 class TransformTask[IN, OUT](
-    runner: StreamingOperator[IN, OUT],
+    operator: StreamingOperator[IN, OUT],
     taskContext: TaskContext, userConf: UserConfig) extends Task(taskContext, userConf) {
 
   def this(context: TaskContext, conf: UserConfig) = {
@@ -36,11 +36,19 @@ class TransformTask[IN, OUT](
     )
   }
 
+  override def onStart(startTime: Instant): Unit = {
+    operator.setup()
+  }
+
   override def onNext(msg: Message): Unit = {
-    runner.foreach(TimestampedValue(msg.value.asInstanceOf[IN], msg.timestamp))
+    operator.foreach(TimestampedValue(msg.value.asInstanceOf[IN], msg.timestamp))
   }
 
   override def onWatermarkProgress(watermark: Instant): Unit = {
-    TaskUtil.trigger(watermark, runner, taskContext)
+    TaskUtil.trigger(watermark, operator, taskContext)
+  }
+
+  override def onStop(): Unit = {
+    operator.teardown()
   }
 }

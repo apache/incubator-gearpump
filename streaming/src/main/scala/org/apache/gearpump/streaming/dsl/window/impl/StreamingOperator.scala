@@ -75,6 +75,11 @@ trait StreamingOperator[IN, OUT] extends java.io.Serializable {
 case class AndThenOperator[IN, MIDDLE, OUT](left: StreamingOperator[IN, MIDDLE],
     right: StreamingOperator[MIDDLE, OUT]) extends StreamingOperator[IN, OUT] {
 
+  override def setup(): Unit = {
+    left.setup()
+    right.setup()
+  }
+
   override def foreach(
       tv: TimestampedValue[IN]): Unit = {
     left.flatMap(tv).foreach(right.flatMap)
@@ -90,6 +95,11 @@ case class AndThenOperator[IN, MIDDLE, OUT](left: StreamingOperator[IN, MIDDLE],
     lOutputs.outputs.foreach(right.foreach)
     right.trigger(lOutputs.watermark)
   }
+
+  override def teardown(): Unit = {
+    left.teardown()
+    right.teardown()
+  }
 }
 
 /**
@@ -102,15 +112,15 @@ class FlatMapOperator[IN, OUT](runner: FunctionRunner[IN, OUT])
     runner.setup()
   }
 
-  override def foreach(timestampedValue: TimestampedValue[IN]): Unit = {
+  override def foreach(tv: TimestampedValue[IN]): Unit = {
     throw new UnsupportedOperationException("foreach should not be invoked on FlatMapOperator; " +
       "please use flatMap instead")
   }
 
   override def flatMap(
-      timestampedValue: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
-    runner.process(timestampedValue.value)
-      .map(TimestampedValue(_, timestampedValue.timestamp))
+      tv: TimestampedValue[IN]): TraversableOnce[TimestampedValue[OUT]] = {
+    runner.process(tv.value)
+      .map(TimestampedValue(_, tv.timestamp))
   }
 
   override def trigger(time: Instant): TriggeredOutputs[OUT] = {
@@ -139,11 +149,11 @@ class WindowOperator[IN, OUT](
   private var watermark = Watermark.MIN
 
   override def foreach(
-      timestampedValue: TimestampedValue[IN]): Unit = {
+      tv: TimestampedValue[IN]): Unit = {
     val wins = windowFn(new Context[IN] {
-      override def element: IN = timestampedValue.value
+      override def element: IN = tv.value
 
-      override def timestamp: Instant = timestampedValue.timestamp
+      override def timestamp: Instant = tv.timestamp
     })
     wins.foreach { win =>
       if (windowFn.isNonMerging) {
@@ -151,9 +161,9 @@ class WindowOperator[IN, OUT](
           val inputs = new FastList[TimestampedValue[IN]]
           windowInputs.put(win, inputs)
         }
-        windowInputs.get(win).add(timestampedValue)
+        windowInputs.get(win).add(tv)
       } else {
-        merge(windowInputs, win, timestampedValue)
+        merge(windowInputs, win, tv)
       }
     }
 
@@ -228,5 +238,9 @@ class WindowOperator[IN, OUT](
     val triggeredOutputs = onTrigger(ArrayBuffer.empty[TimestampedValue[OUT]], watermark)
     watermark = TaskUtil.max(watermark, triggeredOutputs.watermark)
     TriggeredOutputs(triggeredOutputs.outputs, watermark)
+  }
+
+  override def teardown(): Unit = {
+    runner.teardown()
   }
 }
