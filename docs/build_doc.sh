@@ -50,13 +50,6 @@ export BUILD_API=$2
 # generate site documents
 mkdocs build --clean
 
-# check html link validity
-echo "Checking generated HTMLs using htmlproofer..."
-
-htmlproofer site \
-  --disable-external \
-  --file-ignore site/base.html,site/breadcrumbs.html,site/versions.html,site/toc.html,site/footer.html
-
 # generate API doc
 if [ "$BUILD_API" = 1 ]; then
   # Build Scaladoc for Java/Scala

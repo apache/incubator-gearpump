@@ -5,39 +5,10 @@ have docs corresponding to your checked out version.
 
 # Requirements
 
-You need to install ruby and ruby-dev first. On Ubuntu, you ca run command like this:
+We use [MkDocs](https://www.mkdocs.org/) (>=0.17) to generate our documentation site. You can install
+it via:
 
-    sudo apt-get install ruby
-    sudo apt-get install ruby-dev
-    sudo apt-get install python-setuptools
-    sudo apt-get install pip
-
-We use Markdown to write and Jekyll to translate the documentation to static HTML. You can install
-all needed software via:
-
-    sudo pip install mkdocs
-    sudo gem install html-proofer
-
-
-If you are using Mac OSX 10.11+ (El Capitan), you will need to execute following command:
-```
-sudo gvim /Library/Ruby/Gems/2.0.0/gems/ffi-1.9.10/lib/ffi/library.rb
-```
-And change following code in this file:
-```ruby
-module FFI
-...
-    def self.map_library_name(lib)
-        ...
-        lib = Library::LIBC if lib == 'c'
-        lib = Library::LIBCURL if lib == 'libcurl'
-...
-module Library
-    CURRENT_PROCESS = FFI::CURRENT_PROCESS
-    LIBC = '/usr/lib/libc.dylib'
-    LIBCURL = '/usr/lib/libcurl.dylib'
-```
-
+    pip install mkdocs
 
 # How to Build
 Command `./build_doc.sh` can be used to create a full document folder under site/. 
@@ -67,5 +38,5 @@ how a headline looks.
 
 Command `mkdocs build` can be used to make a test build.
 
-Command `mkdocs serve` can be used for debug purpose. Mkdocs will start a web server at
+Command `mkdocs serve` can be used for debug purpose. MkDocs will start a web server at
 `localhost:8000`. Use this mode to experiment commits and check changes locally.
