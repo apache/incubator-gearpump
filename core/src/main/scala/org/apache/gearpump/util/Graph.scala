@@ -34,7 +34,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
 
   // This is used to ensure the output of this Graph is always stable
   // Like method getVertices(), or getEdges()
-  private var indexs = Map.empty[Any, Int]
+  private var indices = Map.empty[Any, Int]
   private var nextIndex = 0
   private def nextId: Int = {
     val result = nextIndex
@@ -56,7 +56,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
   def addVertex(vertex: N): Unit = {
     val result = vertices.add(vertex)
     if (result) {
-      indexs += vertex -> nextId
+      indices += vertex -> nextId
     }
   }
 
@@ -67,7 +67,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
   def addEdge(edge: (N, E, N)): Unit = {
     val result = edges.add(edge)
     if (result) {
-      indexs += edge -> nextId
+      indices += edge -> nextId
       outEdges += edge._1 -> (outgoingEdgesOf(edge._1) + edge)
       inEdges += edge._3 -> (incomingEdgesOf(edge._3) + edge)
     }
@@ -79,7 +79,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    */
   def getVertices: List[N] = {
     // Sorts the vertex so that we can keep the order for mapVertex
-    vertices.toList.sortBy(indexs(_))
+    vertices.toList.sortBy(indices(_))
   }
 
   /**
@@ -123,7 +123,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    */
   def removeVertex(node: N): Unit = {
     vertices.remove(node)
-    indexs -= node
+    indices -= node
     val toBeRemoved = incomingEdgesOf(node) ++ outgoingEdgesOf(node)
     toBeRemoved.foreach(removeEdge)
     outEdges -= node
@@ -135,7 +135,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current Graph is changed.
    */
   private def removeEdge(edge: (N, E, N)): Unit = {
-    indexs -= edge
+    indices -= edge
     edges.remove(edge)
     inEdges.update(edge._3, inEdges(edge._3) - edge)
     outEdges.update(edge._1, outEdges(edge._1) - edge)
@@ -189,7 +189,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    */
   def getEdges: List[(N, E, N)] = {
     // Sorts the edges so that we can keep the order for mapEdges
-    edges.toList.sortBy(indexs(_))
+    edges.toList.sortBy(indices(_))
   }
 
   /**
@@ -273,7 +273,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
       var indegreeMap = getVertices.map(v => v -> inDegreeOf(v)).toMap
 
       val verticesWithZeroIndegree = mutable.Queue(indegreeMap.filter(_._2 == 0).keys
-        .toList.sortBy(indexs(_)): _*)
+        .toList.sortBy(indices(_)): _*)
       var output = List.empty[N]
       var count = 0
       while (verticesWithZeroIndegree.nonEmpty) {
@@ -361,7 +361,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    */
   def topologicalOrderWithCirclesIterator: Iterator[N] = {
     val topo = getAcyclicCopy().topologicalOrderIterator
-    topo.flatMap(_.sortBy(indexs(_)).iterator)
+    topo.flatMap(_.sortBy(indices(_)).iterator)
   }
 
   private def getAcyclicCopy(): Graph[mutable.MutableList[N], E] = {
@@ -417,7 +417,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
       val toBeRemovedLists = newGraph.removeZeroInDegree
       val maxLength = toBeRemovedLists.map(_.length).max
       for (subGraph <- toBeRemovedLists) {
-        val sorted = subGraph.sortBy(indexs)
+        val sorted = subGraph.sortBy(indices)
         for (i <- sorted.indices) {
           output += sorted(i) -> (level + i)
         }

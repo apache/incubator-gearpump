@@ -19,33 +19,31 @@
 package org.apache.gearpump.services
 
 import scala.util.{Failure, Success}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.Materializer
-
 import org.apache.gearpump.cluster.AppMasterToMaster.{GetWorkerData, WorkerData}
 import org.apache.gearpump.cluster.ClientToMaster.{QueryHistoryMetrics, QueryWorkerConfig, ReadOption}
 import org.apache.gearpump.cluster.ClusterConfig
 import org.apache.gearpump.cluster.MasterToClient.{HistoryMetrics, WorkerConfig}
 import org.apache.gearpump.cluster.worker.WorkerId
+import org.apache.gearpump.services.util.JsonUtil
 import org.apache.gearpump.util.ActorUtil._
 import org.apache.gearpump.util.Constants
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.json4s.jackson.Serialization.write
 
 /** Service to handle worker related queries */
 class WorkerService(val master: ActorRef, override val system: ActorSystem)
   extends BasicService {
 
-  import upickle.default.write
+  private implicit val formats = JsonUtil.defaultFormats + JsonUtil.workerIdSerializer
   private val systemConfig = system.settings.config
   private val concise = systemConfig.getBoolean(Constants.GEARPUMP_SERVICE_RENDER_CONFIG_CONCISE)
 
   protected override def doRoute(implicit mat: Materializer) = pathPrefix("worker" / Segment) {
     workerIdString => {
       pathEnd {
-        val workerId = WorkerId.parse(workerIdString)
+        val workerId = WorkerId(workerIdString)
         onComplete(askWorker[WorkerData](master, workerId, GetWorkerData(workerId))) {
           case Success(value: WorkerData) =>
             complete(write(value.workerDescription))
@@ -54,7 +52,7 @@ class WorkerService(val master: ActorRef, override val system: ActorSystem)
       }
     }~
     path("config") {
-      val workerId = WorkerId.parse(workerIdString)
+      val workerId = WorkerId(workerIdString)
       onComplete(askWorker[WorkerConfig](master, workerId, QueryWorkerConfig(workerId))) {
         case Success(value: WorkerConfig) =>
           val config = Option(value.config).map(ClusterConfig.render(_, concise)).getOrElse("{}")
@@ -64,7 +62,7 @@ class WorkerService(val master: ActorRef, override val system: ActorSystem)
       }
     } ~
     path("metrics" / RemainingPath ) { path =>
-      val workerId = WorkerId.parse(workerIdString)
+      val workerId = WorkerId(workerIdString)
       parameter(ReadOption.Key ? ReadOption.ReadLatest) { readOption =>
         val query = QueryHistoryMetrics(path.head.toString, readOption)
         onComplete(askWorker[HistoryMetrics](master, workerId, query)) {

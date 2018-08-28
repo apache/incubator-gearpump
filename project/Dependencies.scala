@@ -56,6 +56,7 @@ object Dependencies {
   val jedisVersion = "2.9.0"
   val rabbitmqVersion = "3.5.3"
   val calciteVersion = "1.12.0"
+  val json4sVersion = "3.5.3"
 
   val annotationDependencies = Seq(
     // work around for compiler warnings like

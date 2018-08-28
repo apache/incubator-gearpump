@@ -75,7 +75,7 @@ object TaskLocator {
     def fromJson(json: String): Localities = {
       val localities = ConfigFactory.parseString(json).getAnyRef("localities")
         .asInstanceOf[java.util.Map[String, String]].asScala.map { pair =>
-        val workerId: WorkerId = WorkerId.parse(pair._1)
+        val workerId: WorkerId = WorkerId(pair._1)
         val tasks = pair._2.split(",").map { task =>
           val pattern(processorId, taskIndex) = task
           TaskId(processorId.toInt, taskIndex.toInt)
@@ -87,7 +87,7 @@ object TaskLocator {
 
     def toJson(localities: Localities): String = {
       val map = localities.localities.toList.map { pair =>
-        (WorkerId.render(pair._1), pair._2.map(task =>
+        (pair._1.toString, pair._2.map(task =>
           s"task_${task.processorId}_${task.index}").mkString(","))
       }.toMap.asJava
       ConfigFactory.empty().withValue("localities", ConfigValueFactory.fromAnyRef(map)).

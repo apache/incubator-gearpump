@@ -131,14 +131,14 @@ class SupervisorServiceSpec
 
   "SupervisorService" should "remove worker" in {
     implicit val customTimeout = RouteTestTimeout(15.seconds)
-    (Post(s"/api/$REST_VERSION/supervisor/removeworker/${WorkerId.render(WorkerId(1, 0L))}")
+    (Post(s"/api/$REST_VERSION/supervisor/removeworker/${WorkerId(1, 0L)}")
       ~> supervisorRoute) ~> check {
       val responseBody = responseAs[String]
       ConfigFactory.parseString(responseBody).getBoolean("success") shouldBe true
     }
 
 
-    (Post(s"/api/$REST_VERSION/supervisor/removeworker/${WorkerId.render(WorkerId(1, 0L))}")
+    (Post(s"/api/$REST_VERSION/supervisor/removeworker/${WorkerId(1, 0L)}")
       ~> nullRoute) ~> check {
       status shouldBe StatusCodes.InternalServerError
     }

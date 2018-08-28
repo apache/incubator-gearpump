@@ -29,7 +29,7 @@ import akka.stream.scaladsl.Sink
 
 import org.apache.gearpump.util.Util
 // NOTE: This cannot be removed!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.apache.gearpump.services.util.JsonUtil._
 
 /**
  * Serves as a fake OAuth2 server.

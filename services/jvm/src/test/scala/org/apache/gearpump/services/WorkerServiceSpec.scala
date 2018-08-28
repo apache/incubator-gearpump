@@ -35,7 +35,7 @@ import org.apache.gearpump.cluster.MasterToClient.{HistoryMetrics, HistoryMetric
 import org.apache.gearpump.cluster.TestUtil
 import org.apache.gearpump.cluster.worker.{WorkerId, WorkerSummary}
 // NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.apache.gearpump.services.util.JsonUtil._
 
 class WorkerServiceSpec
   extends FlatSpec with ScalatestRouteTest with Matchers with BeforeAndAfterAll {
@@ -79,7 +79,7 @@ class WorkerServiceSpec
 
   "ConfigQueryService" should "return config for worker" in {
     implicit val customTimeout = RouteTestTimeout(15.seconds)
-    (Get(s"/api/$REST_VERSION/worker/${WorkerId.render(WorkerId(0, 0L))}/config")
+    (Get(s"/api/$REST_VERSION/worker/${WorkerId(0, 0L)}/config")
       ~> workerRoute) ~> check {
       val responseBody = responseAs[String]
       val config = Try(ConfigFactory.parseString(responseBody))
@@ -89,7 +89,7 @@ class WorkerServiceSpec
 
   it should "return WorkerData" in {
     implicit val customTimeout = RouteTestTimeout(15.seconds)
-    (Get(s"/api/$REST_VERSION/worker/${WorkerId.render(WorkerId(1, 0L))}")
+    (Get(s"/api/$REST_VERSION/worker/${WorkerId(1, 0L)}")
       ~> workerRoute) ~> check {
       val responseBody = responseAs[String]
       val config = Try(ConfigFactory.parseString(responseBody))
@@ -104,7 +104,7 @@ class WorkerServiceSpec
 
   "MetricsQueryService" should "return history metrics" in {
     implicit val customTimeout = RouteTestTimeout(15.seconds)
-    (Get(s"/api/$REST_VERSION/worker/${WorkerId.render(WorkerId(0, 0L))}/metrics/worker")
+    (Get(s"/api/$REST_VERSION/worker/${WorkerId(0, 0L)}/metrics/worker")
       ~> workerRoute) ~> check {
       val responseBody = responseAs[String]
       val config = Try(ConfigFactory.parseString(responseBody))

@@ -20,7 +20,6 @@ package org.apache.gearpump.services
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.{HttpChallenge, HttpCookie, HttpCookiePair}
 import akka.http.scaladsl.model.{RemoteAddress, StatusCodes, Uri}
@@ -33,14 +32,14 @@ import com.typesafe.config.Config
 import com.softwaremill.session.SessionDirectives._
 import com.softwaremill.session.SessionOptions._
 import com.softwaremill.session.{MultiValueSessionSerializer, SessionConfig, SessionManager}
-import upickle.default.write
-
 import org.apache.gearpump.security.{Authenticator => BaseAuthenticator}
 import org.apache.gearpump.services.SecurityService.{User, UserSession}
 import org.apache.gearpump.services.security.oauth2.OAuth2Authenticator
 import org.apache.gearpump.util.{Constants, LogUtil}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.json4s.NoTypeHints
+import org.json4s.jackson.Serialization
+import org.json4s.jackson.Serialization.write
+
 
 /**
  * Security authentication endpoint.
@@ -69,6 +68,8 @@ class SecurityService(inner: RouteService, implicit val system: ActorSystem) ext
   private val sessionConfig = SessionConfig.fromConfig(config)
   private implicit val sessionManager: SessionManager[UserSession] =
     new SessionManager[UserSession](sessionConfig)
+
+  private implicit val formats = Serialization.formats(NoTypeHints)
 
   private val authenticator = {
     val clazz = Class.forName(config.getString(Constants.GEARPUMP_UI_AUTHENTICATOR_CLASS))

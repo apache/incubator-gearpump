@@ -20,27 +20,24 @@ package org.apache.gearpump.services
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-
 import org.apache.gearpump.cluster.AppMasterToMaster.{GetWorkerData, WorkerData}
 import org.apache.gearpump.cluster.ClientToMaster._
 import org.apache.gearpump.cluster.worker.WorkerId
 import org.apache.gearpump.services.SupervisorService.{Path, Status}
+import org.apache.gearpump.services.util.JsonUtil
 import org.apache.gearpump.util.ActorUtil._
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.json4s.jackson.Serialization.write
 
 /** Responsible for adding/removing machines. Typically it delegates to YARN. */
 class SupervisorService(
     val master: ActorRef, val supervisor: ActorRef, override val system: ActorSystem)
   extends BasicService {
 
-  import upickle.default.write
-
+  private implicit val formats = JsonUtil.defaultFormats
   /**
    * TODO: Add additional check to ensure the user have enough authorization to
    * add/remove a worker machine
@@ -89,7 +86,7 @@ class SupervisorService(
     path("removeworker" / Segment) { workerIdString =>
       post {
         authorize {
-          val workerId = WorkerId.parse(workerIdString)
+          val workerId = WorkerId(workerIdString)
           def future(): Future[CommandResult] = {
             askWorker[WorkerData](master, workerId, GetWorkerData(workerId)).flatMap{workerData =>
               val containerId = workerData.workerDescription.resourceManagerContainerId

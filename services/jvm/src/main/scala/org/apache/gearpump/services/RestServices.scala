@@ -31,8 +31,6 @@ import org.apache.commons.lang.exception.ExceptionUtils
 
 import org.apache.gearpump.jarstore.JarStoreClient
 import org.apache.gearpump.util.{Constants, LogUtil}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
 
 /** Contains all REST API service endpoints */
 class RestServices(master: ActorRef, mat: ActorMaterializer, system: ActorSystem)

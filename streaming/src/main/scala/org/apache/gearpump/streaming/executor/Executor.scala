@@ -449,13 +449,14 @@ object Executor {
       logFile: String,
       status: String,
       taskCount: Int,
-      tasks: Map[ProcessorId, List[TaskId]],
+      tasks: Map[Int, List[TaskId]],
       jvmName: String
   )
 
   object ExecutorSummary {
     def empty: ExecutorSummary = {
-      ExecutorSummary(0, WorkerId.unspecified, "", "", "", 1, null, jvmName = "")
+      ExecutorSummary(0, WorkerId.unspecified, "", "", "", 1,
+        Map.empty[Int, List[TaskId]], jvmName = "")
     }
   }
 

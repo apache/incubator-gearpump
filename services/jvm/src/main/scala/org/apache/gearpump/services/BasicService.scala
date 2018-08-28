@@ -19,17 +19,13 @@
 package org.apache.gearpump.services
 
 import scala.concurrent.ExecutionContext
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.CacheDirectives.{`max-age`, `no-cache`}
 import akka.http.scaladsl.model.headers.`Cache-Control`
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-
 import org.apache.gearpump.util.{Constants, LogUtil}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
 
 trait RouteService {
   def route: Route

@@ -19,31 +19,27 @@
 package org.apache.gearpump.services
 
 import scala.util.{Failure, Success, Try}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.{FormData, Multipart}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.ParameterDirectives.ParamMagnet
 import akka.stream.Materializer
-import upickle.default.{read, write}
-
 import org.apache.gearpump.cluster.AppMasterToMaster.{AppMasterSummary, GeneralAppMasterSummary}
 import org.apache.gearpump.cluster.ClientToMaster._
 import org.apache.gearpump.cluster.ClusterConfig
 import org.apache.gearpump.cluster.MasterToAppMaster.{AppMasterData, AppMasterDataDetailRequest, AppMasterDataRequest}
 import org.apache.gearpump.cluster.MasterToClient._
-import org.apache.gearpump.jarstore.{JarStoreClient, FileDirective}
+import org.apache.gearpump.jarstore.{FileDirective, JarStoreClient}
 import org.apache.gearpump.services.AppMasterService.Status
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
 import org.apache.gearpump.streaming.AppMasterToMaster.StallingTasks
-import org.apache.gearpump.streaming.appmaster.DagManager._
+import org.apache.gearpump.streaming.appmaster.DagManager.{DAGOperation, DAGOperationResult, ReplaceProcessor}
 import org.apache.gearpump.streaming.appmaster.StreamAppMasterSummary
 import org.apache.gearpump.streaming.executor.Executor.{ExecutorConfig, ExecutorSummary, GetExecutorSummary, QueryExecutorConfig}
 import org.apache.gearpump.util.ActorUtil.{askActor, askAppMaster}
-import FileDirective._
+import org.apache.gearpump.services.util.JsonUtil
 import org.apache.gearpump.util.{Constants, Util}
+import org.json4s.jackson.Serialization.{read, write}
 
 /**
  * Management service for AppMaster
@@ -51,6 +47,9 @@ import org.apache.gearpump.util.{Constants, Util}
 class AppMasterService(val master: ActorRef,
     val jarStoreClient: JarStoreClient, override val system: ActorSystem)
   extends BasicService {
+
+  implicit val formats = JsonUtil.defaultFormats + JsonUtil.appStatusSerializer +
+    JsonUtil.workerIdSerializer
 
   private val systemConfig = system.settings.config
   private val concise = systemConfig.getBoolean(Constants.GEARPUMP_SERVICE_RENDER_CONFIG_CONCISE)
@@ -71,7 +70,7 @@ class AppMasterService(val master: ActorRef,
           val msg = java.net.URLDecoder.decode(args, "UTF-8")
           val dagOperation = read[DAGOperation](msg)
           (post & entity(as[Multipart.FormData])) { _ =>
-            uploadFile { form =>
+            FileDirective.uploadFile { form =>
               val jar = form.getFileInfo("jar").map(_.file)
 
               if (jar.nonEmpty) {

@@ -27,16 +27,16 @@ import akka.testkit.TestActor.{AutoPilot, KeepRunning}
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import upickle.default.read
 import org.apache.gearpump.cluster.AppMasterToMaster.GeneralAppMasterSummary
 import org.apache.gearpump.cluster.ClientToMaster.{GetLastFailure, QueryAppMasterConfig, QueryHistoryMetrics, ResolveAppId}
 import org.apache.gearpump.cluster.MasterToAppMaster.{AppMasterData, AppMasterDataDetailRequest, AppMasterDataRequest}
 import org.apache.gearpump.cluster.MasterToClient._
 import org.apache.gearpump.cluster.{ApplicationStatus, TestUtil}
 import org.apache.gearpump.jarstore.JarStoreClient
+import org.apache.gearpump.services.util.JsonUtil
 import org.apache.gearpump.streaming.executor.Executor.{ExecutorConfig, ExecutorSummary, GetExecutorSummary, QueryExecutorConfig}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+
+import org.json4s.jackson.Serialization.read
 
 class AppMasterServiceSpec extends FlatSpec with ScalatestRouteTest
   with Matchers with BeforeAndAfterAll {
@@ -92,10 +92,10 @@ class AppMasterServiceSpec extends FlatSpec with ScalatestRouteTest
 
   "AppMasterService" should "return a JSON structure for GET request when detail = false" in {
     implicit val customTimeout = RouteTestTimeout(15.seconds)
+    implicit val formats = JsonUtil.defaultFormats + JsonUtil.appStatusSerializer
     Get(s"/api/$REST_VERSION/appmaster/0?detail=false") ~> appMasterRoute ~> check {
       val responseBody = responseAs[String]
       read[AppMasterData](responseBody)
-
       // Checks the header, should contains no-cache header.
       // Cache-Control:no-cache, max-age=0
       val noCache = header[`Cache-Control`].get.value()
@@ -117,6 +117,7 @@ class AppMasterServiceSpec extends FlatSpec with ScalatestRouteTest
   }
 
   "AppMaster" should "return lastest error" in {
+    implicit val formats = JsonUtil.defaultFormats
     implicit val customTimeout = RouteTestTimeout(15.seconds)
     (Get(s"/api/$REST_VERSION/appmaster/0/errors") ~> appMasterRoute) ~> check {
       val responseBody = responseAs[String]
@@ -143,6 +144,7 @@ class AppMasterServiceSpec extends FlatSpec with ScalatestRouteTest
   }
 
   it should "return return executor summary" in {
+    implicit val formats = JsonUtil.defaultFormats + JsonUtil.workerIdSerializer
     implicit val customTimeout = RouteTestTimeout(15.seconds)
     (Get(s"/api/$REST_VERSION/appmaster/0/executor/0") ~> appMasterRoute) ~> check {
       val responseBody = responseAs[String]

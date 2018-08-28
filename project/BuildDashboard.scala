@@ -46,13 +46,14 @@ object BuildDashboard extends sbt.Build {
 
   private lazy val serviceJvmSettings = commonSettings ++ noPublish ++ Seq(
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "com.lihaoyi" %% "upickle" % upickleVersion,
+      "org.json4s" %% "json4s-jackson" % json4sVersion,
       "com.softwaremill.akka-http-session" %% "core" % "0.3.0",
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.github.scribejava" % "scribejava-apis" % "2.4.0",
       "com.ning" % "async-http-client" % "1.9.33",
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+
       "org.webjars" % "angularjs" % "1.4.9",
 
       // angular 1.5 breaks ui-select, but we need ng-touch 1.5

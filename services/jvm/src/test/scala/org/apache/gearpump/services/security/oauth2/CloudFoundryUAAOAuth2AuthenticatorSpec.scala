@@ -33,7 +33,7 @@ import org.scalatest.FlatSpec
 
 import org.apache.gearpump.security.Authenticator
 // NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.apache.gearpump.services.util.JsonUtil._
 import org.apache.gearpump.services.security.oauth2.impl.CloudFoundryUAAOAuth2Authenticator
 
 class CloudFoundryUAAOAuth2AuthenticatorSpec extends FlatSpec with ScalatestRouteTest {

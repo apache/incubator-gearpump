@@ -19,22 +19,27 @@
 package org.apache.gearpump.services.util
 
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
-import upickle.default.{read, write}
-
 import org.apache.gearpump.cluster.UserConfig
 import org.apache.gearpump.metrics.Metrics.{Counter, MetricType}
-import org.apache.gearpump.services.util.UpickleUtil._
 import org.apache.gearpump.streaming.ProcessorId
 import org.apache.gearpump.streaming.appmaster.{ProcessorSummary, StreamAppMasterSummary}
 import org.apache.gearpump.util.Graph
+import org.json4s.jackson.Serialization.{read, write}
 
-class UpickleSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
+class JsonUtilSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  "UserConfig" should "serialize and deserialize with upickle correctly" in {
+  implicit val formats = JsonUtil.defaultFormats +
+    JsonUtil.userConfigSerializer +
+    JsonUtil.workerIdSerializer +
+    JsonUtil.appStatusSerializer +
+    JsonUtil.graphSerializer
+
+  "UserConfig" should "serialize and deserialize correctly" in {
+
     val conf = UserConfig.empty.withString("key", "value")
     val serialized = write(conf)
     val deserialized = read[UserConfig](serialized)
-    assert(deserialized.getString("key") == Some("value"))
+    assert(deserialized.getString("key").contains("value"))
   }
 
   "Graph" should "be able to serialize/deserialize correctly" in {
@@ -54,10 +59,10 @@ class UpickleSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
     metric shouldBe deserialized
   }
 
-  "StreamingAppMasterDataDetail" should "serialize and deserialize with upickle correctly" in {
-    val app = new StreamAppMasterSummary(appId = 0,
-      processors = Map.empty[ProcessorId, ProcessorSummary],
-      processorLevels = Map.empty[ProcessorId, Int]
+  "StreamingAppMasterDataDetail" should "serialize and deserialize correctly" in {
+    val app = StreamAppMasterSummary(appId = 0,
+      processors = Map.empty[Int, ProcessorSummary],
+      processorLevels = Map.empty[Int, Int]
     )
 
     val serialized = write(app)

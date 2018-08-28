@@ -17,12 +17,8 @@
  */
 package org.apache.gearpump.integrationtest.minicluster
 
-import scala.reflect.ClassTag
-
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.log4j.Logger
-import upickle.Js
-import upickle.default._
 
 import org.apache.gearpump.cluster.ApplicationStatus._
 import org.apache.gearpump.cluster.AppMasterToMaster.MasterData
@@ -34,14 +30,16 @@ import org.apache.gearpump.cluster.AppJar
 import org.apache.gearpump.integrationtest.{Docker, Util}
 import org.apache.gearpump.services.AppMasterService.Status
 import org.apache.gearpump.services.MasterService.{AppSubmissionResult, BuiltinPartitioners}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.apache.gearpump.services.util.JsonUtil
 import org.apache.gearpump.streaming.ProcessorDescription
 import org.apache.gearpump.streaming.appmaster.AppMaster.ExecutorBrief
 import org.apache.gearpump.streaming.appmaster.DagManager.{DAGOperationResult, ReplaceProcessor}
 import org.apache.gearpump.streaming.appmaster.StreamAppMasterSummary
 import org.apache.gearpump.streaming.executor.Executor.ExecutorSummary
-import org.apache.gearpump.util.{Constants, Graph}
+import org.apache.gearpump.util.Constants
+
+
+import org.json4s.jackson.Serialization.read
 
 /**
  * A REST client to operate a Gearpump cluster
@@ -52,20 +50,14 @@ class RestClient(host: String, port: Int) {
 
   private val cookieFile: String = "cookie.txt"
 
-  implicit val graphReader: upickle.default.Reader[Graph[Int, String]] =
-    upickle.default.Reader[Graph[Int, String]] {
-    case Js.Obj(verties, edges) =>
-      val vertexList = upickle.default.readJs[List[Int]](verties._2)
-      val edgeList = upickle.default.readJs[List[(Int, String, Int)]](edges._2)
-      Graph(vertexList, edgeList)
-  }
+  implicit val formats = JsonUtil.defaultFormats + JsonUtil.graphSerializer
 
   private def decodeAs[T](
-      expr: String)(implicit reader: upickle.default.Reader[T], classTag: ClassTag[T]): T = try {
+      expr: String)(implicit mf: Manifest[T]): T = try {
     read[T](expr)
   } catch {
     case ex: Throwable =>
-      LOG.error(s"Failed to decode Rest response to ${classTag.runtimeClass.getSimpleName}")
+      LOG.error(s"Failed to decode Rest response to ${mf.runtimeClass.getSimpleName}")
       throw ex
   }
 
@@ -185,13 +177,13 @@ class RestClient(host: String, port: Int) {
 
   def queryWorkerMetrics(workerId: WorkerId, current: Boolean): HistoryMetrics = {
     val args = if (current) "?readLatest=true" else ""
-    val workerIdStr = WorkerId.render(workerId)
+    val workerIdStr = workerId.toString
     val resp = callApi(s"worker/$workerIdStr/metrics/worker$workerIdStr?$args")
     decodeAs[HistoryMetrics](resp)
   }
 
   def queryWorkerConfig(workerId: WorkerId): Config = {
-    val resp = callApi(s"worker/${WorkerId.render(workerId)}/config")
+    val resp = callApi(s"worker/${workerId}/config")
     ConfigFactory.parseString(resp)
   }
 

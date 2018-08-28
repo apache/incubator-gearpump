@@ -22,17 +22,16 @@ import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{APPEND, WRITE}
+
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.ParameterDirectives.ParamMagnet
 import akka.http.scaladsl.unmarshalling.Unmarshaller._
 import akka.stream.Materializer
 import com.typesafe.config.Config
-
 import org.apache.gearpump.cluster.AppMasterToMaster.{GetAllWorkers, GetMasterData, GetWorkerData, MasterData, WorkerData}
 import org.apache.gearpump.cluster.ClientToMaster.{QueryHistoryMetrics, QueryMasterConfig, ReadOption}
 import org.apache.gearpump.cluster.MasterToAppMaster.{AppMastersData, AppMastersDataRequest, WorkerList}
@@ -40,22 +39,24 @@ import org.apache.gearpump.cluster.MasterToClient.{HistoryMetrics, MasterConfig,
 import org.apache.gearpump.cluster.client.ClientContext
 import org.apache.gearpump.cluster.worker.WorkerSummary
 import org.apache.gearpump.cluster.{ClusterConfig, UserConfig}
-import org.apache.gearpump.jarstore.{JarStoreClient, FileDirective}
+import org.apache.gearpump.jarstore.{FileDirective, JarStoreClient}
 import org.apache.gearpump.streaming.partitioner.{PartitionerByClassName, PartitionerDescription}
 import org.apache.gearpump.services.MasterService.{BuiltinPartitioners, SubmitApplicationRequest}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
 import org.apache.gearpump.streaming.{ProcessorDescription, ProcessorId, StreamApplication}
 import org.apache.gearpump.util.ActorUtil._
 import FileDirective._
+import org.apache.gearpump.services.util.JsonUtil
 import org.apache.gearpump.util.{Constants, Graph, Util}
+import org.json4s.jackson.Serialization.{read, write}
+
 
 /** Manages service for master node */
 class MasterService(val master: ActorRef,
     val jarStoreClient: JarStoreClient, override val system: ActorSystem)
   extends BasicService {
 
-  import upickle.default.{read, write}
+  private implicit val formats = JsonUtil.defaultFormats + JsonUtil.graphSerializer +
+    JsonUtil.appStatusSerializer + JsonUtil.workerIdSerializer
 
   private val systemConfig = system.settings.config
   private val concise = systemConfig.getBoolean(Constants.GEARPUMP_SERVICE_RENDER_CONFIG_CONCISE)
@@ -171,7 +172,6 @@ class MasterService(val master: ActorRef,
           val effectiveConfig = if (userConfig == null) UserConfig.empty else userConfig
           val appId = context.submit(new StreamApplication(appName, effectiveConfig, graph)).appId
 
-          import upickle.default.write
           val submitApplicationResultValue = SubmitApplicationResultValue(appId)
           val jsonData = write(submitApplicationResultValue)
           complete(jsonData)
@@ -343,7 +343,7 @@ object MasterService {
 
   case class SubmitApplicationRequest(
       appName: String,
-      processors: Map[ProcessorId, ProcessorDescription],
+      processors: Map[Int, ProcessorDescription],
       dag: Graph[Int, String],
       userConfig: UserConfig)
 }

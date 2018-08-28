@@ -261,7 +261,7 @@ class RestServiceSpec extends TestSpecBase {
           restClient.queryWorkerMetrics(workerId, current = true).metrics.nonEmpty,
           "metrics available")
         val actual = restClient.queryWorkerMetrics(workerId, current = true)
-        actual.path shouldEqual s"worker${WorkerId.render(workerId)}"
+        actual.path shouldEqual s"worker${workerId}"
         actual.metrics.foreach(metric => {
           metric.time should be > 0L
           metric.value should not be null

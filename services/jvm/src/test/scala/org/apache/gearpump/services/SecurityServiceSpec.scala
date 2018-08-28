@@ -31,7 +31,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import org.apache.gearpump.cluster.TestUtil
 // NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
+import org.apache.gearpump.services.util.JsonUtil._
 
 class SecurityServiceSpec
   extends FlatSpec with ScalatestRouteTest with Matchers with BeforeAndAfterAll {

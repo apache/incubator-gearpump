@@ -19,10 +19,10 @@
 package org.apache.gearpump.services
 
 import java.io.File
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
-
 import akka.actor.ActorRef
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
@@ -33,23 +33,24 @@ import akka.testkit.TestActor.{AutoPilot, KeepRunning}
 import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-
 import org.apache.gearpump.cluster.AppMasterToMaster.{GetAllWorkers, GetMasterData, GetWorkerData, MasterData, WorkerData}
 import org.apache.gearpump.cluster.ClientToMaster.{QueryHistoryMetrics, QueryMasterConfig, ResolveWorkerId, SubmitApplication}
 import org.apache.gearpump.cluster.MasterToAppMaster.{AppMasterData, AppMastersData, AppMastersDataRequest, WorkerList}
 import org.apache.gearpump.cluster.MasterToClient._
-import org.apache.gearpump.cluster.TestUtil
+import org.apache.gearpump.cluster.{TestUtil, UserConfig}
 import org.apache.gearpump.cluster.worker.{WorkerId, WorkerSummary}
 import org.apache.gearpump.jarstore.JarStoreClient
 import org.apache.gearpump.services.MasterService.{BuiltinPartitioners, SubmitApplicationRequest}
-// NOTE: This cannot be removed!!!
-import org.apache.gearpump.services.util.UpickleUtil._
-import org.apache.gearpump.streaming.ProcessorDescription
+import org.apache.gearpump.services.util.JsonUtil
+import org.apache.gearpump.streaming.{ProcessorDescription, ProcessorId}
 import org.apache.gearpump.util.Graph
+import org.json4s.jackson.Serialization.{read, write}
 
 class MasterServiceSpec extends FlatSpec with ScalatestRouteTest
   with Matchers with BeforeAndAfterAll {
-  import upickle.default.{read, write}
+
+  private implicit val formats = JsonUtil.defaultFormats + JsonUtil.graphSerializer +
+    JsonUtil.appStatusSerializer + JsonUtil.workerIdSerializer
 
   override def testConfig: Config = TestUtil.UI_CONFIG
 
@@ -195,6 +196,7 @@ class MasterServiceSpec extends FlatSpec with ScalatestRouteTest
     )
     val dag = Graph(0 ~ "partitioner" ~> 1)
     val jsonValue = write(SubmitApplicationRequest("complexdag", processors, dag, null))
+    val request = read[SubmitApplicationRequest](jsonValue)
     Post(s"/api/$REST_VERSION/master/submitdag",
       HttpEntity(ContentTypes.`application/json`, jsonValue)) ~> masterRoute ~> check {
       val responseBody = responseAs[String]

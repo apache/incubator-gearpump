@@ -104,7 +104,7 @@ private[cluster] class Worker(masterProxy: ActorRef) extends Actor with TimeOutS
 
   private def initializeMetrics(): Unit = {
     // Registers jvm metrics
-    val metricsSetName = "worker" + WorkerId.render(id)
+    val metricsSetName = "worker" + id
     Metrics(context.system).register(new JvmMetricsSet(metricsSetName))
 
     historyMetricsService = if (metricsEnabled) {

@@ -25,16 +25,17 @@ package org.apache.gearpump.cluster.worker
  *                  sessionId is **NOT** unique, so always use WorkerId for comparison.
  * @param registerTime the timestamp when a worker node register itself to master node
  */
-case class WorkerId(sessionId: Int, registerTime: Long)
+case class WorkerId(sessionId: Int, registerTime: Long) {
+
+  override def toString: String = {
+    registerTime + "_" + sessionId
+  }
+}
 
 object WorkerId {
   val unspecified: WorkerId = new WorkerId(-1, 0L)
 
-  def render(workerId: WorkerId): String = {
-    workerId.registerTime + "_" + workerId.sessionId
-  }
-
-  def parse(str: String): WorkerId = {
+  def apply(str: String): WorkerId = {
     val pair = str.split("_")
     new WorkerId(pair(1).toInt, pair(0).toLong)
   }

@@ -39,11 +39,11 @@ case class StreamAppMasterSummary(
     user: String = null,
     homeDirectory: String = "",
     logFile: String = "",
-    dag: Graph[ProcessorId, String] = null,
-    executors: List[ExecutorBrief] = null,
-    processors: Map[ProcessorId, ProcessorSummary] = Map.empty[ProcessorId, ProcessorSummary],
-    // Hiearachy level for each processor
-    processorLevels: Map[ProcessorId, Int] = Map.empty[ProcessorId, Int],
+    dag: Graph[Int, String] = null,
+    executors: List[ExecutorBrief] = List.empty[ExecutorBrief],
+    processors: Map[Int, ProcessorSummary] = Map.empty[Int, ProcessorSummary],
+    // Hierarchy level for each processor
+    processorLevels: Map[Int, Int] = Map.empty[Int, Int],
     historyMetricsConfig: HistoryMetricsConfig = null)
   extends AppMasterSummary
 
