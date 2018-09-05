@@ -17,24 +17,19 @@
  */
 
 package org.apache.gearpump.util
+import scalax.collection.edge.LBase.LEdgeCompanion
 
 import scala.collection.mutable
 import scala.language.implicitConversions
-import scala.util.{Failure, Success, Try}
+import scalax.collection.edge.LDiEdge
+import scalax.collection.mutable.{Graph => SGraph}
 
 /**
  * Generic mutable Graph libraries.
  */
-class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serializable {
-  private val LOG = LogUtil.getLogger(getClass)
-  private val vertices = mutable.Set.empty[N]
-  private val edges = mutable.Set.empty[(N, E, N)]
-  private val outEdges = mutable.Map.empty[N, mutable.Set[(N, E, N)]]
-  private val inEdges = mutable.Map.empty[N, mutable.Set[(N, E, N)]]
+class Graph[N, E](private val graph: SGraph[N, LDiEdge]) extends Serializable {
 
-  // This is used to ensure the output of this Graph is always stable
-  // Like method getVertices(), or getEdges()
-  private var indexs = Map.empty[Any, Int]
+  private var indices = Map.empty[Any, Int]
   private var nextIndex = 0
   private def nextId: Int = {
     val result = nextIndex
@@ -42,21 +37,13 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
     result
   }
 
-  private def init(): Unit = {
-    Option(vertexList).getOrElse(List.empty[N]).foreach(addVertex)
-    Option(edgeList).getOrElse(List.empty[(N, E, N)]).foreach(addEdge)
-  }
-
-  init()
-
   /**
    * Add a vertex
    * Current Graph is changed.
    */
   def addVertex(vertex: N): Unit = {
-    val result = vertices.add(vertex)
-    if (result) {
-      indexs += vertex -> nextId
+    if (graph.add(vertex)) {
+      indices += vertex -> nextId
     }
   }
 
@@ -65,11 +52,9 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current Graph is changed.
    */
   def addEdge(edge: (N, E, N)): Unit = {
-    val result = edges.add(edge)
-    if (result) {
-      indexs += edge -> nextId
-      outEdges += edge._1 -> (outgoingEdgesOf(edge._1) + edge)
-      inEdges += edge._3 -> (incomingEdgesOf(edge._3) + edge)
+    implicit val edgeCompanion: LEdgeCompanion[LDiEdge] = LDiEdge
+    if (graph.addLEdge(edge._1, edge._3)(edge._2)) {
+      indices += edge -> nextId
     }
   }
 
@@ -78,43 +63,35 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * The result is stable
    */
   def getVertices: List[N] = {
-    // Sorts the vertex so that we can keep the order for mapVertex
-    vertices.toList.sortBy(indexs(_))
+    graph.nodes.map(_.value).toList.sortBy(indices)
   }
 
   /**
    * out degree
    */
   def outDegreeOf(node: N): Int = {
-    outgoingEdgesOf(node).size
+    graph.get(node).outDegree
   }
 
   /**
    * in degree
    */
   def inDegreeOf(node: N): Int = {
-    incomingEdgesOf(node).size
+    graph.get(node).inDegree
   }
 
   /**
    * out going edges.
    */
-  def outgoingEdgesOf(node: N): mutable.Set[(N, E, N)] = {
-    outEdges.getOrElse(node, mutable.Set.empty)
+  def outgoingEdgesOf(node: N): List[(N, E, N)] = {
+    graph.get(node).outgoing.map(toEdge).toList
   }
 
   /**
    * incoming edges.
    */
-  def incomingEdgesOf(node: N): mutable.Set[(N, E, N)] = {
-    inEdges.getOrElse(node, mutable.Set.empty)
-  }
-
-  /**
-   * adjacent vertices.
-   */
-  private def adjacentVertices(node: N): List[N] = {
-    outgoingEdgesOf(node).map(_._3).toList
+  def incomingEdgesOf(node: N): List[(N, E, N)] = {
+    graph.get(node).incoming.map(toEdge).toList
   }
 
   /**
@@ -122,12 +99,17 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current Graph is changed.
    */
   def removeVertex(node: N): Unit = {
-    vertices.remove(node)
-    indexs -= node
-    val toBeRemoved = incomingEdgesOf(node) ++ outgoingEdgesOf(node)
-    toBeRemoved.foreach(removeEdge)
-    outEdges -= node
-    inEdges -= node
+    if (graph.remove(node)) {
+      indices -= node
+    }
+  }
+
+  private def toEdge(e: graph.EdgeT): (N, E, N) = {
+    (e.source, e.label.asInstanceOf[E], e.target)
+  }
+
+  private def toLDiEdge(edge: (N, E, N)): LDiEdge[N] = {
+    LDiEdge(edge._1, edge._3)(edge._2)
   }
 
   /**
@@ -135,14 +117,13 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current Graph is changed.
    */
   private def removeEdge(edge: (N, E, N)): Unit = {
-    indexs -= edge
-    edges.remove(edge)
-    inEdges.update(edge._3, inEdges(edge._3) - edge)
-    outEdges.update(edge._1, outEdges(edge._1) - edge)
+    if (graph.remove(toLDiEdge(edge))) {
+      indices -= edge
+    }
   }
 
   /**
-   * add edge
+   * add an edge and its source and target vertices
    * Current Graph is changed.
    */
   def addEdge(node1: N, edge: E, node2: N): Unit = {
@@ -156,14 +137,13 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current Graph is not changed.
    */
   def mapVertex[NewNode](fun: N => NewNode): Graph[NewNode, E] = {
-    val newVertices = getVertices.map(node => (node, fun(node)))
-
-    val vertexMap: Map[N, NewNode] = newVertices.toMap
-
-    val newEdges = getEdges.map { edge =>
-      (vertexMap(edge._1), edge._2, vertexMap(edge._3))
+    val newGraph = new Graph[NewNode, E](SGraph.empty[NewNode, LDiEdge])
+    graph.foreach {
+      case n: graph.NodeT => newGraph.addVertex(fun(n))
+      case e: graph.EdgeT => newGraph.addEdge(
+        fun(e.source), e.label.asInstanceOf[E], fun(e.target))
     }
-    new Graph(newVertices.map(_._2), newEdges)
+    newGraph
   }
 
   /**
@@ -171,25 +151,28 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current graph is not changed.
    */
   def mapEdge[NewEdge](fun: (N, E, N) => NewEdge): Graph[N, NewEdge] = {
-    val newEdges = getEdges.map { edge =>
-      (edge._1, fun(edge._1, edge._2, edge._3), edge._3)
+    val newGraph = new Graph[N, NewEdge](SGraph.empty[N, LDiEdge])
+    graph.foreach {
+      case n: graph.NodeT => newGraph.addVertex(n.value)
+      case e: graph.EdgeT =>
+        val (s, p, t) = toEdge(e)
+        newGraph.addEdge(s, fun(s, p, t), t)
     }
-    new Graph(getVertices, newEdges)
+    newGraph
   }
 
   /**
    * edges connected to node
    */
   def edgesOf(node: N): List[(N, E, N)] = {
-    (incomingEdgesOf(node) ++ outgoingEdgesOf(node)).toList
+    graph.get(node).edges.map(toEdge).toList.sortBy(indices)
   }
 
   /**
    * all edges
    */
   def getEdges: List[(N, E, N)] = {
-    // Sorts the edges so that we can keep the order for mapEdges
-    edges.toList.sortBy(indexs(_))
+    graph.edges.map(toEdge).toList.sortBy(indices)
   }
 
   /**
@@ -197,8 +180,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * Current graph is changed.
    */
   def addGraph(other: Graph[N, E]): Graph[N, E] = {
-    (getVertices ++ other.getVertices).foreach(addVertex)
-    (getEdges ++ other.getEdges).foreach(edge => addEdge(edge._1, edge._2, edge._3))
+    graph ++= other.graph
     this
   }
 
@@ -206,20 +188,14 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * clone the graph
    */
   def copy: Graph[N, E] = {
-    new Graph(getVertices, getEdges)
+    new Graph[N, E](SGraph.from(graph.nodes, graph.edges))
   }
 
   /**
    * check empty
    */
   def isEmpty: Boolean = {
-    val vertexCount = getVertices.size
-    val edgeCount = getEdges.length
-    if (vertexCount + edgeCount == 0) {
-      true
-    } else {
-      false
-    }
+    graph.isEmpty
   }
 
   /**
@@ -249,48 +225,16 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
     this
   }
 
-  private def removeZeroInDegree: List[N] = {
-    val toBeRemoved = getVertices.filter(inDegreeOf(_) == 0)
-    toBeRemoved.foreach(removeVertex)
-    toBeRemoved
-  }
-
   /**
    * Return an iterator of vertex in topological order
    * The node returned by Iterator is stable sorted.
    */
   def topologicalOrderIterator: Iterator[N] = {
-    tryTopologicalOrderIterator match {
-      case Success(iterator) => iterator
-      case Failure(_) =>
-        LOG.warn("Please note this graph is cyclic.")
+    graph.topologicalSort match {
+      case Right(t) =>
+        t.map(_.value).toIterator
+      case Left(_) =>
         topologicalOrderWithCirclesIterator
-    }
-  }
-
-  private def tryTopologicalOrderIterator: Try[Iterator[N]] = {
-    Try {
-      var indegreeMap = getVertices.map(v => v -> inDegreeOf(v)).toMap
-
-      val verticesWithZeroIndegree = mutable.Queue(indegreeMap.filter(_._2 == 0).keys
-        .toList.sortBy(indexs(_)): _*)
-      var output = List.empty[N]
-      var count = 0
-      while (verticesWithZeroIndegree.nonEmpty) {
-        val vertice = verticesWithZeroIndegree.dequeue()
-        adjacentVertices(vertice).foreach { adjacentV =>
-          indegreeMap += adjacentV -> (indegreeMap(adjacentV) - 1)
-          if (indegreeMap(adjacentV) == 0) {
-            verticesWithZeroIndegree.enqueue(adjacentV)
-          }
-        }
-        output :+= vertice
-        count += 1
-      }
-      if (count != getVertices.size) {
-        throw new Exception("There exists a cycle in the graph")
-      }
-      output.iterator
     }
   }
 
@@ -361,7 +305,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    */
   def topologicalOrderWithCirclesIterator: Iterator[N] = {
     val topo = getAcyclicCopy().topologicalOrderIterator
-    topo.flatMap(_.sortBy(indexs(_)).iterator)
+    topo.flatMap(_.sortBy(indices).iterator)
   }
 
   private def getAcyclicCopy(): Graph[mutable.MutableList[N], E] = {
@@ -375,13 +319,13 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
 
     for (circle1 <- circles; circle2 <- circles; if circle1 != circle2) yield {
       for (node1 <- circle1; node2 <- circle2) yield {
-        var outgoingEdges = outgoingEdgesOf(node1)
-        for (edge <- outgoingEdges; if edge._3 == node2) yield {
+        var edges = outgoingEdgesOf(node1)
+        for (edge <- edges; if edge._3 == node2) yield {
           newGraph.addEdge(circle1, edge._2, circle2)
         }
 
-        outgoingEdges = outgoingEdgesOf(node2)
-        for (edge <- outgoingEdges; if edge._3 == node1) yield {
+        edges = outgoingEdgesOf(node2)
+        for (edge <- edges; if edge._3 == node1) yield {
           newGraph.addEdge(circle2, edge._2, circle1)
         }
       }
@@ -393,7 +337,7 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * check whether there is a loop
    */
   def hasCycle(): Boolean = {
-    tryTopologicalOrderIterator.isFailure
+    graph.isCyclic
   }
 
   /**
@@ -410,21 +354,16 @@ class Graph[N, E](vertexList: List[N], edgeList: List[(N, E, N)]) extends Serial
    * }}}
    */
   def vertexHierarchyLevelMap(): Map[N, Int] = {
-    val newGraph = getAcyclicCopy()
-    var output = Map.empty[N, Int]
-    var level = 0
-    while (!newGraph.isEmpty) {
-      val toBeRemovedLists = newGraph.removeZeroInDegree
-      val maxLength = toBeRemovedLists.map(_.length).max
-      for (subGraph <- toBeRemovedLists) {
-        val sorted = subGraph.sortBy(indexs)
-        for (i <- sorted.indices) {
-          output += sorted(i) -> (level + i)
+    var map = Map.empty[N, Int]
+    graph.topologicalSort match {
+      case Right(t) =>
+        t.toLayered.foreach { case (level, nodes) =>
+          nodes.foreach { n =>
+            map += (n.value -> level)
+          }
         }
-      }
-      level += maxLength
     }
-    output
+    map
   }
 
   override def toString: String = {
@@ -452,13 +391,16 @@ object Graph {
   def apply[N, E](elems: Path[_ <: N, _ <: E]*): Graph[N, E] = {
     val graph = empty[N, E]
     elems.foreach { path =>
-      path.updategraph(graph)
+      path.updateGraph(graph)
     }
     graph
   }
 
   def apply[N, E](vertices: List[N], edges: List[(N, E, N)]): Graph[N, E] = {
-    new Graph(vertices, edges)
+    val graph = empty[N, E]
+    vertices.foreach(graph.addVertex)
+    edges.foreach(graph.addEdge)
+    graph
   }
 
   def unapply[N, E](graph: Graph[N, E]): Option[(List[N], List[(N, E, N)])] = {
@@ -466,7 +408,7 @@ object Graph {
   }
 
   def empty[N, E]: Graph[N, E] = {
-    new Graph(List.empty[N], List.empty[(N, E, N)])
+    new Graph(SGraph.empty[N, LDiEdge])
   }
 
   class Path[N, + E](path: List[Either[N, E]]) {
@@ -483,7 +425,7 @@ object Graph {
       this ~ edge ~> node
     }
 
-    private[Graph] def updategraph[NodeT >: N, EdgeT >: E](graph: Graph[NodeT, EdgeT]): Unit = {
+    private[Graph] def updateGraph[NodeT >: N, EdgeT >: E](graph: Graph[NodeT, EdgeT]): Unit = {
       val nodeEdgePair: Tuple2[Option[N], Option[E]] = (None, None)
       path.foldLeft(nodeEdgePair) { (pair, either) =>
         val (lastNode, lastEdge) = pair

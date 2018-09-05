@@ -119,7 +119,7 @@ class GraphSpec extends PropSpec with PropertyChecks with Matchers {
     assert(levelMap("C") < levelMap("F"))
   }
 
-  property("copy should return a immutalbe new Graph") {
+  property("copy should return an immutable new Graph") {
     val graph = Graph.empty[String, String]
     val defaultEdge = "edge"
     graph.addVertex("A")
@@ -192,6 +192,8 @@ class GraphSpec extends PropSpec with PropertyChecks with Matchers {
       4 ~> 1, 1 ~> 2 ~> 4, 7 ~> 6, 8 ~> 2, 6 ~> 9, 4 ~> 10)
     val topoWithCircles = graph.topologicalOrderWithCirclesIterator
     val trueTopoWithCircles = Iterator[Int](0, 8, 1, 3, 4, 2, 6, 5, 7, 10, 9)
+
+    topoWithCircles.foreach(println)
 
     assert(trueTopoWithCircles.zip(topoWithCircles).forall(x => x._1 == x._2))
   }

@@ -37,6 +37,14 @@ object UpickleUtil {
     }
   }
 
+  implicit val graphWriter: upickle.default.Writer[Graph[Int, String]] = {
+    upickle.default.Writer[Graph[Int, String]] {
+      case Graph(vertexList, edgeList) =>
+        Js.Obj("vertexList" -> upickle.default.writeJs[List[Int]](vertexList),
+          "edgeList" -> upickle.default.writeJs[List[(Int, String, Int)]](edgeList))
+    }
+  }
+
   implicit val appStatusReader: upickle.default.Reader[ApplicationStatus] =
     upickle.default.Reader[ApplicationStatus] {
       case Js.Str(str) =>

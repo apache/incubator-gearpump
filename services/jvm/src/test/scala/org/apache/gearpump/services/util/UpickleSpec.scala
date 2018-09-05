@@ -38,7 +38,7 @@ class UpickleSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Graph" should "be able to serialize/deserialize correctly" in {
-    val graph = new Graph[Int, String](List(0, 1), List((0, "edge", 1)))
+    val graph = Graph[Int, String](List(0, 1), List((0, "edge", 1)))
     val serialized = write(graph)
 
     val deserialized = read[Graph[Int, String]](serialized)

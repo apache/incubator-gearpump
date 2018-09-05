@@ -102,7 +102,7 @@ object Dependencies {
         exclude("org.slf4j", "slf4j-api"),
       "com.codahale.metrics" % "metrics-jvm" % codahaleVersion
         exclude("org.slf4j", "slf4j-api"),
-
+      "org.scala-graph" %% "graph-core" % "1.12.1",
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",

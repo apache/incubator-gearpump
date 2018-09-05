@@ -30,6 +30,6 @@ import org.apache.gearpump.streaming.task.Task;
 public class Graph extends org.apache.gearpump.util.Graph<Processor<? extends Task>, Partitioner> {
 
   public Graph() {
-    super(null, null);
+    super(null);
   }
 }
